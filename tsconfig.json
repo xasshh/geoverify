@@ -22,7 +22,7 @@
     "exactOptionalPropertyTypes": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "geojson"],
     "forceConsistentCasingInFileNames": true,
 
     "paths": {

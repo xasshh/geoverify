@@ -27,3 +27,4 @@ Thumbs.db
 /test-results
 /playwright-report
 /tests/Browser/screenshots
+/storage/app/geodata

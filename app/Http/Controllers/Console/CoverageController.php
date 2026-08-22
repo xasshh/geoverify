@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Console;
+
+use App\Domain\Coverage\Models\CoverageArea;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * The coverage view: cells shaded by completion against the footprint denominator.
+ *
+ * Every geometry is serialised by PostGIS. No coordinate is assembled in PHP, and
+ * nothing is projected or measured here.
+ */
+final class CoverageController
+{
+    public function show(CoverageArea $coverageArea): Response
+    {
+        return Inertia::render('console/Coverage', [
+            'area' => [
+                'id' => $coverageArea->id,
+                'name' => $coverageArea->name,
+                'client' => $coverageArea->client_name,
+                'contractRef' => $coverageArea->contract_ref,
+                'lgaCode' => $coverageArea->lga_code,
+                'resolution' => $coverageArea->default_h3_resolution,
+            ],
+            'summary' => $this->summary($coverageArea),
+        ]);
+    }
+
+    /**
+     * Cells as GeoJSON, clipped to the requested viewport.
+     *
+     * A mandate the size of Abuja Municipal is 18,337 cells at resolution 9, so the
+     * viewport filter is what keeps this view usable rather than a nicety.
+     */
+    public function cells(Request $request, CoverageArea $coverageArea): JsonResponse
+    {
+        $validated = $request->validate([
+            'bbox' => ['nullable', 'string', 'regex:/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:25000'],
+        ]);
+
+        $limit = (int) ($validated['limit'] ?? 20000);
+        $bbox = isset($validated['bbox'])
+            ? array_map(floatval(...), explode(',', (string) $validated['bbox']))
+            : null;
+
+        $bindings = [$coverageArea->id];
+        $clip = '';
+
+        if ($bbox !== null && count($bbox) === 4) {
+            $clip = 'AND g.boundary && ST_MakeEnvelope(?, ?, ?, ?, 4326)';
+            array_push($bindings, $bbox[0], $bbox[1], $bbox[2], $bbox[3]);
+        }
+
+        $bindings[] = $limit;
+
+        $geojson = DB::scalar(<<<SQL
+            SELECT json_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE(json_agg(feature), '[]'::json)
+            )::text
+            FROM (
+                SELECT json_build_object(
+                    'type', 'Feature',
+                    'id', g.id,
+                    'geometry', ST_AsGeoJSON(g.boundary, 5)::json,
+                    'properties', json_build_object(
+                        'h3', to_hex(g.h3_index),
+                        'status', g.status,
+                        'footprints', g.footprint_count,
+                        'captured', g.structures_captured,
+                        'coverage', g.coverage_pct
+                    )
+                ) AS feature
+                  FROM grid_cells g
+                 WHERE g.coverage_area_id = ?
+                 {$clip}
+                 ORDER BY g.footprint_count DESC
+                 LIMIT ?
+            ) features
+        SQL, $bindings);
+
+        return JsonResponse::fromJsonString(
+            is_string($geojson) ? $geojson : '{"type":"FeatureCollection","features":[]}',
+        );
+    }
+
+    /** The mandate outline, drawn as the hard edge of the work. */
+    public function boundary(CoverageArea $coverageArea): JsonResponse
+    {
+        $geojson = DB::scalar(
+            'select ST_AsGeoJSON(boundary, 5) from coverage_areas where id = ?',
+            [$coverageArea->id],
+        );
+
+        return JsonResponse::fromJsonString(is_string($geojson) ? $geojson : '{}');
+    }
+
+    /**
+     * @return array{cells: int, tiled: int, footprints: int, cellsWithFootprints: int, busiest: int, medianPerCell: int, wards: int, bounds: array<int, float>}
+     */
+    private function summary(CoverageArea $area): array
+    {
+        /** @var object{cells: int, with_footprints: int, footprints: int, busiest: int, median: float|null}|null $cells */
+        $cells = DB::selectOne(<<<'SQL'
+            SELECT count(*)                                                     AS cells,
+                   count(*) FILTER (WHERE footprint_count > 0)                  AS with_footprints,
+                   COALESCE(sum(footprint_count), 0)                            AS footprints,
+                   COALESCE(max(footprint_count), 0)                            AS busiest,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY footprint_count)
+                       FILTER (WHERE footprint_count > 0)                       AS median
+              FROM grid_cells WHERE coverage_area_id = ?
+        SQL, [$area->id]);
+
+        /** @var object{minx: float, miny: float, maxx: float, maxy: float}|null $box */
+        $box = DB::selectOne(
+            'select ST_XMin(boundary) minx, ST_YMin(boundary) miny,
+                    ST_XMax(boundary) maxx, ST_YMax(boundary) maxy
+               from coverage_areas where id = ?',
+            [$area->id],
+        );
+
+        $wards = (int) DB::scalar(
+            'select count(*) from admin_boundaries w
+              join coverage_areas c on c.id = ?
+             where w.level = \'ward\' and ST_Intersects(w.boundary, c.boundary)',
+            [$area->id],
+        );
+
+        return [
+            'cells' => (int) ($cells->cells ?? 0),
+            'tiled' => (int) ($cells->cells ?? 0),
+            'footprints' => (int) ($cells->footprints ?? 0),
+            'cellsWithFootprints' => (int) ($cells->with_footprints ?? 0),
+            'busiest' => (int) ($cells->busiest ?? 0),
+            'medianPerCell' => (int) round((float) ($cells->median ?? 0)),
+            'wards' => $wards,
+            'bounds' => [
+                (float) ($box->minx ?? 0), (float) ($box->miny ?? 0),
+                (float) ($box->maxx ?? 0), (float) ($box->maxy ?? 0),
+            ],
+        ];
+    }
+}
