@@ -1,11 +1,236 @@
+/*
+| Type, self-hosted
+|
+| Subsets matter here more than usual. Nigerian trading and person names carry
+| Yoruba, Igbo and Hausa orthography, and those characters are NOT in the "latin"
+| subset:
+|
+|   latin-ext   s-dot, n-dot, and the Hausa hooked letters b, d, k
+|   vietnamese  the Yoruba and Igbo sub-dot vowels e, o, i, u
+|
+| Dropping either subset renders a business name in a fallback face, which in a
+| register sold on accuracy is a defect, not a cosmetic issue. Each face is
+| unicode-range gated, so a page of plain ASCII downloads none of the extras.
+|
+| Newsreader uses the weight-only axis rather than optical size: the opsz build
+| costs 272 KB on latin alone against 120 KB, and the display face is rationed in
+| the field app anyway. That is 152 KB an officer on 2G does not pay for.
+*/
+@import '@fontsource/ibm-plex-sans/latin-400.css';
+@import '@fontsource/ibm-plex-sans/latin-500.css';
+@import '@fontsource/ibm-plex-sans/latin-600.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-400.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-500.css';
+@import '@fontsource/ibm-plex-sans/latin-ext-600.css';
+@import '@fontsource/ibm-plex-sans/vietnamese-400.css';
+@import '@fontsource/ibm-plex-sans/vietnamese-500.css';
+@import '@fontsource/ibm-plex-sans/vietnamese-600.css';
+
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-400.css';
+@import '@fontsource/ibm-plex-mono/latin-ext-500.css';
+@import '@fontsource/ibm-plex-mono/vietnamese-400.css';
+@import '@fontsource/ibm-plex-mono/vietnamese-500.css';
+
+@import '@fontsource-variable/newsreader/wght.css';
+@import '@fontsource-variable/newsreader/wght-italic.css';
+
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+/*
+| Surfaces and status
+|
+| Two modes, both designed rather than inverted:
+|
+|   daylight  the console's register room, and the field app in direct sun, where
+|             a bright screen on a light ground beats a dark one because a phone
+|             cannot out-emit the sun.
+|   dusk      the field app in low light and on battery, where a dark ground on
+|             OLED costs less power.
+|
+| Every status colour exists in both, same hue and same meaning, tuned so it stays
+| legible on the surface behind it. Values are measured, not guessed: dusk hits
+| WCAG AAA on the primary surface, daylight hits AA on the raised surface.
+*/
+:root,
+[data-mode='daylight'] {
+    --gv-surface: #f7f6f3;
+    --gv-surface-raised: #edebe6;
+    --gv-surface-sunken: #e2dfd8;
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --gv-text: #0e1e2e;
+    --gv-text-muted: #43535f;
+    --gv-text-faint: #6b7a85;
+    --gv-text-inverse: #f7f6f3;
+
+    --gv-rule: #d3cfc6;
+    --gv-rule-strong: #b4aea2;
+
+    /* Gold is the only accent. It means verification, never decoration. */
+    --gv-gold: #7e642e;
+    --gv-green: #2a6555;
+    --gv-amber: #9a5913;
+    --gv-alert: #8f2721;
+    --gv-graphite: #54646f;
+
+    /* Text that sits on a filled status block. */
+    --gv-on-accent: #f7f6f3;
+
+    --gv-shadow-sheet: 0 -2px 24px rgb(14 30 46 / 0.12);
+}
+
+[data-mode='dusk'] {
+    --gv-surface: #0e1e2e;
+    --gv-surface-raised: #16293b;
+    --gv-surface-sunken: #091624;
+
+    --gv-text: #f2f1ed;
+    --gv-text-muted: #a2b0bb;
+    --gv-text-faint: #7e8c99;
+    --gv-text-inverse: #0e1e2e;
+
+    --gv-rule: #25394b;
+    --gv-rule-strong: #385064;
+
+    --gv-gold: #d0ae63;
+    --gv-green: #5cc0a4;
+    --gv-amber: #ee9c45;
+    --gv-alert: #f2938c;
+    --gv-graphite: #a2b0bb;
+
+    --gv-on-accent: #0e1e2e;
+
+    --gv-shadow-sheet: 0 -2px 24px rgb(0 0 0 / 0.5);
+}
+
+/*
+| Tokens
+|
+| "inline" so the utilities resolve the custom property at use time rather than
+| baking the value in. That is what lets a single class work in both modes.
+*/
+@theme inline {
+    --color-surface: var(--gv-surface);
+    --color-raised: var(--gv-surface-raised);
+    --color-sunken: var(--gv-surface-sunken);
+
+    --color-ink: var(--gv-text);
+    --color-muted: var(--gv-text-muted);
+    --color-faint: var(--gv-text-faint);
+    --color-inverse: var(--gv-text-inverse);
+
+    --color-rule: var(--gv-rule);
+    --color-rule-strong: var(--gv-rule-strong);
+
+    --color-gold: var(--gv-gold);
+    --color-green: var(--gv-green);
+    --color-amber: var(--gv-amber);
+    --color-alert: var(--gv-alert);
+    --color-graphite: var(--gv-graphite);
+    --color-on-accent: var(--gv-on-accent);
+
+    --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Display sizes carry the optical size axis, so they are set per step. */
+    --text-display-l: 2.125rem;
+    --text-display-l--line-height: 1.05;
+    --text-display-l--letter-spacing: -0.015em;
+    --text-display-m: 1.625rem;
+    --text-display-m--line-height: 1.15;
+    --text-display-m--letter-spacing: -0.01em;
+    --text-display-s: 1.25rem;
+    --text-display-s--line-height: 1.25;
+
+    --text-body: 0.9375rem;
+    --text-body--line-height: 1.6;
+    --text-ui: 0.875rem;
+    --text-ui--line-height: 1.45;
+    --text-table: 0.8125rem;
+    --text-table--line-height: 1.4;
+    --text-label: 0.6875rem;
+    --text-label--line-height: 1.3;
+    --text-label--letter-spacing: 0.12em;
+    --text-mono: 0.8125rem;
+    --text-mono--line-height: 1.5;
+
+    /* Touch targets. Field values are floors, not suggestions. */
+    --spacing-touch: 2.75rem; /* 44px, absolute minimum */
+    --spacing-touch-lg: 3rem; /* 48px, anything destructive */
+    --spacing-touch-xl: 3.25rem; /* 52px, primary field action */
+
+    --radius-sheet: 0.75rem;
+}
+
+@layer base {
+    html {
+        /* Coordinates, accuracies, counts and timestamps must align in columns.
+           A proportional figure in a coordinate column is a defect, so the safe
+           behaviour is the default rather than something opted into. */
+        font-variant-numeric: tabular-nums;
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--color-surface);
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        font-size: var(--text-body);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Keyboard operation is a requirement of the console, not a nicety. */
+    :focus-visible {
+        outline: 2px solid var(--color-gold);
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+
+    /* Prose measure. Dense tables set their own. */
+    p {
+        max-width: 68ch;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+}
+
+@utility numeric-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'zero' 1;
+}
+
+/*
+| Motion
+|
+| Only where it explains something. The trace draws itself along its own
+| timestamps so a supervisor watches the officer's day and sees the pauses.
+| pathLength is normalised to 1 on the element, so no layout measurement is
+| needed and the animation is identical at every size.
+*/
+@keyframes gv-trace-draw {
+    from {
+        stroke-dashoffset: 1;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.gv-trace-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: gv-trace-draw 2.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }

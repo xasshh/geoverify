@@ -135,3 +135,34 @@ jobs:
           DB_USERNAME: geoverify
           DB_PASSWORD: secret
           REDIS_HOST: 127.0.0.1
+
+      # The design system gate, and from M5 the offline capture run. Only on one
+      # PHP version: this exercises the browser, not the runtime.
+      - name: Install Playwright browsers
+        if: matrix.php == '8.3'
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        if: matrix.php == '8.3'
+        run: |
+          php artisan serve --port=8123 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8123/design && break
+            sleep 1
+          done
+          npx playwright test
+        env:
+          APP_ENV: local
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: geoverify_testing
+          DB_USERNAME: geoverify
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1
+
+      - name: Upload design gallery screenshots
+        if: matrix.php == '8.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-gallery
+          path: tests/Browser/screenshots/
+          if-no-files-found: warn
