@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+
+    treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # Pest binds test closures to Tests\TestCase at runtime. PHPStan cannot follow
+        # that binding, so every $this->get(), $this->post() and similar call inside a
+        # test closure reads as undefined. The binding is configured in tests/Pest.php.
+        -
+            identifier: method.notFound
+            path: tests/*
+            message: '#Call to an undefined method PHPUnit\\Framework\\TestCase::#'

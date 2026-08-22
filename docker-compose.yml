@@ -1,0 +1,84 @@
+# GeoVerify local stack.
+#
+# One command brings up the database (PostGIS + h3-pg), Redis and S3-compatible
+# object storage. See docs/setup.md for running against a native PostgreSQL
+# instead, which is what this machine currently does.
+name: geoverify
+
+services:
+  postgres:
+    build:
+      context: ./docker/postgres
+      args:
+        POSTGRES_VERSION: "17"
+        POSTGIS_VERSION: "3.5"
+    environment:
+      POSTGRES_DB: geoverify
+      POSTGRES_TEST_DB: geoverify_testing
+      POSTGRES_USER: geoverify
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Checks that the grid generator's own dependency answers, not merely that
+      # the server accepts connections.
+      test:
+        - CMD-SHELL
+        - >-
+          psql -U geoverify -d geoverify -tAc
+          "select count(*) from h3_polygon_to_cells(st_geomfromtext('POLYGON((7.44 9.03,7.50 9.03,7.50 9.08,7.44 9.08,7.44 9.03))',4326),9)"
+          | grep -q '^[1-9]'
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":8900"]
+    environment:
+      MINIO_ROOT_USER: geoverify
+      MINIO_ROOT_PASSWORD: password
+    ports:
+      - "${FORWARD_MINIO_PORT:-9000}:9000"
+      - "${FORWARD_MINIO_CONSOLE_PORT:-8900}:8900"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # Creates the private bucket photographs are written to. Runs once and exits.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >-
+      /bin/sh -c "
+      mc alias set local http://minio:9000 geoverify password &&
+      mc mb --ignore-existing local/geoverify-media &&
+      mc anonymous set none local/geoverify-media
+      "
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

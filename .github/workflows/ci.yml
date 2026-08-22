@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so a CI run is reproducible. Must match docker/postgres/Dockerfile.
+  H3PG_COMMIT: 04227cb62a7338eb2a655fff875b125de2f043f4
+
+jobs:
+  database-image:
+    name: Database image builds with h3-pg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # This machine has no Docker runtime, so the compose stack gets its first
+      # real exercise here. If the image stops building, the team finds out on CI
+      # rather than on someone's first day.
+      - name: Build the database image
+        run: docker build -t geoverify-postgres ./docker/postgres
+
+      - name: Prove the grid generator works inside the image
+        run: |
+          docker run -d --name gv-db \
+            -e POSTGRES_DB=geoverify \
+            -e POSTGRES_USER=geoverify \
+            -e POSTGRES_PASSWORD=secret \
+            -p 5432:5432 geoverify-postgres
+          for i in $(seq 1 60); do
+            docker exec gv-db pg_isready -U geoverify -d geoverify && break
+            sleep 2
+          done
+          docker exec gv-db psql -U geoverify -d geoverify -v ON_ERROR_STOP=1 -tAc "
+            select count(*) from h3_polygon_to_cells(
+              st_geomfromtext('POLYGON((7.44 9.03,7.50 9.03,7.50 9.08,7.44 9.08,7.44 9.03))',4326), 9
+            )" | tee /tmp/cells
+          test "$(cat /tmp/cells)" = "385"
+
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 8.3 is the brief's target. 8.5 is what the current dev machine runs, so
+        # both are held green rather than discovering the gap later.
+        php: ['8.3', '8.5']
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the database
+        run: |
+          docker build -t geoverify-postgres ./docker/postgres
+          docker run -d --name gv-db \
+            -e POSTGRES_DB=geoverify \
+            -e POSTGRES_TEST_DB=geoverify_testing \
+            -e POSTGRES_USER=geoverify \
+            -e POSTGRES_PASSWORD=secret \
+            -p 5432:5432 geoverify-postgres
+          for i in $(seq 1 60); do
+            docker exec gv-db pg_isready -U geoverify -d geoverify_testing && break
+            sleep 2
+          done
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_pgsql, pgsql, redis, gd, zip, intl, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: geoverify_testing
+          DB_USERNAME: geoverify
+          DB_PASSWORD: secret
+
+      - name: Formatting (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis (Larastan level 6)
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npx eslint .
+
+      - name: Tests
+        run: php artisan test
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: geoverify_testing
+          DB_USERNAME: geoverify
+          DB_PASSWORD: secret
+          REDIS_HOST: 127.0.0.1

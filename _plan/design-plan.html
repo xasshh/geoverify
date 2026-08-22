@@ -1,0 +1,863 @@
+<meta charset="utf-8">
+<title>GeoVerify Field Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&display=swap">
+
+<style>
+/* ─── tokens: light / "paper" is primary (console register-room) ───────────── */
+:root{
+  --paper:#F7F6F3; --paper-2:#EDEBE6; --paper-3:#E2DFD8;
+  --ink:#0E1E2E;  --ink-2:#16293B;
+  --text:#0E1E2E; --text-2:#43535F; --text-3:#6B7A85;
+  --rule:#D3CFC6; --rule-strong:#B4AEA2;
+  --gold:#7E642E; --gold-bright:#B08D42;
+  --green:#2A6555; --amber:#9A5913; --alert:#8F2721; --graphite:#54646F;
+  --surface:var(--paper); --surface-2:var(--paper-2);
+  --shadow:0 1px 0 rgba(14,30,46,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1E2E; --paper-2:#16293B; --paper-3:#1E3448;
+    --text:#F2F1ED; --text-2:#A2B0BB; --text-3:#7E8C99;
+    --rule:#25394B; --rule-strong:#38506444;
+    --gold:#D0AE63; --gold-bright:#D0AE63;
+    --green:#5CC0A4; --amber:#EE9C45; --alert:#F2938C; --graphite:#A2B0BB;
+    --surface:var(--paper); --surface-2:var(--paper-2);
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1E2E; --paper-2:#16293B; --paper-3:#1E3448;
+  --text:#F2F1ED; --text-2:#A2B0BB; --text-3:#7E8C99;
+  --rule:#25394B; --rule-strong:#385064;
+  --gold:#D0AE63; --gold-bright:#D0AE63;
+  --green:#5CC0A4; --amber:#EE9C45; --alert:#F2938C; --graphite:#A2B0BB;
+  --surface:var(--paper); --surface-2:var(--paper-2);
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--surface); color:var(--text);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6; font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px 96px}
+
+/* ─── survey drawing title block ───────────────────────────────────────────── */
+.titleblock{border:1.5px solid var(--text);margin:36px 0 8px;background:var(--surface)}
+.tb-main{padding:26px 24px 22px;border-bottom:1px solid var(--text)}
+.tb-eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 12px}
+.tb-title{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:clamp(32px,5.4vw,52px);line-height:1.02;letter-spacing:-.015em;margin:0;text-wrap:balance}
+.tb-sub{font-family:Newsreader,Georgia,serif;font-style:italic;font-size:clamp(16px,2.2vw,20px);color:var(--text-2);margin:10px 0 0;max-width:56ch}
+.tb-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.tb-cell{padding:11px 14px;border-right:1px solid var(--rule)}
+.tb-cell:last-child{border-right:0}
+.tb-k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:3px}
+.tb-v{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:500;color:var(--text)}
+@media(max-width:720px){.tb-grid{grid-template-columns:repeat(2,1fr)}
+  .tb-cell{border-bottom:1px solid var(--rule)}
+  .tb-cell:nth-child(2n){border-right:0}}
+
+/* ─── sections ─────────────────────────────────────────────────────────────── */
+section{margin:64px 0 0;scroll-margin-top:20px}
+.sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1.5px solid var(--text);padding-bottom:9px;margin-bottom:26px;flex-wrap:wrap}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.04em}
+.sec-title{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:clamp(22px,3vw,30px);line-height:1.15;margin:0;letter-spacing:-.01em}
+.sec-ref{margin-left:auto;font-size:10.5px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+h3{font-family:"IBM Plex Sans",sans-serif;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin:34px 0 12px}
+p{margin:0 0 14px;max-width:72ch;color:var(--text-2)}
+p strong{color:var(--text);font-weight:600}
+p.lead{font-size:16.5px;color:var(--text)}
+a{color:var(--gold);text-decoration-thickness:1px;text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px}
+
+/* ─── decision strip ───────────────────────────────────────────────────────── */
+.decisions{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:0;border:1px solid var(--rule-strong)}
+.dec{padding:15px 17px;border-right:1px solid var(--rule)}
+.dec:last-child{border-right:0}
+.dec-k{font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.dec-v{font-size:14.5px;font-weight:600;color:var(--text);line-height:1.35}
+.dec-n{font-size:12.5px;color:var(--text-3);margin-top:5px;line-height:1.45}
+@media(max-width:760px){.dec{border-right:0;border-bottom:1px solid var(--rule)}.dec:last-child{border-bottom:0}}
+
+/* ─── palette ──────────────────────────────────────────────────────────────── */
+.pal{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:8px}
+@media(max-width:820px){.pal{grid-template-columns:1fr}}
+.pal-col{border:1px solid var(--rule-strong)}
+.pal-hd{padding:10px 14px;border-bottom:1px solid var(--rule-strong);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+.pal-hd .m{color:var(--text-3);letter-spacing:0;text-transform:none;font-weight:400;font-size:11.5px;display:block;margin-top:3px;font-family:"IBM Plex Mono",monospace}
+.sw{display:flex;align-items:center;gap:13px;padding:11px 14px;border-bottom:1px solid var(--rule)}
+.sw:last-child{border-bottom:0}
+.chip{width:52px;height:38px;flex:none;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600}
+.sw-b{flex:1;min-width:0}
+.sw-n{font-size:13.5px;font-weight:600;color:var(--text)}
+.sw-m{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--text-3)}
+.sw-r{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:11.5px;flex:none}
+.ratio{font-weight:600;color:var(--text)}
+.aaa{color:var(--green);font-size:9.5px;font-weight:600;letter-spacing:.08em}
+.aa{color:var(--text-3);font-size:9.5px;font-weight:600;letter-spacing:.08em}
+
+.fail-table{width:100%;border-collapse:collapse;margin:12px 0 4px;font-size:13px}
+.fail-table th{text-align:left;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);padding:7px 10px;border-bottom:1px solid var(--rule-strong)}
+.fail-table td{padding:7px 10px;border-bottom:1px solid var(--rule);font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--text-2)}
+.fail-table td.n{color:var(--text);font-weight:600}
+.bad{color:var(--alert);font-weight:600}
+.good{color:var(--green);font-weight:600}
+
+/* ─── type specimen ────────────────────────────────────────────────────────── */
+.spec{border:1px solid var(--rule-strong);margin-bottom:18px}
+.spec-hd{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:9px 15px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.spec-n{font-size:12.5px;font-weight:600;letter-spacing:.04em}
+.spec-r{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+.spec-b{padding:18px 15px}
+.sp-display{font-family:Newsreader,Georgia,serif;font-weight:600;font-size:clamp(28px,4.4vw,42px);line-height:1.08;letter-spacing:-.015em;color:var(--text);margin:0}
+.sp-italic{font-family:Newsreader,Georgia,serif;font-style:italic;font-weight:400;font-size:19px;color:var(--text-2);margin:9px 0 0}
+.sp-body{font-size:15px;color:var(--text-2);margin:0;max-width:62ch}
+.sp-mono{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--text);margin:0;line-height:1.8}
+.scale-row{display:flex;align-items:baseline;gap:14px;padding:7px 0;border-bottom:1px dotted var(--rule)}
+.scale-row:last-child{border-bottom:0}
+.scale-k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--text-3);width:120px;flex:none}
+.scale-s{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--text-3);margin-left:auto;flex:none}
+
+/* ─── wireframes ───────────────────────────────────────────────────────────── */
+.wf{border:1px solid var(--rule-strong);margin-bottom:22px;background:var(--surface-2)}
+.wf-hd{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:10px 15px;border-bottom:1px solid var(--rule-strong);background:var(--surface);flex-wrap:wrap}
+.wf-n{font-size:13px;font-weight:600}
+.wf-m{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--text-3)}
+.wf pre{margin:0;padding:18px 15px;overflow-x:auto;font-family:"IBM Plex Mono",monospace;font-size:11.5px;line-height:1.42;color:var(--text);white-space:pre}
+.wf-note{padding:11px 15px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--text-2);background:var(--surface)}
+.wf-note b{color:var(--text);font-weight:600}
+
+/* ─── signature / presence mark ────────────────────────────────────────────── */
+.mark-lab{border:1px solid var(--rule-strong);padding:24px;background:var(--surface-2);margin-bottom:20px}
+.mark-scales{display:flex;align-items:flex-end;gap:34px;flex-wrap:wrap;justify-content:center}
+.mark-item{text-align:center}
+.mark-cap{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--text-3);margin-top:8px}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--rule-strong)}
+@media(max-width:640px){.compare{grid-template-columns:1fr}}
+.cmp{padding:20px;border-right:1px solid var(--rule-strong)}
+.cmp:last-child{border-right:0}
+.cmp-hd{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.cmp-ok{color:var(--green)} .cmp-no{color:var(--alert)}
+.cmp-body{display:flex;gap:16px;align-items:center}
+.cmp-txt{font-size:12.5px;color:var(--text-2);line-height:1.5}
+.mono-i{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--text)}
+
+/* ─── status pills (shape + label, never colour alone) ─────────────────────── */
+.pills{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 4px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 9px;border:1px solid;border-radius:2px;font-size:11.5px;font-weight:600;letter-spacing:.03em}
+.pill svg{flex:none}
+
+/* ─── build plan ───────────────────────────────────────────────────────────── */
+.ms{border-left:2px solid var(--rule-strong);padding-left:0;margin-top:6px}
+.ms-item{position:relative;padding:0 0 22px 26px;border-left:2px solid transparent;margin-left:-2px}
+.ms-item::before{content:"";position:absolute;left:-6px;top:7px;width:10px;height:10px;background:var(--surface);border:2px solid var(--gold);border-radius:50%}
+.ms-hd{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+.ms-k{font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;color:var(--gold)}
+.ms-t{font-size:15px;font-weight:600;color:var(--text)}
+.ms-gate{margin-left:auto;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.ms-d{font-size:13.5px;color:var(--text-2);margin:5px 0 0;max-width:74ch}
+.ms-out{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--text-3);margin-top:6px;padding-left:11px;border-left:1px solid var(--rule)}
+
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.tbl th{text-align:left;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);padding:8px 11px;border-bottom:1.5px solid var(--text);position:sticky;top:0;background:var(--surface)}
+.tbl td{padding:8px 11px;border-bottom:1px solid var(--rule);color:var(--text-2);vertical-align:top}
+.tbl td.mono{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--text);white-space:nowrap}
+.tbl tr:hover td{background:var(--surface-2)}
+.scroll{overflow-x:auto;border:1px solid var(--rule-strong)}
+
+/* ─── critique / flags ─────────────────────────────────────────────────────── */
+.crit{border:1px solid var(--rule-strong);margin-bottom:14px}
+.crit-hd{padding:11px 15px;border-bottom:1px solid var(--rule);font-size:13px;font-weight:600;display:flex;gap:10px;align-items:baseline}
+.crit-tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--amber);flex:none;letter-spacing:.06em}
+.crit-b{padding:13px 15px;font-size:13.5px;color:var(--text-2)}
+.crit-b .chg{display:block;margin-top:9px;padding-top:9px;border-top:1px dotted var(--rule);color:var(--text)}
+.crit-b .chg b{color:var(--green);font-weight:600}
+
+.flag{border-left:3px solid var(--amber);background:var(--surface-2);padding:13px 16px;margin-bottom:11px}
+.flag-t{font-size:13.5px;font-weight:600;color:var(--text);margin-bottom:4px}
+.flag-b{font-size:13px;color:var(--text-2);margin:0}
+.flag.stop{border-left-color:var(--alert)}
+
+ul.tight{margin:4px 0 14px;padding-left:19px;color:var(--text-2);font-size:13.5px}
+ul.tight li{margin-bottom:5px}
+ul.tight code,p code,.crit-b code,.flag-b code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:2px;color:var(--text)}
+
+footer{margin-top:72px;padding-top:18px;border-top:1.5px solid var(--text);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--text-3)}
+
+@media (prefers-reduced-motion:no-preference){
+  .draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw 2.2s cubic-bezier(.4,0,.2,1) forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+}
+</style>
+
+<div class="wrap">
+
+<div class="titleblock">
+  <div class="tb-main">
+    <p class="tb-eyebrow">Design plan &amp; build plan · for approval</p>
+    <h1 class="tb-title">GeoVerify Field Enumeration Platform</h1>
+    <p class="tb-sub">An instrument for producing GPS-verified, identity-validated economic records, and the evidence that an officer was standing there.</p>
+  </div>
+  <div class="tb-grid">
+    <div class="tb-cell"><span class="tb-k">Phase</span><span class="tb-v">1 of 1 in scope</span></div>
+    <div class="tb-cell"><span class="tb-k">Pilot geography</span><span class="tb-v">FCT · AMAC</span></div>
+    <div class="tb-cell"><span class="tb-k">Grid</span><span class="tb-v">H3 res 9</span></div>
+    <div class="tb-cell"><span class="tb-k">Status</span><span class="tb-v" style="color:var(--gold)">Awaiting sign-off</span></div>
+  </div>
+</div>
+
+<p class="lead" style="margin-top:26px">This is the design plan first and the build plan second, as asked. Nothing is built yet. Two things in it contradict the brief on purpose (a palette correction and a schema addition), and both are argued below rather than slipped in.</p>
+
+<!-- ══ 0 ══ -->
+<section id="decisions">
+  <div class="sec-head">
+    <span class="sec-num">00</span>
+    <h2 class="sec-title">Decisions taken</h2>
+    <span class="sec-ref">from your four answers</span>
+  </div>
+  <div class="decisions">
+    <div class="dec">
+      <div class="dec-k">Spatial engine</div>
+      <div class="dec-v">h3-pg built locally</div>
+      <div class="dec-n">PostGIS 3.6 + Redis already running natively. H3 stays in Postgres, never in PHP.</div>
+    </div>
+    <div class="dec">
+      <div class="dec-k">Kiosks &amp; stalls</div>
+      <div class="dec-v">Structures, non-building type</div>
+      <div class="dec-n"><code>footprint</code> null, centroid from GPS. Enterprise→structure stays non-nullable.</div>
+    </div>
+    <div class="dec">
+      <div class="dec-k">Sector taxonomy</div>
+      <div class="dec-v">ISIC Rev 4</div>
+      <div class="dec-n">Officer searches Nigerian trade names; ISIC class is stored underneath.</div>
+    </div>
+    <div class="dec">
+      <div class="dec-k">Pilot LGA</div>
+      <div class="dec-v">Abuja Municipal</div>
+      <div class="dec-n">Real boundary, real footprints, real grid at M2.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 1 ══ -->
+<section id="palette">
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2 class="sec-title">Palette</h2>
+    <span class="sec-ref">§8 · measured, not asserted</span>
+  </div>
+
+  <p>I measured your tokens before adopting them. <strong>Five of them fail WCAG AA</strong>, and they fail in the worst possible place: on the field app's dark surface, for the status colours that matter most when an officer is standing in the sun.</p>
+
+  <div class="scroll">
+    <table class="fail-table">
+      <thead><tr><th>Token</th><th>On surface</th><th>Ratio</th><th>Verdict</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td class="n">alert #9E2B25</td><td>ink #0E1E2E</td><td class="bad">2.27</td><td class="bad">FAIL</td><td>Rejection state unreadable in the field</td></tr>
+        <tr><td class="n">green #2F6F5E</td><td>ink #0E1E2E</td><td class="bad">2.86</td><td class="bad">FAIL</td><td>"Saved / confirmed" unreadable in the field</td></tr>
+        <tr><td class="n">graphite #5A6B78</td><td>ink-2 #16293B</td><td class="bad">2.69</td><td class="bad">FAIL</td><td>All secondary text on raised dark panels</td></tr>
+        <tr><td class="n">gold #B08D42</td><td>paper #F7F6F3</td><td class="bad">2.89</td><td class="bad">FAIL</td><td>THE accent, unusable as text in the console</td></tr>
+        <tr><td class="n">amber #C2701A</td><td>paper #F7F6F3</td><td class="bad">3.45</td><td class="bad">large only</td><td>"Needs review" fails at table size</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="margin-top:16px"><strong>The fix keeps your rule intact.</strong> "Status colours mean exactly one thing each, everywhere, forever" survives. What changes is that each meaning gets <em>two tuned values</em>, one per surface, same hue, same meaning. Amber is amber whether it sits on paper or on ink; it is simply legible on both. Every value below is measured, and the stricter of the two surfaces is the one quoted.</p>
+
+  <div class="pal">
+    <div class="pal-col">
+      <div class="pal-hd">Field app · dark surface<span class="m">on ink #0E1E2E, target AAA</span></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#D0AE63;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">gold</div><div class="sw-m">#D0AE63</div></div><div class="sw-r"><span class="ratio">7.97</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#5CC0A4;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">green</div><div class="sw-m">#5CC0A4</div></div><div class="sw-r"><span class="ratio">7.66</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#EE9C45;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">amber</div><div class="sw-m">#EE9C45</div></div><div class="sw-r"><span class="ratio">7.62</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#F2938C;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">alert</div><div class="sw-m">#F2938C</div></div><div class="sw-r"><span class="ratio">7.50</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#A2B0BB;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">graphite</div><div class="sw-m">#A2B0BB</div></div><div class="sw-r"><span class="ratio">7.61</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1E2E;color:#F2F1ED;border:1px solid #25394B">Aa</div><div class="sw-b"><div class="sw-n">text on ink</div><div class="sw-m">#F2F1ED</div></div><div class="sw-r"><span class="ratio">15.1</span><br><span class="aaa">AAA</span></div></div>
+    </div>
+    <div class="pal-col">
+      <div class="pal-hd">Console · light surface<span class="m">on paper-2 #EDEBE6, target AA</span></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#7E642E;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">gold</div><div class="sw-m">#7E642E</div></div><div class="sw-r"><span class="ratio">4.70</span><br><span class="aa">AA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#2A6555;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">green</div><div class="sw-m">#2A6555</div></div><div class="sw-r"><span class="ratio">5.70</span><br><span class="aa">AA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#9A5913;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">amber</div><div class="sw-m">#9A5913</div></div><div class="sw-r"><span class="ratio">4.62</span><br><span class="aa">AA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#8F2721;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">alert</div><div class="sw-m">#8F2721</div></div><div class="sw-r"><span class="ratio">7.11</span><br><span class="aaa">AAA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#54646F;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">graphite</div><div class="sw-m">#54646F</div></div><div class="sw-r"><span class="ratio">5.14</span><br><span class="aa">AA</span></div></div>
+      <div class="sw"><div class="chip" style="background:#F7F6F3;color:#0E1E2E;border:1px solid #D3CFC6">Aa</div><div class="sw-b"><div class="sw-n">ink on paper</div><div class="sw-m">#0E1E2E</div></div><div class="sw-r"><span class="ratio">14.2</span><br><span class="aaa">AAA</span></div></div>
+    </div>
+  </div>
+
+  <h3>What each colour is allowed to mean</h3>
+  <p>Gold is the only accent, and it means <strong>verification and attention</strong>: the active cell, the confirmed identity, the capture point. It is never used to make a panel look less flat. The other four are states, and carry a shape and a word as well as a hue, so the console is readable at a glance and to a colourblind supervisor:</p>
+
+  <div class="pills">
+    <span class="pill" style="color:var(--green);border-color:var(--green)"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="currentColor"/></svg>Accepted</span>
+    <span class="pill" style="color:var(--amber);border-color:var(--amber)"><svg width="10" height="9" viewBox="0 0 11 10" aria-hidden="true"><path d="M5.5 0 11 10H0z" fill="currentColor"/></svg>Needs review</span>
+    <span class="pill" style="color:var(--alert);border-color:var(--alert)"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 0 10 5 5 10 0 5z" fill="currentColor"/></svg>Rejected</span>
+    <span class="pill" style="color:var(--gold);border-color:var(--gold)"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="8" height="8" fill="currentColor"/></svg>In progress</span>
+    <span class="pill" style="color:var(--graphite);border-color:var(--graphite)"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Unassigned</span>
+  </div>
+  <p style="font-size:13px;margin-top:10px">Circle, triangle, diamond, square, ring, each fixed to meaning, never reused. A supervisor learns five shapes once.</p>
+</section>
+
+<!-- ══ 2 ══ -->
+<section id="type">
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2 class="sec-title">Typography</h2>
+    <span class="sec-ref">§8 · three faces</span>
+  </div>
+
+  <div class="spec">
+    <div class="spec-hd"><span class="spec-n">Newsreader</span><span class="spec-r">Display · 500 / 600 · italic 400</span></div>
+    <div class="spec-b">
+      <p class="sp-display">381 of 412 structures</p>
+      <p class="sp-italic">Abuja Municipal · ward boundary resolved server-side</p>
+    </div>
+  </div>
+
+  <div class="spec">
+    <div class="spec-hd"><span class="spec-n">IBM Plex Sans</span><span class="spec-r">UI &amp; body · 400 / 500 / 600 · tabular</span></div>
+    <div class="spec-b">
+      <p class="sp-body">A field officer with no prior exposure to the system is handed a phone and a cell assignment, works a full day in an area with no reliable network, and every record arrives intact in the supervisor queue.</p>
+    </div>
+  </div>
+
+  <div class="spec">
+    <div class="spec-hd"><span class="spec-n">IBM Plex Mono</span><span class="spec-r">Machine values · 400 / 500</span></div>
+    <div class="spec-b">
+      <p class="sp-mono">9.05785, 7.49508  ±4.2 m<br>8928308280fffff  res 9<br>RC 1234567 · NIN ••••4821<br>2026-08-22T14:02:11+01:00</p>
+    </div>
+  </div>
+
+  <h3>Why this pairing and not the obvious one</h3>
+  <p>The obvious move for a credibility product is a neutral grotesque everywhere: Inter, or a government-issue face like Public Sans. It is safe, and it produces precisely the anonymous surface that got the last build rejected. The other obvious move, right now, is Instrument Serif over a warm cream ground; it is so current that an evaluator has seen it on forty landing pages this year, which reads as generated rather than designed.</p>
+  <p><strong>Newsreader is a Scotch Roman</strong>: the lineage of printed gazettes, land registers and survey reports, which is exactly what this product is. It has sharp bracketed serifs and a genuinely idiosyncratic italic, it holds at 42px on an evidence-pack cover and at 15px in a subheading, and it is open-licensed and self-hostable, so no field device ever waits on a font CDN. <strong>IBM Plex Sans</strong> was drawn for a company that makes instruments; it has true tabular figures, a real 450/500 weight range for dense tables, and it pairs with <strong>IBM Plex Mono</strong> as one designed system, so coordinates and H3 indices look like the machine values they are without a second family fighting the first.</p>
+
+  <h3>Scale &amp; rules</h3>
+  <div class="spec"><div class="spec-b" style="padding-top:8px;padding-bottom:8px">
+    <div class="scale-row"><span class="scale-k">display-l</span><span style="font-family:Newsreader,serif;font-weight:600;font-size:34px">Evidence pack</span><span class="scale-s">34 / 1.05</span></div>
+    <div class="scale-row"><span class="scale-k">display-m</span><span style="font-family:Newsreader,serif;font-weight:600;font-size:26px">Review queue</span><span class="scale-s">26 / 1.15</span></div>
+    <div class="scale-row"><span class="scale-k">display-s</span><span style="font-family:Newsreader,serif;font-weight:600;font-size:20px">Cell 8928308280fffff</span><span class="scale-s">20 / 1.25</span></div>
+    <div class="scale-row"><span class="scale-k">body</span><span style="font-size:15px">Officer walked 2.4 km in this cell</span><span class="scale-s">15 / 1.6</span></div>
+    <div class="scale-row"><span class="scale-k">ui</span><span style="font-size:14px">Save capture</span><span class="scale-s">14 / 1.45</span></div>
+    <div class="scale-row"><span class="scale-k">table</span><span style="font-size:13px">Mama Ngozi Provisions</span><span class="scale-s">13 / 1.4</span></div>
+    <div class="scale-row"><span class="scale-k">label</span><span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Occupancy status</span><span class="scale-s">11 / .12em</span></div>
+    <div class="scale-row"><span class="scale-k">mono</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px">±4.2 m</span><span class="scale-s">13 / 1.5</span></div>
+  </div></div>
+  <ul class="tight">
+    <li><code>font-variant-numeric: tabular-nums</code> is set on <code>body</code>, not opted into per component. A proportional figure in a coordinate column is a defect, so the default has to be the safe one.</li>
+    <li>The display serif is <strong>rationed in the field app</strong>: screen titles and key figures only. High-contrast serifs thin out in direct sunlight; Plex Sans at 500/600 carries the field UI.</li>
+    <li>Fonts are self-hosted and precached by the service worker. A field device on 2G never blocks on type.</li>
+  </ul>
+</section>
+
+<!-- ══ 3 ══ -->
+<section id="layout">
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2 class="sec-title">Layout</h2>
+    <span class="sec-ref">§8 · three screens</span>
+  </div>
+
+  <div class="wf">
+    <div class="wf-hd"><span class="wf-n">A · Field capture</span><span class="wf-m">360-430px · one-handed</span></div>
+<pre>┌─────────────────────────────────────┐
+│ [cell] 8928308280fffff       ! 2    │
+│ (o) 47 queued · synced 14:02        │
+├─────────────────────────────────────┤
+│                                     │
+│        [ ]  [ ]   . unvisited       │
+│     [#] [ ] [.]   # captured        │
+│        [.] [x]    x not a building  │
+│                                     │
+│           (o) accuracy radius       │
+│          /\   today&#x27;s trace         │
+│         /                           │
+│                                     │
+│                       ┌─────────┐   │
+│                       │ recentre│   │
+│                       └─────────┘   │
+├─────────────────────────────────────┤
+│ 381 / 412                  92.5%    │
+│ ███████████████████████████░░░      │
+├─────────────────────────────────────┤
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │     Capture this building   │    │
+│  └─────────────────────────────┘    │
+│  ┌───────────┐  ┌──────────────┐    │
+│  │ Add point │  │ Not a bldg   │    │
+│  └───────────┘  └──────────────┘    │
+└─────────────────────────────────────┘</pre>
+    <div class="wf-note"><b>Why this and not a map with a FAB.</b> The map is locked to the assigned cell, because this is a work list, not an explorer. Every footprint carries a visited state, so the officer's job is visibly finite and the denominator is on screen at all times. Leaving the cell is possible but explicit, and it is logged.</div>
+  </div>
+
+  <div class="wf">
+    <div class="wf-hd"><span class="wf-n">B · Structure detail sheet</span><span class="wf-m">the fourteen-shop case</span></div>
+<pre>┌─────────────────────────────────────┐
+│ ===                                 │
+│ Structure · draft                   │
+│ 9.05785, 7.49508          ±4.2 m    │
+├─────────────────────────────────────┤
+│ Type       [ Shophouse         v ]  │
+│ Floors     [ 2 ]     Units  [ 14 ]  │
+│ Condition  [ Sound             v ]  │
+│ Occupancy  [ Occupied          v ]  │
+├─────────────────────────────────────┤
+│ ENTERPRISES                  8 / 14 │
+│ ┌─────────────────────────────────┐ │
+│ │ G01  Mama Ngozi Provisions      │ │
+│ │      47.11 Retail · micro   done│ │
+│ ├─────────────────────────────────┤ │
+│ │ G02  Chidi POS                  │ │
+│ │      64.19 Financial · micro done││
+│ ├─────────────────────────────────┤ │
+│ │ G03  --                         │ │
+│ │      not captured           add+│ │
+│ └─────────────────────────────────┘ │
+│ v 6 more units                      │
+├─────────────────────────────────────┤
+│ PHOTOS                       2 of 3 │
+│ [ facade ] [ signage ] [    +    ]  │
+├─────────────────────────────────────┤
+│ PRIOR OBSERVATION · 2026-03-14      │
+│ Occupied · 12 units · 2 floors      │
+├─────────────────────────────────────┤
+│  ┌───────────────────────────────┐  │
+│  │         Save capture          │  │
+│  └───────────────────────────────┘  │
+│  Saved on device · syncs later      │
+└─────────────────────────────────────┘</pre>
+    <div class="wf-note"><b>The unit count drives the enterprise checklist.</b> Declaring 14 units creates 14 slots, so a half-enumerated building is visibly half-enumerated to both officer and supervisor. Prior observations sit below the form as read-only history, so the officer sees what changed since March without being able to edit the past.</div>
+  </div>
+
+  <div class="wf">
+    <div class="wf-hd"><span class="wf-n">C · Supervisor review</span><span class="wf-m">1440px · no scroll</span></div>
+<pre>┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ Review · 214 queued      &lt; prev  next &gt;      A. Bello      cell 8928308280fffff        │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ WAS THE OFFICER THERE?         │ IS IT THE RIGHT BUILDING?   │ IS THE RECORD SANE?     │
+│                                │                             │                         │
+│  ┌──────────────────────────┐  │  ┌────────┐  ┌───────────┐  │  Trading  Mama Ngozi    │
+│  │           .              │  │  │ facade │  │  signage  │  │  Sector   47.11 Retail  │
+│  │      \   .   (o) capture │  │  └────────┘  └───────────┘  │  Scale    micro         │
+│  │       \ /                │  │  ┌──────────┐               │  Staff    1-4           │
+│  │        v                 │  │  │ interior │  EXIF d 3.1 m │  Years    6             │
+│  └──────────────────────────┘  │  └──────────┘           ok  │  CAC   RC 1234567   ok  │
+│  14:02-14:09  ·  7 fixes       │                             │  NIN   ....4821     ok  │
+│  mean acc 4.2 m   max 9.1 m    │  footprint    inside    ok  │                         │
+│  implied speed 1.3 m/s    ok   │  device cam   verified  ok  │  ─────────────────────  │
+│                                │                             │  OFFICER HISTORY        │
+│  CONFIDENCE          72 ###.   │                             │  412 captures           │
+│  ! accuracy &gt; 5 m on 2 fixes   │                             │  return rate      3.1%  │
+│  ! capture interval uniform    │                             │  mean confidence    84  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ [ Accept ]    [ Return with reason v ]    [ Escalate ]           cmd+enter to accept   │
+└────────────────────────────────────────────────────────────────────────────────────────┘</pre>
+    <div class="wf-note"><b>The columns are the three questions, in the order a supervisor actually asks them.</b> Not "map / photos / form", but presence, then identification, then plausibility. Flags are pinned to the evidence that produced them rather than collected in a sidebar, because "accuracy &gt; 5 m" means nothing next to a photograph and everything next to the fix list. Officer history is present so a low score is judged against a person's record, not in isolation.</div>
+  </div>
+</section>
+
+<!-- ══ 4 ══ -->
+<section id="signature">
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2 class="sec-title">The signature: the Presence Mark</h2>
+    <span class="sec-ref">§8 · one idea</span>
+  </div>
+
+  <p class="lead">Every record in this system carries a small hexagon containing the officer's <strong>actual walking trace</strong> at the moment of capture, drawn from the <code>LineStringM</code>, with a gold dot at the capture point.</p>
+  <p>It is generated, never designed: same data, same mark, every time. No two are alike because no two walks are alike. It is the product's claim rendered as a shape: <em>someone was here, and this is the path they took to get here.</em></p>
+
+  <div class="mark-lab">
+    <div class="mark-scales" id="scales"></div>
+  </div>
+
+  <h3>It is not decoration. It is the anti-spoofing affordance</h3>
+  <p>§6 asks for "trace naturalness" as a flag: perfectly straight traces, zero jitter, identical repeating accuracy values. That check runs server-side and produces a number. The Presence Mark makes the same fact <strong>pre-attentive</strong>: a supervisor scanning a column of 200 marks finds the fabricated day without opening a single record.</p>
+
+  <div class="compare">
+    <div class="cmp">
+      <div class="cmp-hd cmp-ok">● Walked</div>
+      <div class="cmp-body">
+        <span id="mk-real"></span>
+        <div class="cmp-txt">Street-grid turns, dwell clusters at each capture, jitter between fixes.<br><span class="mono-i">confidence 88</span></div>
+      </div>
+    </div>
+    <div class="cmp">
+      <div class="cmp-hd cmp-no">◆ Fabricated</div>
+      <div class="cmp-body">
+        <span id="mk-fake"></span>
+        <div class="cmp-txt">Straight segments, uniform spacing, no dwell, no jitter.<br><span class="mono-i">confidence 21 · flagged</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Where it appears</h3>
+  <ul class="tight">
+    <li><strong>16px</strong>: a review-queue column. At this size it carries <em>density, not route</em>: a walked day reads as a dense figure, a fabricated one as a line. That is the only claim I'd make for it, and it is the one the column needs.</li>
+    <li><strong>40px</strong>: the record card and the officer's own capture list.</li>
+    <li><strong>240px</strong>: the review screen's left column, where it is the primary evidence.</li>
+    <li><strong>Full plate</strong>: the cover of the PDF evidence pack handed to a client's auditor.</li>
+  </ul>
+  <p>Motion, once, where it explains: on the review screen the trace draws itself along its own timestamps, so the supervisor watches the officer's day at 40× and sees the pauses. Nowhere else does it animate, and it respects <code>prefers-reduced-motion</code>.</p>
+</section>
+
+<!-- ══ 5 ══ -->
+<section id="critique">
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2 class="sec-title">Self-critique</h2>
+    <span class="sec-ref">§8 · what I'd have produced for anyone</span>
+  </div>
+
+  <div class="crit">
+    <div class="crit-hd"><span class="crit-tag">01</span><span>Your palette sits inside the generated-design cluster, and I nearly didn't say so</span></div>
+    <div class="crit-b">Warm off-white ground, serif display, gold-bronze accent. That is close to the single most common look produced by design tools right now. The brief's own tokens land there. It would have been easy to accept them silently because they came from you.
+      <span class="chg"><b>Kept, with the reason made explicit.</b> What separates this from the cluster is not the hue, it is that <b>colour is never decorative here</b>: gold means verification, and a panel that looks flat stays flat. Plus the density, the tabular discipline, and the dark field surface as the primary environment. If those three slip during the build, the palette will read as generated and the fix will not be a new colour.</span>
+    </div>
+  </div>
+
+  <div class="crit">
+    <div class="crit-hd"><span class="crit-tag">02</span><span>"The map is the interface, chrome floats over it"</span></div>
+    <div class="crit-b">This is every mapping product ever made, and I wrote it down without thinking because the brief said it.
+      <span class="chg"><b>Changed to a cell-locked work list.</b> This map is not for exploring. It is bounded by the assignment, every footprint carries a visited state, the denominator is permanently on screen, and leaving the cell is an explicit logged action. That is an enumeration instrument, not a map viewer.</span>
+    </div>
+  </div>
+
+  <div class="crit">
+    <div class="crit-hd"><span class="crit-tag">03</span><span>A dark field app because dark looks technical</span></div>
+    <div class="crit-b">I defaulted to the dark surface and was ready to justify it with "sunlight legibility". That is backwards: in direct sunlight a <em>bright</em> screen with a light ground is generally more readable, because phone displays cannot out-emit the sun. Dark saves OLED battery. Those are two different arguments and I was about to merge them into one convenient one.
+      <span class="chg"><b>Two real modes, switched by physics not taste.</b> A <b>Daylight</b> mode: light ground, maximum brightness, heaviest weights, the AA-checked light palette, auto-engaged via the ambient light sensor with a manual override that sticks. A <b>Dusk</b> mode: the dark palette and a dimmed map style, for battery and low light. Both are designed, neither is a filter over the other, and the officer can pin either.</span>
+    </div>
+  </div>
+
+  <div class="crit">
+    <div class="crit-hd"><span class="crit-tag">04</span><span>A three-pane review screen</span></div>
+    <div class="crit-b">Evidence left, form right, actions bottom, the layout of every admin moderation tool.
+      <span class="chg"><b>Re-ordered around the supervisor's actual questions</b>: was the officer there, is this the right building, is the record sane. Flags also moved out of a sidebar to sit against the evidence that produced them. Same three panes; the information design underneath is different.</span>
+    </div>
+  </div>
+
+  <div class="crit">
+    <div class="crit-hd"><span class="crit-tag">05</span><span>The bottom sheet as an edit form</span></div>
+    <div class="crit-b">Standard mobile pattern, and wrong for this product: an edit form implies overwriting, and §3 forbids it.
+      <span class="chg"><b>Made an observation form.</b> Prior state is visible, greyed and non-editable, below the current entry. The officer records what is true today; March stays where it is.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══ 6 ══ -->
+<section id="schema">
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2 class="sec-title">One schema change I want to argue for</h2>
+    <span class="sec-ref">§3 · re-enumeration</span>
+  </div>
+
+  <p>§3 requires that "re-enumeration creates a new observation, never an overwrite", but §3's own table list puts the time-varying attributes (<code>floors</code>, <code>condition</code>, <code>occupancy_status</code>, <code>operating_status</code>, <code>employee_band</code>) directly on <code>structures</code> and <code>enterprises</code>. Those two things cannot both be true. A second visit either overwrites the column or it does not happen.</p>
+
+  <p><strong>Proposal, which keeps your schema literally intact:</strong> add <code>structure_observations</code> and <code>enterprise_observations</code> as the append-only authority: one row per visit, carrying the mutable attributes plus its own provenance (<code>captured_by</code>, <code>captured_at</code>, <code>field_session_id</code>, <code>assignment_id</code>, <code>capture_accuracy_m</code>, <code>confidence_score</code>). The columns on <code>structures</code> stay exactly as specified and become a <strong>projection of the latest accepted observation</strong>, maintained on write.</p>
+  <p>You get simple queries for every ordinary read, "what did this look like in March" as a first-class question, and no hard deletes anywhere. The cost is one extra write per capture and a projection to keep honest, which is a test, not a risk.</p>
+
+  <p style="margin-top:16px">Two smaller additions in the same spirit:</p>
+  <ul class="tight">
+    <li><code>consent_records</code>: §10 requires NDPA consent captured at the point of collection. That needs to be its own evidenced row (script version, granted, recorded_by, recorded_at, lawful basis, purpose), not a boolean on an enterprise.</li>
+    <li><code>isic_classes</code> + <code>trade_aliases</code>: the ISIC tree, plus the Nigerian trade names the officer actually searches ("POS operator", "vulcanizer", "provisions store") mapped onto it. The alias list is the thing that makes field capture fast and is the thing we will keep tuning.</li>
+  </ul>
+</section>
+
+<!-- ══ 7 ══ -->
+<section id="build">
+  <div class="sec-head">
+    <span class="sec-num">07</span>
+    <h2 class="sec-title">Build plan</h2>
+    <span class="sec-ref">§11 · vertical slices, gated</span>
+  </div>
+
+  <div class="ms">
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M0</span><span class="ms-t">Environment</span><span class="ms-gate">gate: test suite green</span></div>
+      <p class="ms-d">Laravel 12 + Inertia v2 + React 19 + TS strict, Pest, Larastan 6, ESLint, CI. Build h3-pg against Homebrew PG17 (<code>cmake</code> + <code>h3</code> via brew) and verify <code>h3_polygon_to_cells</code> returns cells before anything depends on it. Ship <code>docker-compose.yml</code> with a custom DB image, since no official PostGIS image bundles h3-pg.</p>
+      <div class="ms-out">→ php artisan test green · CREATE EXTENSION h3, h3_postgis, postgis, pg_trgm verified</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M1</span><span class="ms-t">Design system</span><span class="ms-gate">gate: your sign-off on screenshots</span></div>
+      <p class="ms-d">Tokens, the three faces self-hosted, and the primitives: button, field, select, table, sheet, status pill, map chrome, sync indicator, Presence Mark component. A <code>/design</code> route rendering <em>every state of every component</em> in both Daylight and Dusk. I screenshot it, look at it myself, and tell you what I'd fix before you have to.</p>
+      <div class="ms-out">→ /design · no feature screens exist yet</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M2</span><span class="ms-t">Spatial foundation</span><span class="ms-gate">gate: real grid over real AMAC</span></div>
+      <p class="ms-d">Coverage, admin boundaries, grid cells, footprints. Boundary loader, grid generator, footprint ingest, all idempotent and resumable. A read-only MapLibre view of a generated H3 res-9 grid over Abuja Municipal with Google Open Buildings footprints under it.</p>
+      <div class="ms-out">→ geoverify:boundaries-load · grid-generate · footprints-ingest · /console/coverage</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M3</span><span class="ms-t">Identity &amp; assignment</span><span class="ms-gate">gate: supervisor assigns, officer sees</span></div>
+      <p class="ms-d">Fortify, roles (officer / supervisor / admin), devices with per-device Sanctum tokens, assignments. Supervisor selects cells on the map and assigns with due dates; officer sees their work.</p>
+      <div class="ms-out">→ /console/assignments · /field</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M4</span><span class="ms-t">Field capture, online</span><span class="ms-gate">gate: full capture against live server</span></div>
+      <p class="ms-d">PWA shell, cell-locked map with footprints, structure capture, the fourteen-shop enterprise flow, photographs, trace recording, consent capture. Plumbing stays simple so the interaction design gets the attention.</p>
+      <div class="ms-out">→ /field/cells/{cell} · POST /api/field/captures</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M5</span><span class="ms-t">Offline</span><span class="ms-gate">gate: a full day with the radio off</span></div>
+      <p class="ms-d">Dexie, UUIDv7, append-only mutation queue, Workbox, PMTiles pack download, background sync, resumable chunked media upload, idempotent ingestion keyed on <code>client_uuid</code> + payload hash. Pest tests that submit the same batch three times, out of order, with a missing parent, and after reassignment. Playwright with the network genuinely off.</p>
+      <div class="ms-out">→ POST /api/field/sync · /api/field/media · sync_receipts</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M6</span><span class="ms-t">Supervision</span><span class="ms-gate">gate: review a spoofed day and catch it</span></div>
+      <p class="ms-d">Confidence scoring with each signal as its own testable class, review queue ordered by score ascending, the three-question review screen, accept / return / escalate with returns pushed back to the device, coverage view against the footprint denominator, live operations map.</p>
+      <div class="ms-out">→ /console/review · /console/live · verification_events on every transition</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M7</span><span class="ms-t">Evidence output</span><span class="ms-gate">gate: looks like a survey document</span></div>
+      <p class="ms-d">GeoJSON, CSV, and the PDF evidence pack per cell: records, trace map, photograph contact sheet, audit log, Presence Mark on the cover. Every export writes a <code>verification_events</code> row.</p>
+      <div class="ms-out">→ /console/exports</div>
+    </div>
+    <div class="ms-item">
+      <div class="ms-hd"><span class="ms-k">M8</span><span class="ms-t">Hardening</span><span class="ms-gate">gate: 2,000 mutations, 500 photos</span></div>
+      <p class="ms-d">Load-test sync, battery-profile a four-hour session on a real handset, fix what that reveals.</p>
+      <div class="ms-out">→ measured numbers, not assurances</div>
+    </div>
+  </div>
+
+  <h3>Migrations, in order</h3>
+  <div class="scroll">
+  <table class="tbl">
+    <thead><tr><th>#</th><th>Migration</th><th>Milestone</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">01</td><td class="mono">enable_extensions</td><td class="mono">M0</td><td>postgis, h3, h3_postgis, pg_trgm, pgcrypto</td></tr>
+      <tr><td class="mono">02</td><td class="mono">users_roles_devices</td><td class="mono">M0</td><td>role enum; devices carry public_key + integrity_verdict</td></tr>
+      <tr><td class="mono">03</td><td class="mono">admin_boundaries</td><td class="mono">M2</td><td>GiST on boundary; self-referencing parent_id</td></tr>
+      <tr><td class="mono">04</td><td class="mono">coverage_areas</td><td class="mono">M2</td><td>MultiPolygon 4326</td></tr>
+      <tr><td class="mono">05</td><td class="mono">grid_cells</td><td class="mono">M2</td><td>unique h3_index; GiST boundary; GiST centroid</td></tr>
+      <tr><td class="mono">06</td><td class="mono">external_footprints</td><td class="mono">M2</td><td>GiST; h3_index; matched_structure_id nullable</td></tr>
+      <tr><td class="mono">07</td><td class="mono">isic_classes + trade_aliases</td><td class="mono">M2</td><td>trigram index on alias for field search</td></tr>
+      <tr><td class="mono">08</td><td class="mono">assignments</td><td class="mono">M3</td><td>unique active assignment per cell</td></tr>
+      <tr><td class="mono">09</td><td class="mono">field_sessions</td><td class="mono">M4</td><td>trace LineStringM, M carries epoch seconds</td></tr>
+      <tr><td class="mono">10</td><td class="mono">position_fixes</td><td class="mono">M4</td><td>kept raw; is_mock; network_point nullable</td></tr>
+      <tr><td class="mono">11</td><td class="mono">structures</td><td class="mono">M4</td><td>unique client_uuid; ward/lga/state resolved server-side</td></tr>
+      <tr><td class="mono">12</td><td class="mono">structure_observations</td><td class="mono">M4</td><td><em>proposed</em>: append-only; structures becomes its projection</td></tr>
+      <tr><td class="mono">13</td><td class="mono">enterprises</td><td class="mono">M4</td><td>unique client_uuid; structure_id NOT NULL</td></tr>
+      <tr><td class="mono">14</td><td class="mono">enterprise_observations</td><td class="mono">M4</td><td><em>proposed</em>: as above</td></tr>
+      <tr><td class="mono">15</td><td class="mono">media</td><td class="mono">M4</td><td>sha256 unique per subject; private disk only</td></tr>
+      <tr><td class="mono">16</td><td class="mono">consent_records</td><td class="mono">M4</td><td><em>proposed</em>: NDPA, evidenced at point of collection</td></tr>
+      <tr><td class="mono">17</td><td class="mono">identity_claims</td><td class="mono">M4</td><td>no nin column exists; hash + last4 + receipt only</td></tr>
+      <tr><td class="mono">18</td><td class="mono">verification_events</td><td class="mono">M4</td><td>append-only; the product</td></tr>
+      <tr><td class="mono">19</td><td class="mono">sync_receipts</td><td class="mono">M5</td><td>unique (client_uuid, payload_hash)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Modules</h3>
+  <div class="scroll">
+  <table class="tbl">
+    <thead><tr><th>Namespace</th><th>Holds</th><th>Key actions</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">Domain\Coverage</td><td>CoverageArea, AdminBoundary, GridCell, ExternalFootprint</td><td>GenerateGrid, IngestFootprints, LoadBoundaries, RecomputeCoverage</td></tr>
+      <tr><td class="mono">Domain\Field</td><td>Assignment, FieldSession, PositionFix, Device</td><td>OpenSession, AppendFixes, CloseSession, AssignCells, ReturnAssignment</td></tr>
+      <tr><td class="mono">Domain\Registry</td><td>Structure, Enterprise + observations, IsicClass</td><td>CaptureStructure, CaptureEnterprise, ResolveAdminHierarchy, DetectDuplicates</td></tr>
+      <tr><td class="mono">Domain\Identity</td><td>IdentityClaim, Verifier contract, NullVerifier, CacVerifier</td><td>SubmitClaim, RecordConsent</td></tr>
+      <tr><td class="mono">Domain\Media</td><td>Media</td><td>StoreUpload, AssembleChunks, GenerateThumb, CheckPhotoGeometry</td></tr>
+      <tr><td class="mono">Domain\Verification</td><td>VerificationEvent, ConfidenceScorer + one class per signal</td><td>ScoreCapture, AcceptCapture, ReturnCapture, Escalate</td></tr>
+      <tr><td class="mono">Domain\Sync</td><td>SyncReceipt, MutationBatch</td><td>ProcessBatch: idempotent, ordered, partial-failure tolerant</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Routes</h3>
+  <div class="scroll">
+  <table class="tbl">
+    <thead><tr><th>Route</th><th>Group</th><th>Milestone</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">/design</td><td>web · dev</td><td class="mono">M1</td></tr>
+      <tr><td class="mono">/console/coverage · /console/cells/{cell}</td><td>web · supervisor</td><td class="mono">M2</td></tr>
+      <tr><td class="mono">/console/assignments · /console/officers</td><td>web · supervisor</td><td class="mono">M3</td></tr>
+      <tr><td class="mono">/field · /field/cells/{cell}</td><td>web · PWA · officer</td><td class="mono">M4</td></tr>
+      <tr><td class="mono">POST /api/field/sessions · /fixes · /captures</td><td>api · sanctum</td><td class="mono">M4</td></tr>
+      <tr><td class="mono">POST /api/field/sync · /api/field/media</td><td>api · sanctum · throttled</td><td class="mono">M5</td></tr>
+      <tr><td class="mono">GET /api/field/bootstrap · /packs/{cell}.pmtiles</td><td>api · sanctum</td><td class="mono">M5</td></tr>
+      <tr><td class="mono">/console/review · /console/review/{capture}</td><td>web · supervisor</td><td class="mono">M6</td></tr>
+      <tr><td class="mono">/console/live</td><td>web · supervisor</td><td class="mono">M6</td></tr>
+      <tr><td class="mono">/console/exports</td><td>web · supervisor</td><td class="mono">M7</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="font-size:13px;margin-top:12px">No route exists for the Business Portal, the Discovery Portal or the Command Centre, and none will.</p>
+
+  <h3>Battery, since you asked</h3>
+  <ul class="tight">
+    <li><strong>Adaptive trace interval.</strong> 5 s / 10 m while moving; backs off to 30 s once fixes cluster inside the accuracy radius; resumes instantly on movement. A stationary officer is the common case during a long enterprise interview.</li>
+    <li><strong>Fixes never touch React state.</strong> They go to a ref and drive the marker imperatively, so a GPS update does not re-render a tree.</li>
+    <li><strong>Batched IndexedDB writes</strong>: one transaction per N fixes rather than one per fix.</li>
+    <li><strong>Dusk map style</strong>: fewer layers, no 3D, no hillshade, <code>maxPitch: 0</code>, no continuous render loop.</li>
+    <li><strong>Photo encode off the main thread</strong>, once, at capture.</li>
+    <li><strong>Uploads default to Wi-Fi or charging</strong>, with a manual "send now" override that is always available.</li>
+    <li><strong>Wake lock only while a session is active</strong>, released the moment it ends. If the lock is denied, the officer is told plainly, because a locked screen means a lost trace.</li>
+  </ul>
+</section>
+
+<!-- ══ 8 ══ -->
+<section id="risks">
+  <div class="sec-head">
+    <span class="sec-num">08</span>
+    <h2 class="sec-title">What I'd flag before we start</h2>
+    <span class="sec-ref">honest list</span>
+  </div>
+
+  <div class="flag stop">
+    <div class="flag-t">h3-pg on PostgreSQL 17 is the one unproven dependency</div>
+    <p class="flag-b">Your Postgres is Homebrew 17.10 and h3-pg has to be compiled against it. I expect it to work, but it is a source build of a third-party extension and it is the foundation of M2. <strong>I will prove it in the first hour of M0</strong> and tell you immediately if it fails, rather than discovering it three milestones deep. Fallback if it will not build: PostGIS <code>ST_HexagonGrid</code> for cell geometry with H3 indices assigned by a small C-backed helper. Worse, and I would come back to you before taking it.</p>
+  </div>
+
+  <div class="flag">
+    <div class="flag-t">Docker ships but cannot be tested here</div>
+    <p class="flag-b">No Docker runtime on this machine, so the compose stack is written and reviewed but not executed locally. Development runs native against your PG17 + Redis; MinIO is replaced in dev by a private local disk behind the same signed-URL contract, so no application code differs between dev and production. The compose file gets its first real run in CI.</p>
+  </div>
+
+  <div class="flag">
+    <div class="flag-t">PHP 8.5, not 8.3</div>
+    <p class="flag-b">Your runtime is 8.5.0. I will constrain to <code>^8.3</code> so the brief's target is honoured and CI can pin 8.3, but local development runs 8.5. If any dependency objects, you will hear about it in M0.</p>
+  </div>
+
+  <div class="flag">
+    <div class="flag-t">Play Integrity needs a real Android package</div>
+    <p class="flag-b">§6 wants a device-integrity verdict at session start. That requires a signed Android app registered with Google Play, which a PWA is not. Until there is a TWA wrapper, that signal will be recorded as <code>unverified</code> and weighted accordingly, and it will not silently score as passing. Worth deciding whether a TWA is in scope, because it is the difference between a real integrity check and an absent one.</p>
+  </div>
+
+  <div class="flag">
+    <div class="flag-t">Google Open Buildings coverage for AMAC needs confirming</div>
+    <p class="flag-b">Coverage and vintage vary by tile. First task in M2 is to pull the AMAC tiles and report the actual footprint count and confidence distribution, because the whole denominator argument rests on it. If density looks wrong, Microsoft's layer is the cross-check.</p>
+  </div>
+</section>
+
+<footer>
+  <span>GeoVerify · Phase 1 · design plan &amp; build plan</span>
+  <span>Awaiting approval before any application code</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // deterministic PRNG so a mark is stable across reloads
+  function rng(seed){let s=seed>>>0;return function(){s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296}}
+
+  // scale a trace to fill the glyph. A mark that only fills a corner
+  // is unreadable at 16px, which is where it has to work hardest
+  function fit(pts,r){
+    var xs=pts.map(function(p){return p[0]}), ys=pts.map(function(p){return p[1]});
+    var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+    var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+    var w=Math.max(maxx-minx,1e-6), h=Math.max(maxy-miny,1e-6);
+    var s=Math.min((r*2)/w,(r*2)/h), cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+    return pts.map(function(p){return [50+(p[0]-cx)*s, 50+(p[1]-cy)*s]});
+  }
+
+  function hexPath(cx,cy,r){
+    var p=[];
+    for(var i=0;i<6;i++){var a=Math.PI/180*(60*i-30);
+      p.push((cx+r*Math.cos(a)).toFixed(2)+','+(cy+r*Math.sin(a)).toFixed(2));}
+    return 'M'+p.join('L')+'Z';
+  }
+
+  // natural walk: cardinal street legs, 90-degree turns, dwell at captures, jitter
+  function walk(seed,legs){
+    var r=rng(seed),pts=[],x=50,y=50,d=Math.floor(r()*4);
+    var DX=[1,0,-1,0], DY=[0,1,0,-1];
+    for(var L=0;L<legs;L++){
+      var steps=3+Math.floor(r()*6);
+      for(var i=0;i<steps;i++){
+        x+=DX[d]*(2.4+r()*1.6); y+=DY[d]*(2.4+r()*1.6);
+        if(x<10||x>90){d=(d+2)%4; x=Math.max(10,Math.min(90,x));}
+        if(y<10||y>90){d=(d+2)%4; y=Math.max(10,Math.min(90,y));}
+        pts.push([x+(r()-0.5)*1.4, y+(r()-0.5)*1.4]);
+      }
+      if(r()<0.30){ // dwell at a capture, a cluster of near-identical fixes
+        for(var k=0;k<4;k++) pts.push([x+(r()-0.5)*2.2, y+(r()-0.5)*2.2]);
+      }
+      d=(d + (r()<0.5?1:3)) % 4; // turn 90 degrees either way
+    }
+    return pts;
+  }
+  // fabricated: straight, uniform, no jitter
+  function fake(n){
+    var pts=[];
+    for(var i=0;i<n;i++){var t=i/(n-1);
+      pts.push([20+t*60, 74-t*46]);}
+    return pts;
+  }
+
+  function toPath(pts){
+    return 'M'+pts.map(function(p){return p[0].toFixed(2)+','+p[1].toFixed(2)}).join('L');
+  }
+
+  function mark(size,pts,opts){
+    opts=opts||{};
+    var ns='http://www.w3.org/2000/svg';
+    var svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('width',size); svg.setAttribute('height',size);
+    svg.setAttribute('viewBox','0 0 100 100');
+    svg.setAttribute('role','img');
+    svg.setAttribute('aria-label',opts.label||'Presence mark: officer walking trace within assigned cell');
+
+    var hex=document.createElementNS(ns,'path');
+    hex.setAttribute('d',hexPath(50,50,44));
+    hex.setAttribute('fill',opts.fill||'none');
+    hex.setAttribute('stroke','currentColor');
+    hex.setAttribute('stroke-width',size<24?2.4:1.4);
+    hex.setAttribute('opacity','.30');
+    svg.appendChild(hex);
+
+    var fitted=fit(pts,size<24?32:30);
+    var tr=document.createElementNS(ns,'path');
+    tr.setAttribute('d',toPath(fitted));
+    tr.setAttribute('fill','none');
+    tr.setAttribute('stroke',opts.stroke||'var(--gold)');
+    tr.setAttribute('stroke-width',opts.sw||(size<24?3.2:size<60?2.2:1.7));
+    tr.setAttribute('stroke-linejoin','round');
+    tr.setAttribute('stroke-linecap','round');
+    svg.appendChild(tr);
+
+    if(size>=40 && !opts.noDot){
+      var last=fitted[fitted.length-1];
+      var dot=document.createElementNS(ns,'circle');
+      dot.setAttribute('cx',last[0]); dot.setAttribute('cy',last[1]);
+      dot.setAttribute('r',size<60?4:3);
+      dot.setAttribute('fill','var(--gold)');
+      svg.appendChild(dot);
+    }
+    return svg;
+  }
+
+  var scales=document.getElementById('scales');
+  if(scales){
+    [[16,'16 px / queue row'],[40,'40 px / record card'],[92,'92 px / cell summary'],[184,'184 px / review screen']]
+    .forEach(function(cfg){
+      var w=document.createElement('div'); w.className='mark-item';
+      var pts=walk(32607,11);
+      var el=mark(cfg[0],pts,{noDot:cfg[0]<40});
+      el.style.color='var(--graphite)';
+      w.appendChild(el);
+      var c=document.createElement('div'); c.className='mark-cap'; c.textContent=cfg[1];
+      w.appendChild(c); scales.appendChild(w);
+      // measure only once in the document. A detached path reports length 0
+      if(cfg[0]===184){
+        var tp=el.querySelector('path:last-of-type');
+        try{var len=tp.getTotalLength?tp.getTotalLength():0;
+          if(len){tp.style.setProperty('--len',len);tp.classList.add('draw');}}catch(e){}
+      }
+    });
+  }
+
+  var a=document.getElementById('mk-real');
+  if(a){var m=mark(104,walk(4522,11),{});m.style.color='var(--green)';m.querySelector('path:last-of-type').setAttribute('stroke','var(--green)');a.appendChild(m);}
+  var b=document.getElementById('mk-fake');
+  if(b){var m2=mark(104,fake(14),{});m2.style.color='var(--alert)';m2.querySelector('path:last-of-type').setAttribute('stroke','var(--alert)');b.appendChild(m2);}
+})();
+</script>
