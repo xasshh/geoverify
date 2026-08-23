@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
+import { AppBar } from '@/components/AppBar';
 import {
     Map as MapLibreMap,
     NavigationControl,
@@ -197,6 +198,13 @@ export default function Coverage({ area, summary }: CoverageProps) {
     return (
         <div data-mode="dusk" className="flex h-dvh flex-col bg-surface text-ink">
             <Head title={`Coverage: ${area.name}`} />
+            <AppBar
+                variant="console"
+                links={[
+                    { label: 'Coverage', href: '/console/coverage', current: true },
+                    { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: false },
+                ]}
+            />
 
             <header className="shrink-0 border-b border-rule px-6 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-4">

@@ -39,6 +39,23 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
+
+            // Shared so every screen can show who is signed in, and so the field
+            // client knows whose work it is holding without a second request.
+            'auth' => [
+                'user' => $request->user() === null ? null : [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'role' => $request->user()->role->value,
+                    'roleLabel' => $request->user()->role->label(),
+                    'staffRef' => $request->user()->staff_ref,
+                ],
+            ],
+
+            'flash' => [
+                'status' => $request->session()->get('status'),
+            ],
             //
         ];
     }

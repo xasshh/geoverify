@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** A detected building. A work list entry, not a record of a building. */
+/**
+ * @property int $id
+ * @property string $source
+ * @property string|null $source_id
+ * @property float|null $confidence
+ * @property float|null $area_m2
+ * @property int|null $h3_index
+ * @property int|null $grid_cell_id
+ * @property int|null $matched_structure_id
+ * @property bool $dismissed
+ */
 final class ExternalFootprint extends Model
 {
     public const SOURCE_GOOGLE = 'google_open_buildings';

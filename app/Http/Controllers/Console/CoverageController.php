@@ -19,6 +19,27 @@ use Inertia\Response;
  */
 final class CoverageController
 {
+    /** Every mandate this console covers. The console's front door. */
+    public function index(): Response
+    {
+        $areas = CoverageArea::query()
+            ->withCount('gridCells')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('console/CoverageIndex', [
+            'areas' => $areas->map(fn (CoverageArea $area): array => [
+                'id' => $area->id,
+                'name' => $area->name,
+                'client' => $area->client_name,
+                'contractRef' => $area->contract_ref,
+                'lgaCode' => $area->lga_code,
+                'status' => $area->status,
+                'cells' => (int) $area->grid_cells_count,
+            ])->all(),
+        ]);
+    }
+
     public function show(CoverageArea $coverageArea): Response
     {
         return Inertia::render('console/Coverage', [

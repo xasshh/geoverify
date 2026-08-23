@@ -16,6 +16,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * selects: geometry is written and read through PostGIS expressions, never marshalled
  * through PHP.
  */
+/**
+ * @property int $id
+ * @property string $level
+ * @property string $code
+ * @property string $name
+ * @property array<int, string> $alt_names
+ * @property int|null $parent_id
+ * @property string $source
+ * @property string|null $source_parent_name
+ * @property-read self|null $parent
+ */
 final class AdminBoundary extends Model
 {
     public const LEVEL_STATE = 'state';

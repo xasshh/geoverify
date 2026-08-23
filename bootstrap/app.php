@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureCapturesInTheField;
+use App\Http\Middleware\EnsureSupervises;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        $middleware->alias([
+            'supervises' => EnsureSupervises::class,
+            'field' => EnsureCapturesInTheField::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

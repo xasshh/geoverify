@@ -5,7 +5,14 @@ declare(strict_types=1);
 use App\Domain\Coverage\Actions\GenerateGrid;
 use App\Domain\Coverage\Actions\IngestFootprints;
 use App\Domain\Coverage\Models\ExternalFootprint;
+use App\Enums\Role;
 use Inertia\Testing\AssertableInertia;
+
+// The console is a supervisor's tool. Every request here signs in as one, which
+// is also what proves these routes are not reachable without doing so.
+beforeEach(function () {
+    $this->actingAs(person(Role::Supervisor, 'Console supervisor'));
+});
 
 it('renders the coverage view with figures read from the database', function () {
     $area = testMandate();
