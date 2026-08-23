@@ -17,6 +17,10 @@ PWA for field officers, plus the supervisor console behind it.
 - **The sync endpoint is idempotent**, keyed on `client_uuid` plus payload hash.
 - **Business Portal, Discovery Portal and Command Centre do not exist here.** Do
   not add routes, scaffolding or "future" placeholders for them.
+- **Nobody self registers.** Fortify's registration feature stays off. Officers,
+  supervisors and admins are created by an admin.
+- **People and devices are suspended or revoked, never deleted.** An officer's
+  captures must stay attributable after they leave.
 
 ## Stack
 
@@ -27,6 +31,20 @@ Pest, Larastan level 6.
 Inertia is pinned to v2 on both sides: `inertiajs/inertia-laravel ^2.0` with
 `@inertiajs/react ^2.3`. The npm packages have a v3 line that pairs with
 `inertia-laravel` v3; do not upgrade one side alone.
+
+## Roles and access
+
+Three roles: `officer`, `supervisor`, `admin`. An officer holds assignments and
+captures; a supervisor assigns and reviews; an admin also manages people and
+devices. Route groups are gated by the `supervises` and `field` middleware, and
+per record access by `AssignmentPolicy` and `DevicePolicy`.
+
+Devices carry their own revocable Sanctum token scoped to `field:capture`, so a
+lost handset is cut off without touching the person's account.
+
+Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
+`supervisor@geoverify.test`, `bello@geoverify.test` and the rest, password
+`password`.
 
 ## Layout
 
