@@ -7,6 +7,7 @@ use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
+use App\Http\Controllers\Field\CaptureScreenController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
 */
 Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(function (): void {
     Route::get('/', [AssignmentBoardController::class, 'index'])->name('index');
+    Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
 });
 
 /*

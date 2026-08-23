@@ -28,3 +28,6 @@ Thumbs.db
 /playwright-report
 /tests/Browser/screenshots
 /storage/app/geodata
+
+/public/sw.js
+/public/manifest.webmanifest

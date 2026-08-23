@@ -57,7 +57,7 @@ const CONTROL = [
     'w-full rounded-sm border bg-surface px-3 text-ink',
     'placeholder:text-faint',
     'disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint',
-    'read-only:border-dashed read-only:bg-raised read-only:text-muted',
+    '[&[readonly]]:border-dashed [&[readonly]]:bg-raised [&[readonly]]:text-muted',
     'transition-colors duration-150',
 ].join(' ');
 

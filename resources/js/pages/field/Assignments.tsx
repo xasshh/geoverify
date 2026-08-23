@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
 import { StatusPill } from '@/components/StatusPill';
 import { SyncIndicator } from '@/components/SyncIndicator';
@@ -78,13 +78,14 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                 ) : (
                     <ul className="mt-4 flex flex-col gap-3">
                         {assignments.map((a) => (
-                            <li
-                                key={a.id}
+                            <li key={a.id}>
+                              <Link
+                                href={`/field/assignments/${String(a.id)}/capture`}
                                 className={cx(
-                                    'rounded-sm border bg-raised p-4',
+                                    'block rounded-sm border bg-raised p-4',
                                     a.overdue ? 'border-amber' : 'border-rule',
                                 )}
-                            >
+                              >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <p className="numeric-mono text-mono text-ink">{a.h3}</p>
@@ -138,6 +139,9 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                                         {a.returnReason}
                                     </p>
                                 )}
+
+                                <p className="mt-3 text-ui font-semibold text-gold">Open this cell</p>
+                              </Link>
                             </li>
                         ))}
                     </ul>
