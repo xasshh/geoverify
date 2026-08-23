@@ -1,5 +1,5 @@
 import { db, readMeta, writeMeta, type Mutation } from './db';
-import { uuid7 } from '@/lib/capture';
+import { compressPhotograph, uuid7 } from '@/lib/capture';
 
 /**
  * The sync engine.
@@ -62,15 +62,104 @@ export async function enqueue(
     return clientUuid;
 }
 
+/**
+ * Holds a photograph on the device.
+ *
+ * Compressed once, here, rather than at upload time: a handset that has been
+ * offline for a day should not be holding a dozen 12 MB frames, and doing the
+ * work while the officer is standing still costs less battery than doing it all
+ * at once when signal returns.
+ *
+ * It cannot be uploaded until its building has a server id, so it waits. The
+ * officer is never told to wait.
+ */
+export async function holdPhotograph(
+    structureClientUuid: string,
+    kind: string,
+    file: File,
+    position: { longitude: number; latitude: number } | null,
+): Promise<string> {
+    const clientUuid = uuid7();
+    const blob = await compressPhotograph(file);
+
+    await db.photos.put({
+        clientUuid,
+        structureClientUuid,
+        kind,
+        blob,
+        bytes: blob.size,
+        longitude: position?.longitude ?? null,
+        latitude: position?.latitude ?? null,
+        takenAt: new Date().toISOString(),
+        serverId: null,
+    });
+
+    return clientUuid;
+}
+
+/**
+ * Sends photographs whose building the server now knows about.
+ *
+ * Always after the records, never with them. A large photograph on a slow
+ * connection must never be able to delay a capture from arriving.
+ */
+async function drainPhotographs(): Promise<number> {
+    const waiting = await db.photos.filter((p) => p.serverId === null).toArray();
+    let sent = 0;
+
+    for (const photo of waiting) {
+        const structure = await db.structures.get(photo.structureClientUuid);
+
+        if (structure?.serverId == null) {
+            // Its building has not landed yet. Nothing to do but wait.
+            continue;
+        }
+
+        const form = new FormData();
+        form.append('photo', photo.blob, 'capture.jpg');
+        form.append('client_uuid', photo.clientUuid);
+        form.append('structure_id', String(structure.serverId));
+        form.append('kind', photo.kind);
+
+        if (photo.longitude !== null && photo.latitude !== null) {
+            form.append('device_longitude', String(photo.longitude));
+            form.append('device_latitude', String(photo.latitude));
+        }
+
+        try {
+            const response = await fetch('/api/field/photographs', {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'X-XSRF-TOKEN': csrfToken() },
+                body: form,
+            });
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const body = (await response.json()) as { id: number };
+            await db.photos.update(photo.clientUuid, { serverId: body.id });
+            sent += 1;
+        } catch {
+            // Still on the device. Tried again next pass.
+        }
+    }
+
+    return sent;
+}
+
 export async function snapshot(): Promise<QueueSnapshot> {
-    const [queued, failed, deferred, lastSyncAt] = await Promise.all([
+    const [queued, failed, deferred, photos, lastSyncAt] = await Promise.all([
         db.mutations.where('state').anyOf('queued', 'sending').count(),
         db.mutations.where('state').equals('failed').count(),
         db.mutations.where('state').equals('deferred').count(),
+        db.photos.filter((p) => p.serverId === null).count(),
         readMeta<string | null>('lastSyncAt', null),
     ]);
 
-    return { queued, failed, deferred, lastSyncAt, syncing: draining };
+    // Photographs count toward what the officer sees as waiting. They are part
+    // of the day's work, and a queue that hides them would be lying.
+    return { queued: queued + photos, failed, deferred, lastSyncAt, syncing: draining };
 }
 
 let draining = false;
@@ -95,6 +184,9 @@ export async function drain(batchSize = 50): Promise<SyncResult[]> {
             .sortBy('clientUuid');
 
         if (pending.length === 0) {
+            await drainPhotographs();
+            await writeMeta('lastSyncAt', new Date().toISOString());
+
             return [];
         }
 
@@ -132,6 +224,8 @@ export async function drain(batchSize = 50): Promise<SyncResult[]> {
             results.push(...batchResults);
         }
 
+        // Records first, always. Photographs follow once their building has an id.
+        await drainPhotographs();
         await writeMeta('lastSyncAt', new Date().toISOString());
 
         return results;

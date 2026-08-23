@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { StatusPill } from '@/components/StatusPill';
-import { savePhotograph, type PhotographResult } from '@/lib/capture';
+import { holdPhotograph } from '@/lib/offline/queue';
 import { cx } from '@/lib/cx';
 
 interface PhotoCaptureProps {
-    structureId: number;
+    /** The building's own client uuid, which exists before any server has seen it. */
+    structureClientUuid: string;
     position: { longitude: number; latitude: number } | null;
-    fieldSessionId?: number;
 }
 
 const KINDS: Array<{ value: string; label: string; hint: string }> = [
@@ -26,29 +26,25 @@ const KINDS: Array<{ value: string; label: string; hint: string }> = [
  * Uploaded after the record it belongs to, never with it: a 12 MB photograph on
  * a 2G connection must never be able to block a capture from being saved.
  */
-export function PhotoCapture({ structureId, position, fieldSessionId }: PhotoCaptureProps) {
-    const [taken, setTaken] = useState<PhotographResult[]>([]);
+export function PhotoCapture({ structureClientUuid, position }: PhotoCaptureProps) {
+    const [taken, setTaken] = useState<string[]>([]);
     const [busy, setBusy] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-    const upload = async (kind: string, file: File) => {
+    const keep = async (kind: string, file: File) => {
         setBusy(kind);
         setError(null);
 
         try {
-            const result = await savePhotograph(file, {
-                structure_id: structureId,
-                kind,
-                ...(position === null
-                    ? {}
-                    : { device_longitude: position.longitude, device_latitude: position.latitude }),
-                ...(fieldSessionId === undefined ? {} : { field_session_id: fieldSessionId }),
-            });
+            // Compressed and held on the device. It uploads on its own once the
+            // building it belongs to has reached the server, which may be hours
+            // later and is none of the officer's concern.
+            await holdPhotograph(structureClientUuid, kind, file, position);
 
-            setTaken((t) => [...t.filter((p) => p.kind !== kind), result]);
+            setTaken((t) => (t.includes(kind) ? t : [...t, kind]));
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'That photograph did not send.');
+            setError(e instanceof Error ? e.message : 'That photograph could not be kept.');
         } finally {
             setBusy(null);
         }
@@ -58,8 +54,7 @@ export function PhotoCapture({ structureId, position, fieldSessionId }: PhotoCap
         <div className="flex flex-col gap-3">
             <div className="grid grid-cols-3 gap-2">
                 {KINDS.map((kind) => {
-                    const done = taken.find((p) => p.kind === kind.value);
-                    const far = done?.distance_from_subject_m != null && done.distance_from_subject_m > 150;
+                    const done = taken.includes(kind.value);
 
                     return (
                         <div key={kind.value} className="flex flex-col gap-1.5">
@@ -75,14 +70,14 @@ export function PhotoCapture({ structureId, position, fieldSessionId }: PhotoCap
                                     const file = e.target.files?.[0];
 
                                     if (file !== undefined) {
-                                        void upload(kind.value, file);
+                                        void keep(kind.value, file);
                                     }
 
                                     e.target.value = '';
                                 }}
                             />
                             <Button
-                                variant={done === undefined ? 'secondary' : 'primary'}
+                                variant={done ? 'primary' : 'secondary'}
                                 size="field"
                                 fullWidth
                                 busy={busy === kind.value}
@@ -92,29 +87,13 @@ export function PhotoCapture({ structureId, position, fieldSessionId }: PhotoCap
                             >
                                 {kind.label}
                             </Button>
-                            <span
-                                className={cx(
-                                    'text-center text-label',
-                                    far ? 'text-amber' : 'text-faint',
-                                )}
-                            >
-                                {done === undefined
-                                    ? kind.hint
-                                    : far
-                                      ? `${String(Math.round(done.distance_from_subject_m ?? 0))} m away`
-                                      : 'Taken'}
+                            <span className={cx('text-center text-label', 'text-faint')}>
+                                {done ? 'Kept' : kind.hint}
                             </span>
                         </div>
                     );
                 })}
             </div>
-
-            {taken.some((p) => p.from_device_camera === false) && (
-                <p className="border-l-2 border-amber pl-3 text-ui text-muted">
-                    One of these has no camera information in it. That is what a screenshot or a
-                    saved image looks like, and a supervisor will be asked to check it.
-                </p>
-            )}
 
             {error !== null && <p className="text-ui text-alert">{error}</p>}
 
@@ -122,7 +101,7 @@ export function PhotoCapture({ structureId, position, fieldSessionId }: PhotoCap
                 <div className="flex items-center gap-2">
                     <StatusPill
                         tone="accepted"
-                        label={`${String(taken.length)} of ${String(KINDS.length)} taken`}
+                        label={`${String(taken.length)} of ${String(KINDS.length)} kept`}
                         size="sm"
                     />
                 </div>

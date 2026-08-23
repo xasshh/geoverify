@@ -11,13 +11,9 @@ import { SelectField, TextField } from '@/components/Field';
 import { cx } from '@/lib/cx';
 import { useTrace } from '@/lib/geolocation';
 import { PhotoCapture } from '@/components/PhotoCapture';
-import {
-    saveEnterprise,
-    saveStructure,
-    sendFixes,
-    startSession,
-    uuid7,
-} from '@/lib/capture';
+import { sendFixes, startSession, uuid7 } from '@/lib/capture';
+import { useOfflineQueue } from '@/lib/offline/useOfflineQueue';
+import { db } from '@/lib/offline/db';
 import type { TracePoint } from '@/components/PresenceMark';
 
 interface Option {
@@ -87,6 +83,7 @@ export default function Capture({
     const trace = useTrace(true);
     const { takeFixes } = trace;
     const sessionUuid = useRef(uuid7());
+    const queue = useOfflineQueue();
 
     const captured = recorded.length;
 
@@ -162,9 +159,18 @@ export default function Capture({
                     openFlags={poorAccuracy ? 1 : 0}
                     sync={
                         <SyncIndicator
-                            connectivity="online"
-                            queued={trace.pendingCount}
-                            lastSync={null}
+                            connectivity={
+                                queue.syncing ? 'syncing' : queue.online ? 'online' : 'offline'
+                            }
+                            queued={queue.queued + trace.pendingCount}
+                            lastSync={
+                                queue.lastSyncAt === null
+                                    ? null
+                                    : new Date(queue.lastSyncAt).toLocaleTimeString([], {
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                      })
+                            }
                             compact
                         />
                     }
@@ -259,6 +265,7 @@ export default function Capture({
                     consentScript={consentScript}
                     cellId={cell.id}
                     sessionId={sessionId}
+                    record={queue.record}
                     onClose={() => {
                         setStage('map');
                     }}
@@ -281,6 +288,7 @@ export default function Capture({
                 <EnterpriseSheet
                     structure={openStructure}
                     sessionId={sessionId}
+                    record={queue.record}
                     onClose={() => {
                         setStage('structure');
                     }}
@@ -305,6 +313,7 @@ interface StructureSheetProps {
     assignmentId: number;
     cellId: number;
     sessionId: number | null;
+    record: (entity: 'structure' | 'enterprise', payload: Record<string, unknown>) => Promise<string>;
     structureTypes: Option[];
     occupancyStatuses: Option[];
     existing: CapturedStructure | null;
@@ -326,6 +335,7 @@ function StructureSheet({
     assignmentId,
     cellId,
     sessionId,
+    record,
     structureTypes,
     occupancyStatuses,
     existing,
@@ -355,8 +365,29 @@ function StructureSheet({
         setSaving(true);
         setError(null);
 
+        const units = Number.parseInt(unitCount, 10) || 1;
+
         try {
-            const result = await saveStructure({
+            // Written to the device and queued. The officer is finished here
+            // whether or not there is any signal, which is the whole point.
+            await db.structures.put({
+                clientUuid: clientUuid.current,
+                gridCellId: cellId,
+                assignmentId,
+                longitude: position.longitude,
+                latitude: position.latitude,
+                accuracyM: position.accuracy_m,
+                structureType: type,
+                occupancyStatus: occupancy,
+                unitCount: units,
+                floors: null,
+                notes: null,
+                observedAt: new Date().toISOString(),
+                serverId: null,
+                resolvedWard: null,
+            });
+
+            await record('structure', {
                 client_uuid: clientUuid.current,
                 // A new observation each time this is saved, which is what keeps
                 // a revisit from overwriting the last one.
@@ -367,25 +398,29 @@ function StructureSheet({
                 accuracy_m: position.accuracy_m,
                 structure_type: type,
                 occupancy_status: occupancy,
-                unit_count: Number.parseInt(unitCount, 10) || 1,
+                unit_count: units,
                 observed_at: new Date().toISOString(),
                 assignment_id: assignmentId,
                 ...(sessionId === null ? {} : { field_session_id: sessionId }),
             });
 
-            setResolvedWard(result.resolved.ward);
+            // Whatever the server later resolves is shown when it arrives. Until
+            // then the officer is told plainly that the work is on the device.
+            const stored = await db.structures.get(clientUuid.current);
+            setResolvedWard(stored?.resolvedWard ?? null);
+
             onSaved({
-                id: result.id,
-                clientUuid: result.client_uuid,
+                id: stored?.serverId ?? 0,
+                clientUuid: clientUuid.current,
                 structureType: type,
-                unitCount: Number.parseInt(unitCount, 10) || 1,
+                unitCount: units,
                 occupancyStatus: occupancy,
-                resolvedWard: result.resolved.ward,
+                resolvedWard: stored?.resolvedWard ?? null,
                 enterprises: existing?.enterprises ?? [],
                 priorObservation: existing?.priorObservation ?? null,
             });
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'That did not save.');
+            setError(e instanceof Error ? e.message : 'That did not save to this device.');
         } finally {
             setSaving(false);
         }
@@ -435,7 +470,7 @@ function StructureSheet({
                     }
                     footerNote={
                         resolvedWard === null
-                            ? 'Saved on device. Syncs when there is signal.'
+                            ? 'Saved on this device. It syncs on its own when there is signal.'
                             : `Recorded in ${resolvedWard} ward.`
                     }
                 >
@@ -596,9 +631,8 @@ function StructureSheet({
                     {existing !== null && (
                         <SheetSection label="Photographs">
                             <PhotoCapture
-                                structureId={existing.id}
+                                structureClientUuid={existing.clientUuid}
                                 position={position}
-                                {...(sessionId === null ? {} : { fieldSessionId: sessionId })}
                             />
                         </SheetSection>
                     )}
@@ -619,11 +653,13 @@ function StructureSheet({
 function EnterpriseSheet({
     structure,
     sessionId,
+    record,
     onClose,
     onSaved,
 }: {
     structure: CapturedStructure;
     sessionId: number | null;
+    record: (entity: 'structure' | 'enterprise', payload: Record<string, unknown>) => Promise<string>;
     onClose: () => void;
     onSaved: (enterprise: CapturedEnterprise) => void;
 }) {
@@ -645,11 +681,28 @@ function EnterpriseSheet({
         setSaving(true);
         setError(null);
 
+        const clientUuid = uuid7();
+
         try {
-            const result = await saveEnterprise({
-                client_uuid: uuid7(),
+            await db.enterprises.put({
+                clientUuid,
+                structureClientUuid: structure.clientUuid,
+                unitLabel,
+                tradingName: tradingName.trim(),
+                sectorCode: sector?.code ?? null,
+                scaleBand: scale,
+                signageObserved: signage,
+                observedAt: new Date().toISOString(),
+                serverId: null,
+            });
+
+            await record('enterprise', {
+                client_uuid: clientUuid,
                 observation_uuid: uuid7(),
-                structure_id: structure.id,
+                // Referenced by the building's own client uuid, never a server id
+                // the handset may not have been told yet. That is what lets a
+                // business be captured before its building has synced.
+                structure_client_uuid: structure.clientUuid,
                 unit_label: unitLabel,
                 trading_name: tradingName.trim(),
                 sector_code: sector?.code ?? null,
@@ -660,13 +713,13 @@ function EnterpriseSheet({
             });
 
             onSaved({
-                id: result.id,
+                id: 0,
                 unitLabel,
-                tradingName: result.trading_name,
-                sectorCode: result.sector_code,
+                tradingName: tradingName.trim(),
+                sectorCode: sector?.code ?? null,
             });
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'That did not save.');
+            setError(e instanceof Error ? e.message : 'That did not save to this device.');
         } finally {
             setSaving(false);
         }

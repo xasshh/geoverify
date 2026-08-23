@@ -150,8 +150,11 @@ jobs:
             curl -sf -o /dev/null http://127.0.0.1:8123/design && break
             sleep 1
           done
+          php artisan db:seed --class=FieldTeamSeeder --force
           npx playwright test
         env:
+          # The design gallery and the field client are local only routes, and
+          # the offline suite needs a seeded team to sign in as.
           APP_ENV: local
           DB_HOST: 127.0.0.1
           DB_DATABASE: geoverify_testing
