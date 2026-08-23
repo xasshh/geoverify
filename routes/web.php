@@ -6,6 +6,7 @@ use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Field\AssignmentBoardController;
+use App\Http\Controllers\Field\CaptureController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -37,4 +38,18 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
 */
 Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(function (): void {
     Route::get('/', [AssignmentBoardController::class, 'index'])->name('index');
+});
+
+/*
+| The field client's capture endpoints. Session authenticated for the online
+| flow; the offline client authenticates by device token at M5.
+*/
+Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->group(function (): void {
+    Route::post('sessions', [CaptureController::class, 'startSession'])->name('sessions.start');
+    Route::post('sessions/{session}/fixes', [CaptureController::class, 'appendFixes'])->name('sessions.fixes');
+    Route::post('sessions/{session}/end', [CaptureController::class, 'endSession'])->name('sessions.end');
+
+    Route::post('structures', [CaptureController::class, 'storeStructure'])->name('structures.store');
+    Route::post('enterprises', [CaptureController::class, 'storeEnterprise'])->name('enterprises.store');
+    Route::get('sectors', [CaptureController::class, 'searchSectors'])->name('sectors');
 });

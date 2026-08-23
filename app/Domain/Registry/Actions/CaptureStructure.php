@@ -60,30 +60,52 @@ final class CaptureStructure
         // Server side, from the point itself. The device is not consulted.
         $resolved = $this->hierarchy->forPoint($capture->longitude, $capture->latitude);
 
-        $structure = new Structure([
-            'grid_cell_id' => $cell->id,
-            'coverage_area_id' => $cell->coverage_area_id,
-            'external_footprint_id' => $capture->externalFootprintId,
-            'ward_id' => $resolved['ward_id'],
-            'lga_id' => $resolved['lga_id'],
-            'state_id' => $resolved['state_id'],
-            'h3_index' => $cell->h3_index,
-            'captured_by' => $officer->id,
-            'captured_at' => $capture->observedAt,
-            'capture_accuracy_m' => $capture->accuracyM,
-            'structure_type' => $capture->structureType,
-            'layout_class' => $capture->layoutClass,
-            'floors' => $capture->floors,
-            'unit_count' => $capture->unitCount,
-            'condition' => $capture->condition,
-            'occupancy_status' => $capture->occupancyStatus,
-            'status' => Structure::STATUS_SUBMITTED,
-            'client_uuid' => $capture->clientUuid,
+        // Written in one statement: centroid is NOT NULL, so the row cannot exist
+        // before its geometry does. PostGIS builds the point; no coordinate is
+        // assembled in PHP.
+        $id = DB::scalar(<<<'SQL'
+            INSERT INTO structures (
+                grid_cell_id, coverage_area_id, external_footprint_id,
+                ward_id, lga_id, state_id, h3_index,
+                captured_by, captured_at, capture_accuracy_m,
+                structure_type, layout_class, floors, unit_count,
+                condition, occupancy_status, status, client_uuid,
+                centroid, footprint, created_at, updated_at
+            )
+            VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ST_SetSRID(ST_Point(?, ?), 4326)::geography,
+                CASE WHEN ?::bigint IS NULL THEN NULL
+                     ELSE (SELECT f.footprint FROM external_footprints f WHERE f.id = ?) END,
+                now(), now()
+            )
+            RETURNING id
+        SQL, [
+            $cell->id,
+            $cell->coverage_area_id,
+            $capture->externalFootprintId,
+            $resolved['ward_id'],
+            $resolved['lga_id'],
+            $resolved['state_id'],
+            $cell->h3_index,
+            $officer->id,
+            $capture->observedAt,
+            $capture->accuracyM,
+            $capture->structureType,
+            $capture->layoutClass,
+            $capture->floors,
+            $capture->unitCount,
+            $capture->condition,
+            $capture->occupancyStatus,
+            Structure::STATUS_SUBMITTED,
+            $capture->clientUuid,
+            $capture->longitude,
+            $capture->latitude,
+            $capture->externalFootprintId,
+            $capture->externalFootprintId,
         ]);
 
-        $structure->save();
-
-        $this->writeGeometry($structure, $capture);
+        $structure = Structure::query()->findOrFail($id);
 
         $observation = $this->writeObservation($structure, $capture, $officer);
 
@@ -167,25 +189,6 @@ final class CaptureStructure
             'notes' => $capture->notes,
             'client_uuid' => $capture->observationUuid,
         ]);
-    }
-
-    /** Geometry is written by PostGIS. No coordinate is assembled in PHP. */
-    private function writeGeometry(Structure $structure, StructureCapture $capture): void
-    {
-        DB::statement(
-            'UPDATE structures
-                SET centroid = ST_SetSRID(ST_Point(?, ?), 4326)::geography,
-                    footprint = CASE WHEN ? IS NULL THEN NULL
-                                     ELSE (SELECT f.footprint FROM external_footprints f WHERE f.id = ?) END
-              WHERE id = ?',
-            [
-                $capture->longitude,
-                $capture->latitude,
-                $capture->externalFootprintId,
-                $capture->externalFootprintId,
-                $structure->id,
-            ],
-        );
     }
 
     /**
