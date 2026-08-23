@@ -12,8 +12,17 @@ export interface Fix {
 
 interface TraceState {
     current: Fix | null;
-    /** Fixes not yet sent. Cleared once the server has them. */
-    pending: Fix[];
+    /**
+     * How many fixes are waiting to be sent. The fixes themselves live in a ref,
+     * not here: keeping the array in state would re-render the tree on every
+     * fix, which is exactly the cost this hook exists to avoid.
+     */
+    pendingCount: number;
+    /**
+     * The path walked so far, for the Presence Mark. Capped, because a full day
+     * is thousands of points and the mark is 150px across.
+     */
+    track: Array<[number, number]>;
     permission: 'unknown' | 'granted' | 'denied';
     wakeLock: 'held' | 'denied' | 'unsupported' | 'idle';
     error: string | null;
@@ -59,7 +68,8 @@ function metresBetween(a: Fix, b: Fix): number {
 export function useTrace(active: boolean) {
     const [state, setState] = useState<TraceState>(() => ({
         current: null,
-        pending: [],
+        pendingCount: 0,
+        track: [],
         permission: 'unknown',
         // Knowable at first render, so it does not need an effect to discover it.
         wakeLock: 'wakeLock' in navigator ? 'idle' : 'unsupported',
@@ -67,17 +77,29 @@ export function useTrace(active: boolean) {
     }));
 
     const latest = useRef<Fix | null>(null);
+    const pending = useRef<Fix[]>([]);
     const lastKept = useRef<Fix | null>(null);
     const stationarySince = useRef<number | null>(null);
     const watchId = useRef<number | null>(null);
     const wakeLock = useRef<WakeLockSentinel | null>(null);
 
+    /**
+     * Stable identity, and the queue itself. A callback that changed on every
+     * render would restart any effect depending on it, which is how a twenty
+     * second flush timer becomes a flush on every keystroke.
+     */
     const takeFixes = useCallback((): Fix[] => {
-        const taken = state.pending;
-        setState((s) => ({ ...s, pending: [] }));
+        const taken = pending.current;
+
+        if (taken.length === 0) {
+            return [];
+        }
+
+        pending.current = [];
+        setState((s) => ({ ...s, pendingCount: 0 }));
 
         return taken;
-    }, [state.pending]);
+    }, []);
 
     useEffect(() => {
         if (!active || !('geolocation' in navigator)) {
@@ -120,7 +142,14 @@ export function useTrace(active: boolean) {
 
                 if (moved >= 10 || sinceKept >= interval) {
                     lastKept.current = fix;
-                    setState((s) => ({ ...s, current: fix, pending: [...s.pending, fix], permission: 'granted' }));
+                    pending.current = [...pending.current, fix];
+                    setState((s) => ({
+                        ...s,
+                        current: fix,
+                        pendingCount: pending.current.length,
+                        track: [...s.track.slice(-200), [fix.longitude, fix.latitude]],
+                        permission: 'granted',
+                    }));
                 } else {
                     setState((s) => (s.current === null ? { ...s, current: fix, permission: 'granted' } : s));
                 }

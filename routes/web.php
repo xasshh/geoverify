@@ -53,5 +53,8 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
 
     Route::post('structures', [CaptureController::class, 'storeStructure'])->name('structures.store');
     Route::post('enterprises', [CaptureController::class, 'storeEnterprise'])->name('enterprises.store');
+    Route::post('photographs', [CaptureController::class, 'storePhotograph'])->name('photographs.store');
+    Route::get('photographs/{media}', [CaptureController::class, 'showPhotograph'])->name('photographs.show');
+
     Route::get('sectors', [CaptureController::class, 'searchSectors'])->name('sectors');
 });

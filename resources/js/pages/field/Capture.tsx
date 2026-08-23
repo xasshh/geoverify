@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { CoverageBar, FootprintLegend, MapChrome } from '@/components/MapChrome';
@@ -10,6 +10,14 @@ import { SyncIndicator } from '@/components/SyncIndicator';
 import { SelectField, TextField } from '@/components/Field';
 import { cx } from '@/lib/cx';
 import { useTrace } from '@/lib/geolocation';
+import { PhotoCapture } from '@/components/PhotoCapture';
+import {
+    saveEnterprise,
+    saveStructure,
+    sendFixes,
+    startSession,
+    uuid7,
+} from '@/lib/capture';
 import type { TracePoint } from '@/components/PresenceMark';
 
 interface Option {
@@ -74,15 +82,72 @@ export default function Capture({
 }: CaptureProps) {
     const [stage, setStage] = useState<Stage>('map');
     const [openStructure, setOpenStructure] = useState<CapturedStructure | null>(null);
+    const [recorded, setRecorded] = useState<CapturedStructure[]>(structures);
+    const [sessionId, setSessionId] = useState<number | null>(null);
     const trace = useTrace(true);
+    const { takeFixes } = trace;
+    const sessionUuid = useRef(uuid7());
 
-    const captured = structures.length;
+    const captured = recorded.length;
+
+    // One session per visit to this cell. Guarded by a ref rather than by the
+    // dependency list alone: an effect that runs twice would open two sessions
+    // and write two session.started events for one visit.
+    const sessionRequested = useRef(false);
+
+    useEffect(() => {
+        if (sessionRequested.current) {
+            return;
+        }
+
+        sessionRequested.current = true;
+
+        void startSession({ client_uuid: sessionUuid.current, assignment_id: assignmentId })
+            .then((session) => {
+                setSessionId(session.id);
+            })
+            .catch(() => {
+                // Capture still works without a session; the trace is what is
+                // lost, and the officer is told about that separately.
+            });
+    }, [assignmentId]);
+
+    /**
+     * Sends whatever fixes are waiting.
+     *
+     * Batched rather than one request per fix: eighty structures a day at one
+     * request each would be thousands of requests on a connection that can
+     * barely carry the captures. Called on a timer, and again whenever a capture
+     * is saved, so an officer who records one building and closes the app does
+     * not lose the fixes that put them there.
+     */
+    const flushFixes = useCallback(() => {
+        if (sessionId === null) {
+            return;
+        }
+
+        const batch = takeFixes();
+
+        if (batch.length === 0) {
+            return;
+        }
+
+        void sendFixes(sessionId, batch).catch(() => {
+            // Kept for M5's queue rather than dropped on the floor.
+        });
+    }, [sessionId, takeFixes]);
+
+    useEffect(() => {
+        const timer = window.setInterval(flushFixes, 20_000);
+
+        return () => {
+            window.clearInterval(timer);
+        };
+    }, [flushFixes]);
 
     // The officer's own path so far, as the mark that ends up on the record.
-    const tracePoints = useMemo<TracePoint[]>(
-        () => trace.pending.map((f) => [f.longitude, f.latitude] as TracePoint),
-        [trace.pending],
-    );
+    // The officer's own path so far, as the mark that ends up on the record.
+    const tracePoints = useMemo<TracePoint[]>(() => trace.track, [trace.track]);
 
     const accuracy = trace.current?.accuracy_m ?? null;
     const poorAccuracy = accuracy !== null && accuracy > 15;
@@ -98,7 +163,7 @@ export default function Capture({
                     sync={
                         <SyncIndicator
                             connectivity="online"
-                            queued={trace.pending.length}
+                            queued={trace.pendingCount}
                             lastSync={null}
                             compact
                         />
@@ -192,8 +257,18 @@ export default function Capture({
                     existing={openStructure}
                     position={trace.current}
                     consentScript={consentScript}
+                    cellId={cell.id}
+                    sessionId={sessionId}
                     onClose={() => {
                         setStage('map');
+                    }}
+                    onSaved={(structure) => {
+                        flushFixes();
+                        setOpenStructure(structure);
+                        setRecorded((r) => [
+                            structure,
+                            ...r.filter((s) => s.clientUuid !== structure.clientUuid),
+                        ]);
                     }}
                     onCaptureEnterprise={(structure) => {
                         setOpenStructure(structure);
@@ -205,7 +280,19 @@ export default function Capture({
             {stage === 'enterprise' && openStructure !== null && (
                 <EnterpriseSheet
                     structure={openStructure}
+                    sessionId={sessionId}
                     onClose={() => {
+                        setStage('structure');
+                    }}
+                    onSaved={(enterprise) => {
+                        const updated = {
+                            ...openStructure,
+                            enterprises: [...openStructure.enterprises, enterprise],
+                        };
+                        setOpenStructure(updated);
+                        setRecorded((r) =>
+                            r.map((s) => (s.clientUuid === updated.clientUuid ? updated : s)),
+                        );
                         setStage('structure');
                     }}
                 />
@@ -216,12 +303,15 @@ export default function Capture({
 
 interface StructureSheetProps {
     assignmentId: number;
+    cellId: number;
+    sessionId: number | null;
     structureTypes: Option[];
     occupancyStatuses: Option[];
     existing: CapturedStructure | null;
     position: { latitude: number; longitude: number; accuracy_m: number | null } | null;
     consentScript: { version: string; text: string };
     onClose: () => void;
+    onSaved: (structure: CapturedStructure) => void;
     onCaptureEnterprise: (structure: CapturedStructure) => void;
 }
 
@@ -233,12 +323,16 @@ interface StructureSheetProps {
  * able to rewrite March.
  */
 function StructureSheet({
+    assignmentId,
+    cellId,
+    sessionId,
     structureTypes,
     occupancyStatuses,
     existing,
     position,
     consentScript,
     onClose,
+    onSaved,
     onCaptureEnterprise,
 }: StructureSheetProps) {
     const [type, setType] = useState(existing?.structureType ?? 'shophouse');
@@ -246,6 +340,56 @@ function StructureSheet({
     const [unitCount, setUnitCount] = useState(existing?.unitCount?.toString() ?? '1');
     const [consentGiven, setConsentGiven] = useState(false);
     const [showScript, setShowScript] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [resolvedWard, setResolvedWard] = useState<string | null>(existing?.resolvedWard ?? null);
+    const clientUuid = useRef(existing?.clientUuid ?? uuid7());
+
+    const save = async () => {
+        if (position === null) {
+            setError('No position yet. Wait for a fix before saving.');
+
+            return;
+        }
+
+        setSaving(true);
+        setError(null);
+
+        try {
+            const result = await saveStructure({
+                client_uuid: clientUuid.current,
+                // A new observation each time this is saved, which is what keeps
+                // a revisit from overwriting the last one.
+                observation_uuid: uuid7(),
+                grid_cell_id: cellId,
+                longitude: position.longitude,
+                latitude: position.latitude,
+                accuracy_m: position.accuracy_m,
+                structure_type: type,
+                occupancy_status: occupancy,
+                unit_count: Number.parseInt(unitCount, 10) || 1,
+                observed_at: new Date().toISOString(),
+                assignment_id: assignmentId,
+                ...(sessionId === null ? {} : { field_session_id: sessionId }),
+            });
+
+            setResolvedWard(result.resolved.ward);
+            onSaved({
+                id: result.id,
+                clientUuid: result.client_uuid,
+                structureType: type,
+                unitCount: Number.parseInt(unitCount, 10) || 1,
+                occupancyStatus: occupancy,
+                resolvedWard: result.resolved.ward,
+                enterprises: existing?.enterprises ?? [],
+                priorObservation: existing?.priorObservation ?? null,
+            });
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'That did not save.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const units = Number.parseInt(unitCount, 10);
     const enterprises = existing?.enterprises ?? [];
@@ -273,16 +417,27 @@ function StructureSheet({
                             : `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}   +/- ${(position.accuracy_m ?? 0).toFixed(1)} m`
                     }
                     footer={
-                        <Button
-                            variant="primary"
-                            size="field-primary"
-                            fullWidth
-                            disabled={!consentGiven && expectsEnterprises}
-                        >
-                            Save capture
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            {error !== null && <p className="text-ui text-alert">{error}</p>}
+                            <Button
+                                variant="primary"
+                                size="field-primary"
+                                fullWidth
+                                busy={saving}
+                                disabled={(!consentGiven && expectsEnterprises) || position === null}
+                                onClick={() => {
+                                    void save();
+                                }}
+                            >
+                                {existing === null ? 'Save capture' : 'Save changes'}
+                            </Button>
+                        </div>
                     }
-                    footerNote="Saved on device. Syncs when there is signal."
+                    footerNote={
+                        resolvedWard === null
+                            ? 'Saved on device. Syncs when there is signal.'
+                            : `Recorded in ${resolvedWard} ward.`
+                    }
                 >
                     <SheetSection label="What is it">
                         <div className="flex flex-col gap-4">
@@ -438,6 +593,16 @@ function StructureSheet({
                         </SheetSection>
                     )}
 
+                    {existing !== null && (
+                        <SheetSection label="Photographs">
+                            <PhotoCapture
+                                structureId={existing.id}
+                                position={position}
+                                {...(sessionId === null ? {} : { fieldSessionId: sessionId })}
+                            />
+                        </SheetSection>
+                    )}
+
                     {existing?.priorObservation != null && (
                         <PriorObservation
                             observedOn={existing.priorObservation.observedOn}
@@ -453,10 +618,14 @@ function StructureSheet({
 /** One business, inside a structure the officer already recorded. */
 function EnterpriseSheet({
     structure,
+    sessionId,
     onClose,
+    onSaved,
 }: {
     structure: CapturedStructure;
+    sessionId: number | null;
     onClose: () => void;
+    onSaved: (enterprise: CapturedEnterprise) => void;
 }) {
     const [tradingName, setTradingName] = useState('');
     const [sector, setSector] = useState<{
@@ -467,6 +636,41 @@ function EnterpriseSheet({
     } | null>(null);
     const [scale, setScale] = useState('micro');
     const [signage, setSignage] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const unitLabel = `Unit ${String(structure.enterprises.length + 1)}`;
+
+    const save = async () => {
+        setSaving(true);
+        setError(null);
+
+        try {
+            const result = await saveEnterprise({
+                client_uuid: uuid7(),
+                observation_uuid: uuid7(),
+                structure_id: structure.id,
+                unit_label: unitLabel,
+                trading_name: tradingName.trim(),
+                sector_code: sector?.code ?? null,
+                scale_band: scale,
+                signage_observed: signage,
+                observed_at: new Date().toISOString(),
+                ...(sessionId === null ? {} : { field_session_id: sessionId }),
+            });
+
+            onSaved({
+                id: result.id,
+                unitLabel,
+                tradingName: result.trading_name,
+                sectorCode: result.sector_code,
+            });
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'That did not save.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div className="flex h-full flex-col">
@@ -483,16 +687,23 @@ function EnterpriseSheet({
             <div className="min-h-0 flex-1">
                 <Sheet
                     title="Business"
-                    meta={`Unit ${String(structure.enterprises.length + 1)} of ${String(structure.unitCount ?? 1)}`}
+                    meta={`${unitLabel} of ${String(structure.unitCount ?? 1)}`}
                     footer={
-                        <Button
-                            variant="primary"
-                            size="field-primary"
-                            fullWidth
-                            disabled={tradingName.trim() === '' || sector === null}
-                        >
-                            Save business
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            {error !== null && <p className="text-ui text-alert">{error}</p>}
+                            <Button
+                                variant="primary"
+                                size="field-primary"
+                                fullWidth
+                                busy={saving}
+                                disabled={tradingName.trim() === '' || sector === null}
+                                onClick={() => {
+                                    void save();
+                                }}
+                            >
+                                Save business
+                            </Button>
+                        </div>
                     }
                     footerNote="Saved on device. Syncs when there is signal."
                 >

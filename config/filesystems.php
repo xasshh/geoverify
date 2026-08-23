@@ -40,6 +40,29 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Photographs. Private, never publicly listed, and served only through
+         * signed temporary URLs, so a leaked path is not a leaked photograph.
+         *
+         * Locally this is a private directory on disk; in Docker and production
+         * it is the S3 compatible bucket. The contract is identical either way,
+         * so no application code differs between them.
+         */
+        'media' => [
+            'driver' => env('MEDIA_DISK_DRIVER', 'local'),
+            'root' => storage_path('app/private/media'),
+            'serve' => false,
+            'throw' => true,
+            'visibility' => 'private',
+
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            'bucket' => env('AWS_BUCKET', 'geoverify-media'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

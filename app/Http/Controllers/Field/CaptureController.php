@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Field;
 
 use App\Domain\Field\Actions\RecordTrace;
 use App\Domain\Field\Models\FieldSession;
+use App\Domain\Media\Actions\StorePhotograph;
+use App\Domain\Media\Models\Media;
 use App\Domain\Registry\Actions\CaptureEnterprise;
 use App\Domain\Registry\Actions\CaptureStructure;
 use App\Domain\Registry\Actions\ResolveAdminHierarchy;
@@ -203,6 +205,69 @@ final class CaptureController
             'sector_code' => $enterprise->sector_code,
             'units_outstanding' => $structure->fresh()?->unitsOutstanding() ?? 0,
         ], 201);
+    }
+
+    /**
+     * A photograph of a structure.
+     *
+     * Uploaded separately from the record it belongs to, and always after it, so
+     * a 12 MB photograph on a 2G connection can never block a capture from being
+     * saved. At M5 this becomes a resumable chunked upload drained from the
+     * queue; the separation is what makes that possible without rework.
+     */
+    public function storePhotograph(Request $request, StorePhotograph $storer): JsonResponse
+    {
+        $validated = $request->validate([
+            'client_uuid' => ['required', 'uuid'],
+            'structure_id' => ['required', 'integer', 'exists:structures,id'],
+            'kind' => ['required', 'string', 'in:facade,signage,interior,document,street_context'],
+            'photo' => ['required', 'file', 'image', 'max:4096'],
+            'device_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'device_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'field_session_id' => ['nullable', 'integer', 'exists:field_sessions,id'],
+        ]);
+
+        $structure = Structure::query()->findOrFail((int) $validated['structure_id']);
+        Gate::authorize('capture', $structure);
+
+        try {
+            $media = $storer->store(
+                $request->file('photo'),
+                $structure,
+                (string) $validated['kind'],
+                $request->user(),
+                (string) $validated['client_uuid'],
+                isset($validated['device_longitude']) ? (float) $validated['device_longitude'] : null,
+                isset($validated['device_latitude']) ? (float) $validated['device_latitude'] : null,
+                isset($validated['field_session_id']) ? (int) $validated['field_session_id'] : null,
+            );
+        } catch (Throwable $e) {
+            return new JsonResponse(['message' => $e->getMessage()], 422);
+        }
+
+        return new JsonResponse([
+            'id' => $media->id,
+            'client_uuid' => $media->client_uuid,
+            'kind' => $media->kind,
+            'bytes' => $media->bytes,
+            // Surfaced so the officer sees what the record will show a supervisor,
+            // rather than discovering it in a review three weeks later.
+            'distance_from_subject_m' => $media->distance_from_subject_m,
+            'from_device_camera' => $media->from_device_camera,
+        ], 201);
+    }
+
+    /**
+     * A short lived link to a stored photograph.
+     *
+     * The only way a photograph leaves this system. Ten minutes, because a link
+     * that outlives the screen it was made for is a link that gets forwarded.
+     */
+    public function showPhotograph(Request $request, Media $media): JsonResponse
+    {
+        Gate::authorize('view', $media);
+
+        return new JsonResponse(['url' => $media->temporaryUrl()]);
     }
 
     /** The sector picker. Called on every keystroke, so it stays cheap. */
