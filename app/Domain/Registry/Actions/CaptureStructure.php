@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Registry\Actions;
 
 use App\Domain\Coverage\Models\GridCell;
+use App\Domain\Field\Enums\AssignmentStatus;
+use App\Domain\Field\Models\Assignment;
 use App\Domain\Registry\Data\StructureCapture;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Registry\Models\StructureObservation;
@@ -39,6 +41,8 @@ final class CaptureStructure
             throw new RuntimeException('Only an active field officer can capture a structure.');
         }
 
+        $this->assertHoldsCell($capture->gridCellId, $officer);
+
         return DB::transaction(function () use ($capture, $officer): Structure {
             $existing = Structure::query()
                 ->where('client_uuid', $capture->clientUuid)
@@ -51,6 +55,36 @@ final class CaptureStructure
 
             return $structure;
         });
+    }
+
+    /**
+     * The officer must currently hold the ground they are capturing on.
+     *
+     * Checked here rather than only at the HTTP edge, because there are two ways
+     * in: a live post while there is signal, and a batch of mutations synced
+     * hours later from a handset that was offline. The realistic case is an
+     * officer working a cell all morning with no signal while a supervisor moves
+     * it to someone else, and a check that lives only in one controller would let
+     * that work through the other door.
+     */
+    private function assertHoldsCell(int $gridCellId, User $officer): void
+    {
+        $holdsIt = Assignment::query()
+            ->where('grid_cell_id', $gridCellId)
+            ->where('user_id', $officer->id)
+            ->whereNull('closed_at')
+            ->whereIn('status', [
+                AssignmentStatus::Assigned->value,
+                AssignmentStatus::InProgress->value,
+                AssignmentStatus::Returned->value,
+            ])
+            ->exists();
+
+        if (! $holdsIt) {
+            throw new RuntimeException(
+                'That cell is not assigned to you. It may have been reassigned while you were offline.',
+            );
+        }
     }
 
     private function createStructure(StructureCapture $capture, User $officer): Structure

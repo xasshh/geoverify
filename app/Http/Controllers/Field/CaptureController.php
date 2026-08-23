@@ -13,8 +13,6 @@ use App\Domain\Registry\Actions\CaptureStructure;
 use App\Domain\Registry\Actions\ResolveAdminHierarchy;
 use App\Domain\Registry\Actions\SearchSectors;
 use App\Domain\Registry\Data\StructureCapture;
-use App\Domain\Registry\Enums\OccupancyStatus;
-use App\Domain\Registry\Enums\StructureType;
 use App\Domain\Registry\Models\Structure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -126,30 +124,16 @@ final class CaptureController
             'assignment_id' => ['nullable', 'integer', 'exists:assignments,id'],
         ]);
 
-        // Rejected here rather than by a database constraint, so the officer gets
-        // a sentence instead of a driver error.
-        if (StructureType::tryFrom((string) $validated['structure_type']) === null) {
-            return new JsonResponse(['message' => 'That is not a structure type this system records.'], 422);
-        }
-
-        if (OccupancyStatus::tryFrom((string) $validated['occupancy_status']) === null) {
-            return new JsonResponse(['message' => 'That is not an occupancy status this system records.'], 422);
-        }
-
-        // Checked before anything is written: an officer captures only inside
-        // ground that is currently theirs, or the assignment record and the
-        // capture record end up disagreeing about who stood where.
-        if (! Gate::allows('captureInCell', [Structure::class, (int) $validated['grid_cell_id']])) {
-            return new JsonResponse(
-                ['message' => 'That cell is not assigned to you. Ask your supervisor to assign it.'],
-                403,
-            );
-        }
-
         try {
+            // Cell ownership is enforced inside the action, so the live post and
+            // the offline sync path cannot drift apart on who is allowed to
+            // capture where.
             $structure = $capturer->capture(StructureCapture::fromArray($validated), $request->user());
         } catch (Throwable $e) {
-            return new JsonResponse(['message' => $e->getMessage()], 422);
+            return new JsonResponse(
+                ['message' => $e->getMessage()],
+                str_contains($e->getMessage(), 'not assigned to you') ? 403 : 422,
+            );
         }
 
         return new JsonResponse([

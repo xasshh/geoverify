@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Registry\Data;
 
+use App\Domain\Registry\Enums\OccupancyStatus;
+use App\Domain\Registry\Enums\StructureType;
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
 
 /**
  * One structure capture, as it arrives from a handset.
@@ -40,6 +43,22 @@ final readonly class StructureCapture
      */
     public static function fromArray(array $payload): self
     {
+        // Validated here rather than only at the HTTP edge. There are two ways
+        // in, a live post and a batch synced hours later from a handset that was
+        // offline, and a check that lives in one controller lets anything through
+        // the other door. A structure type this system does not record would sit
+        // in the register unnoticed until someone tried to report on it.
+        $type = StructureType::tryFrom((string) ($payload['structure_type'] ?? ''));
+        $occupancy = OccupancyStatus::tryFrom((string) ($payload['occupancy_status'] ?? ''));
+
+        if ($type === null) {
+            throw new InvalidArgumentException('That is not a structure type this system records.');
+        }
+
+        if ($occupancy === null) {
+            throw new InvalidArgumentException('That is not an occupancy status this system records.');
+        }
+
         $float = static fn (string $key): ?float => isset($payload[$key]) && is_numeric($payload[$key])
             ? (float) $payload[$key] : null;
         $int = static fn (string $key): ?int => isset($payload[$key]) && is_numeric($payload[$key])
@@ -53,8 +72,8 @@ final readonly class StructureCapture
             gridCellId: (int) $payload['grid_cell_id'],
             longitude: (float) $payload['longitude'],
             latitude: (float) $payload['latitude'],
-            structureType: (string) $payload['structure_type'],
-            occupancyStatus: (string) $payload['occupancy_status'],
+            structureType: $type->value,
+            occupancyStatus: $occupancy->value,
             observedAt: Carbon::parse((string) $payload['observed_at']),
             accuracyM: $float('accuracy_m'),
             externalFootprintId: $int('external_footprint_id'),

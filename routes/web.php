@@ -8,6 +8,7 @@ use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
+use App\Http\Controllers\Field\SyncController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -57,4 +58,7 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     Route::get('photographs/{media}', [CaptureController::class, 'showPhotograph'])->name('photographs.show');
 
     Route::get('sectors', [CaptureController::class, 'searchSectors'])->name('sectors');
+
+    // Where a handset that has been offline tells the server what happened.
+    Route::post('sync', SyncController::class)->name('sync');
 });
