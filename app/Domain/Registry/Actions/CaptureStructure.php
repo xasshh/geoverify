@@ -11,6 +11,7 @@ use App\Domain\Registry\Data\StructureCapture;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Registry\Models\StructureObservation;
 use App\Domain\Verification\Models\VerificationEvent;
+use App\Jobs\ScoreCapture;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -207,7 +208,7 @@ final class CaptureStructure
 
     private function writeObservation(Structure $structure, StructureCapture $capture, User $officer): StructureObservation
     {
-        return StructureObservation::query()->create([
+        $observation = StructureObservation::query()->create([
             'structure_id' => $structure->id,
             'captured_by' => $officer->id,
             'field_session_id' => $capture->fieldSessionId,
@@ -223,6 +224,12 @@ final class CaptureStructure
             'notes' => $capture->notes,
             'client_uuid' => $capture->observationUuid,
         ]);
+
+        // Scored off the request. A sync batch carries two hundred mutations and
+        // the officer's connection is the one thing this must never wait on.
+        ScoreCapture::dispatch($observation->id)->afterCommit();
+
+        return $observation;
     }
 
     /**
