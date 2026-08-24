@@ -10,10 +10,13 @@ import {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
+import { cx } from '@/lib/cx';
 
 interface Summary {
     cells: number;
     footprints: number;
+    captured: number;
+    accepted: number;
     cellsWithFootprints: number;
     busiest: number;
     medianPerCell: number;
@@ -41,7 +44,9 @@ interface CellProperties {
     status: string;
     footprints: number;
     captured: number;
+    accepted: number;
     coverage: number;
+    verified: number;
 }
 
 function readCell(properties: unknown): CellProperties | null {
@@ -56,18 +61,21 @@ function readCell(properties: unknown): CellProperties | null {
         status: typeof p.status === 'string' ? p.status : '',
         footprints: typeof p.footprints === 'number' ? p.footprints : 0,
         captured: typeof p.captured === 'number' ? p.captured : 0,
+        accepted: typeof p.accepted === 'number' ? p.accepted : 0,
         coverage: typeof p.coverage === 'number' ? p.coverage : 0,
+        verified: typeof p.verified === 'number' ? p.verified : 0,
     };
 }
 
 /**
  * Cell fill by footprint density.
  *
- * Density, not completion, because at this milestone nothing has been captured
- * yet: what the map has to prove is that the grid and the denominator landed on
- * real ground. The scale is gold at increasing opacity so it stays one hue, and
- * an empty cell is drawn as outline only rather than as a colour, because "no
- * detected buildings" is an absence and should look like one.
+ * The view the map opens on, because it is what proves the grid and the
+ * denominator landed on real ground, and because completion shading over an
+ * unstarted mandate is a screen of nothing. The scale is gold at increasing
+ * opacity so it stays one hue, and an empty cell is drawn as outline only
+ * rather than as a colour, because "no detected buildings" is an absence and
+ * should look like one.
  */
 const DENSITY_FILL: ExpressionSpecification = [
     'interpolate',
@@ -85,11 +93,65 @@ const DENSITY_FILL: ExpressionSpecification = [
     'rgba(208,174,99,0.85)',
 ];
 
+/**
+ * Completion against that denominator, one hue per question.
+ *
+ * Gold for captured and green for verified, deliberately not one scale with two
+ * ends. "Has anyone been there" and "do we believe it" are different questions,
+ * and a mandate that is 90 per cent captured and 20 per cent verified has to
+ * look wrong at a glance rather than merely paler.
+ */
+function completionFill(property: 'coverage' | 'verified', rgb: string): ExpressionSpecification {
+    return [
+        'interpolate',
+        ['linear'],
+        ['get', property],
+        0,
+        'rgba(0,0,0,0)',
+        1,
+        `rgba(${rgb},0.20)`,
+        50,
+        `rgba(${rgb},0.50)`,
+        100,
+        `rgba(${rgb},0.85)`,
+    ];
+}
+
+const SHADINGS = {
+    density: {
+        label: 'Building density',
+        legend: 'Detected buildings per cell',
+        ramp: 'from-transparent to-gold',
+        low: '0',
+        high: '300+',
+        fill: DENSITY_FILL,
+    },
+    coverage: {
+        label: 'Captured',
+        legend: 'Captured against detected',
+        ramp: 'from-transparent to-gold',
+        low: '0%',
+        high: '100%',
+        fill: completionFill('coverage', '208,174,99'),
+    },
+    verified: {
+        label: 'Verified',
+        legend: 'Accepted against detected',
+        ramp: 'from-transparent to-green',
+        low: '0%',
+        high: '100%',
+        fill: completionFill('verified', '107,143,110'),
+    },
+} as const;
+
+type Shading = keyof typeof SHADINGS;
+
 export default function Coverage({ area, summary }: CoverageProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibreMap | null>(null);
     const [loadedCells, setLoadedCells] = useState(0);
     const [hovered, setHovered] = useState<CellProperties | null>(null);
+    const [shading, setShading] = useState<Shading>('density');
 
     useEffect(() => {
         if (container.current === null || map.current !== null) {
@@ -144,7 +206,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     id: 'cell-fill',
                     type: 'fill',
                     source: 'cells',
-                    paint: { 'fill-color': DENSITY_FILL },
+                    paint: { 'fill-color': SHADINGS.density.fill },
                 });
 
                 instance.addLayer({
@@ -186,9 +248,23 @@ export default function Coverage({ area, summary }: CoverageProps) {
         };
     }, [area.id, summary.bounds]);
 
+    // Repainted rather than rebuilt: a mandate is 18,337 cells and tearing the
+    // map down to change a colour ramp would refetch every one of them.
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || instance.getLayer('cell-fill') === undefined) {
+            return;
+        }
+
+        instance.setPaintProperty('cell-fill', 'fill-color', SHADINGS[shading].fill);
+    }, [shading, loadedCells]);
+
     const stats: Array<[string, string]> = [
         ['Cells', summary.cells.toLocaleString()],
         ['Footprints', summary.footprints.toLocaleString()],
+        ['Captured', summary.captured.toLocaleString()],
+        ['Accepted', summary.accepted.toLocaleString()],
         ['Cells with buildings', summary.cellsWithFootprints.toLocaleString()],
         ['Median per occupied cell', summary.medianPerCell.toLocaleString()],
         ['Busiest cell', summary.busiest.toLocaleString()],
@@ -203,6 +279,8 @@ export default function Coverage({ area, summary }: CoverageProps) {
                 links={[
                     { label: 'Coverage', href: '/console/coverage', current: true },
                     { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: false },
+                    { label: 'Review', href: '/console/review', current: false },
+                    { label: 'Live', href: '/console/live', current: false },
                 ]}
             />
 
@@ -241,18 +319,47 @@ export default function Coverage({ area, summary }: CoverageProps) {
 
                 <div className="pointer-events-none absolute top-4 left-4 max-w-xs rounded-sm border border-rule-strong bg-surface/95 p-3">
                     <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
-                        Detected buildings per cell
+                        {SHADINGS[shading].legend}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
-                        <span className="h-3 flex-1 rounded-[2px] bg-gradient-to-r from-transparent to-gold" />
+                        <span
+                            className={cx(
+                                'h-3 flex-1 rounded-[2px] bg-gradient-to-r',
+                                SHADINGS[shading].ramp,
+                            )}
+                        />
                     </div>
                     <div className="mt-1 flex justify-between numeric-mono text-label text-faint">
-                        <span>0</span>
-                        <span>300+</span>
+                        <span>{SHADINGS[shading].low}</span>
+                        <span>{SHADINGS[shading].high}</span>
                     </div>
+                    {/* The panel is click through so the map can be panned
+                        underneath it. The buttons have to take their clicks
+                        back, or they are visible and dead. */}
+                    <div className="pointer-events-auto mt-3 flex flex-wrap gap-1.5">
+                        {(Object.keys(SHADINGS) as Shading[]).map((key) => (
+                            <button
+                                key={key}
+                                type="button"
+                                onClick={() => {
+                                    setShading(key);
+                                }}
+                                aria-pressed={shading === key}
+                                className={cx(
+                                    'rounded-sm border px-2.5 py-1 text-label',
+                                    shading === key
+                                        ? 'border-gold text-ink'
+                                        : 'border-rule text-muted hover:border-rule-strong',
+                                )}
+                            >
+                                {SHADINGS[key].label}
+                            </button>
+                        ))}
+                    </div>
+
                     <p className="mt-2 text-label text-faint">
                         {loadedCells.toLocaleString()} cells drawn. Outline only means no
-                        detected buildings.
+                        detected buildings, or nothing counted yet under this shading.
                     </p>
                 </div>
 
@@ -261,7 +368,10 @@ export default function Coverage({ area, summary }: CoverageProps) {
                         <p className="numeric-mono text-mono text-ink">{hovered.h3}</p>
                         <p className="mt-1 numeric-mono text-label text-muted">
                             {hovered.footprints.toLocaleString()} detected /{' '}
-                            {hovered.captured.toLocaleString()} captured
+                            {hovered.captured.toLocaleString()} captured /{' '}
+                            <span className="text-green">
+                                {hovered.accepted.toLocaleString()} accepted
+                            </span>
                         </p>
                         <p className="mt-0.5 text-label text-faint">{hovered.status}</p>
                     </div>

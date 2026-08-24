@@ -51,6 +51,7 @@ final class ReviewObservation
             // The structure carries the projection of its latest decided
             // observation, so a coverage view never has to re-derive it.
             $this->projectOntoStructure($observation, $decision);
+            $this->refreshCellAcceptance($observation);
 
             VerificationEvent::record($observation, $decision->event(), $supervisor, array_filter([
                 'from' => $was,
@@ -93,6 +94,33 @@ final class ReviewObservation
                 'status' => $decision->observationStatus(),
                 'confidence_score' => $observation->confidence_score,
             ]);
+    }
+
+    /**
+     * How much of the cell has been accepted, recomputed from the table.
+     *
+     * Recomputed rather than incremented, like the captured count beside it, so
+     * a decision taken twice or a return that follows an acceptance cannot
+     * leave the coverage map claiming ground the register does not hold.
+     */
+    private function refreshCellAcceptance(StructureObservation $observation): void
+    {
+        DB::statement(<<<'SQL'
+            update grid_cells g
+               set structures_accepted = c.n,
+                   updated_at = now()
+              from (
+                  select count(*) as n
+                    from structures
+                   where grid_cell_id = (select grid_cell_id from structures where id = ?)
+                     and status = ?
+              ) c
+             where g.id = (select grid_cell_id from structures where id = ?)
+        SQL, [
+            $observation->structure_id,
+            Structure::STATUS_ACCEPTED,
+            $observation->structure_id,
+        ]);
     }
 
     /**

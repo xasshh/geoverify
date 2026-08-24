@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $parent_h3_index
  * @property int $footprint_count
  * @property int $structures_captured
+ * @property int $structures_accepted
  * @property string $status
  * @property float $coverage_pct
  * @property-read CoverageArea|null $coverageArea
@@ -37,7 +38,7 @@ final class GridCell extends Model
 
     protected $fillable = [
         'coverage_area_id', 'h3_index', 'h3_resolution', 'parent_h3_index',
-        'footprint_count', 'structures_captured', 'status', 'coverage_pct',
+        'footprint_count', 'structures_captured', 'structures_accepted', 'status', 'coverage_pct',
     ];
 
     protected function casts(): array
@@ -48,6 +49,7 @@ final class GridCell extends Model
             'h3_resolution' => 'integer',
             'footprint_count' => 'integer',
             'structures_captured' => 'integer',
+            'structures_accepted' => 'integer',
             'coverage_pct' => 'float',
         ];
     }

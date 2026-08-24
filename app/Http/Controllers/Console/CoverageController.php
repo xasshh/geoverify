@@ -98,7 +98,14 @@ final class CoverageController
                         'status', g.status,
                         'footprints', g.footprint_count,
                         'captured', g.structures_captured,
-                        'coverage', g.coverage_pct
+                        'accepted', g.structures_accepted,
+                        'coverage', g.coverage_pct,
+                        -- Verified against the same denominator as coverage, so
+                        -- the two shadings are read on one scale.
+                        'verified', CASE WHEN g.footprint_count = 0 THEN 0
+                                         ELSE least(100, round(
+                                             (g.structures_accepted::numeric / g.footprint_count) * 100, 2
+                                         )) END
                     )
                 ) AS feature
                   FROM grid_cells g
@@ -126,15 +133,17 @@ final class CoverageController
     }
 
     /**
-     * @return array{cells: int, tiled: int, footprints: int, cellsWithFootprints: int, busiest: int, medianPerCell: int, wards: int, bounds: array<int, float>}
+     * @return array{cells: int, tiled: int, footprints: int, captured: int, accepted: int, cellsWithFootprints: int, busiest: int, medianPerCell: int, wards: int, bounds: array<int, float>}
      */
     private function summary(CoverageArea $area): array
     {
-        /** @var object{cells: int, with_footprints: int, footprints: int, busiest: int, median: float|null}|null $cells */
+        /** @var object{cells: int, with_footprints: int, footprints: int, captured: int, accepted: int, busiest: int, median: float|null}|null $cells */
         $cells = DB::selectOne(<<<'SQL'
             SELECT count(*)                                                     AS cells,
                    count(*) FILTER (WHERE footprint_count > 0)                  AS with_footprints,
                    COALESCE(sum(footprint_count), 0)                            AS footprints,
+                   COALESCE(sum(structures_captured), 0)                         AS captured,
+                   COALESCE(sum(structures_accepted), 0)                         AS accepted,
                    COALESCE(max(footprint_count), 0)                            AS busiest,
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY footprint_count)
                        FILTER (WHERE footprint_count > 0)                       AS median
@@ -160,6 +169,11 @@ final class CoverageController
             'cells' => (int) ($cells->cells ?? 0),
             'tiled' => (int) ($cells->cells ?? 0),
             'footprints' => (int) ($cells->footprints ?? 0),
+            // Visited and verified are different questions and the console has
+            // to be able to answer both. A mandate that is 90 per cent captured
+            // and 20 per cent accepted is not a mandate that is nearly done.
+            'captured' => (int) ($cells->captured ?? 0),
+            'accepted' => (int) ($cells->accepted ?? 0),
             'cellsWithFootprints' => (int) ($cells->with_footprints ?? 0),
             'busiest' => (int) ($cells->busiest ?? 0),
             'medianPerCell' => (int) round((float) ($cells->median ?? 0)),

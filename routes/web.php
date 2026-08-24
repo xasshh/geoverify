@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\CoverageController;
+use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
@@ -41,6 +42,11 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::get('review', [ReviewController::class, 'index'])->name('review.index');
     Route::get('review/{observation}', [ReviewController::class, 'show'])->name('review.show');
     Route::post('review/{observation}', [ReviewController::class, 'decide'])->name('review.decide');
+
+    // Live operations. Who is out, where they are, and what is going wrong now
+    // rather than at the end of the week.
+    Route::get('live', [LiveOperationsController::class, 'index'])->name('live');
+    Route::get('live/feed.json', [LiveOperationsController::class, 'feed'])->name('live.feed');
 });
 
 /*
