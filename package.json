@@ -37,6 +37,7 @@
         "@inertiajs/react": "^2.3.27",
         "dexie": "^4.4.5",
         "maplibre-gl": "^6.5.0",
+        "pmtiles": "^4.5.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"
     }

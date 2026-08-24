@@ -11,6 +11,9 @@ import { SelectField, TextField } from '@/components/Field';
 import { cx } from '@/lib/cx';
 import { useTrace } from '@/lib/geolocation';
 import { PhotoCapture } from '@/components/PhotoCapture';
+import { FieldMap, type CapturedPoint } from '@/components/FieldMap';
+import { PackDownload } from '@/components/PackDownload';
+import { usePack } from '@/lib/offline/usePack';
 import { sendFixes, startSession, uuid7 } from '@/lib/capture';
 import { useOfflineQueue } from '@/lib/offline/useOfflineQueue';
 import { db } from '@/lib/offline/db';
@@ -25,6 +28,7 @@ interface Option {
 
 interface Cell {
     id: number;
+    coverageAreaId: number;
     h3: string;
     mandate: string;
     footprints: number;
@@ -84,6 +88,19 @@ export default function Capture({
     const { takeFixes } = trace;
     const sessionUuid = useRef(uuid7());
     const queue = useOfflineQueue();
+    const pack = usePack(cell.coverageAreaId);
+
+    /**
+     * The building the officer tapped on the map.
+     *
+     * Null is a real answer and stays one: a kiosk between two buildings has no
+     * footprint, and the officer must be able to capture it without being made
+     * to attach one that is wrong.
+     */
+    const [selectedFootprint, setSelectedFootprint] = useState<number | null>(null);
+    const [street, setStreet] = useState<string | null>(null);
+    const [localPoints, setLocalPoints] = useState<CapturedPoint[]>([]);
+    const [visitedFootprints, setVisitedFootprints] = useState<number[]>([]);
 
     const captured = recorded.length;
 
@@ -142,7 +159,46 @@ export default function Capture({
         };
     }, [flushFixes]);
 
-    // The officer's own path so far, as the mark that ends up on the record.
+    /**
+     * What this device has already recorded in this cell.
+     *
+     * Read from IndexedDB rather than from the page props: a building captured
+     * an hour ago with no signal is not in the props, and it must still show as
+     * done. Re-read whenever the count changes, which is the only thing that
+     * moves it.
+     */
+    useEffect(() => {
+        let live = true;
+
+        void db.structures
+            .where('gridCellId')
+            .equals(cell.id)
+            .toArray()
+            .then((rows) => {
+                if (!live) {
+                    return;
+                }
+
+                setLocalPoints(
+                    rows.map((row) => ({
+                        clientUuid: row.clientUuid,
+                        longitude: row.longitude,
+                        latitude: row.latitude,
+                    })),
+                );
+
+                setVisitedFootprints(
+                    rows
+                        .map((row) => row.externalFootprintId)
+                        .filter((id): id is number => id !== null),
+                );
+            });
+
+        return () => {
+            live = false;
+        };
+    }, [cell.id, recorded.length]);
+
     // The officer's own path so far, as the mark that ends up on the record.
     const tracePoints = useMemo<TracePoint[]>(() => trace.track, [trace.track]);
 
@@ -187,11 +243,23 @@ export default function Capture({
                                     setStage('structure');
                                 }}
                             >
-                                {trace.current === null ? 'Waiting for a position' : 'Capture this building'}
+                                {trace.current === null
+                                    ? 'Waiting for a position'
+                                    : selectedFootprint === null
+                                      ? 'Capture this building'
+                                      : 'Capture the marked building'}
                             </Button>
                             <div className="flex gap-2.5">
-                                <Button variant="secondary" size="field" fullWidth>
-                                    Add point
+                                <Button
+                                    variant="secondary"
+                                    size="field"
+                                    fullWidth
+                                    disabled={selectedFootprint === null}
+                                    onClick={() => {
+                                        setSelectedFootprint(null);
+                                    }}
+                                >
+                                    Clear selection
                                 </Button>
                                 <Button variant="secondary" size="field" fullWidth>
                                     Not a building
@@ -200,58 +268,113 @@ export default function Capture({
                         </div>
                     }
                 >
-                    <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
-                        {tracePoints.length > 1 ? (
-                            <PresenceMark points={tracePoints} size={150} />
-                        ) : trace.current === null ? (
-                            <div className="text-center">
-                                <p className="text-body text-muted">Finding you</p>
-                                <p className="mt-1 text-label text-faint">
-                                    Stand in the open for a few seconds
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="text-center">
-                                <p className="text-body text-ink">Position locked</p>
-                                <p className="mt-1 text-label text-faint">
-                                    Your track appears here as you walk
-                                </p>
-                            </div>
-                        )}
+                    {pack.state === 'installed' && pack.pack !== null ? (
+                        <>
+                            <FieldMap
+                                pack={pack.pack}
+                                assignedH3={cell.h3}
+                                centre={cell.centre}
+                                position={trace.current}
+                                track={trace.track}
+                                captured={localPoints}
+                                visitedFootprintIds={visitedFootprints}
+                                selectedFootprintId={selectedFootprint}
+                                onSelectFootprint={setSelectedFootprint}
+                                onStreetChange={setStreet}
+                            />
 
-                        <FootprintLegend className="justify-center" />
-
-                        {accuracy !== null && (
-                            <p
-                                className={cx(
-                                    'numeric-mono text-mono',
-                                    poorAccuracy ? 'text-amber' : 'text-faint',
+                            {/* Where the officer is, in words. The map answers
+                                where, this answers where by name, which is what
+                                gets written on a paper form and said out loud. */}
+                            <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
+                                <span className="rounded-sm bg-surface/85 px-2 py-1 text-ui text-ink backdrop-blur-sm">
+                                    {street ?? 'Off any mapped street'}
+                                </span>
+                                {accuracy !== null && (
+                                    <span
+                                        className={cx(
+                                            'rounded-sm bg-surface/85 px-2 py-1 numeric-mono text-mono backdrop-blur-sm',
+                                            poorAccuracy ? 'text-amber' : 'text-faint',
+                                        )}
+                                    >
+                                        +/- {accuracy.toFixed(0)} m
+                                    </span>
                                 )}
-                            >
-                                {trace.current?.latitude.toFixed(5) ?? ''}, {trace.current?.longitude.toFixed(5) ?? ''}
-                                {'  '}
-                                +/- {accuracy.toFixed(1)} m
-                            </p>
-                        )}
+                            </div>
 
-                        {poorAccuracy && (
-                            <p className="max-w-[36ch] text-center text-ui text-amber">
-                                Accuracy is poor here. Move away from the wall or into the open
-                                before capturing.
-                            </p>
-                        )}
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-2.5">
+                                {poorAccuracy && (
+                                    <p className="max-w-[36ch] rounded-sm bg-surface/85 px-2 py-1 text-ui text-amber backdrop-blur-sm">
+                                        Accuracy is poor here. Move into the open before capturing.
+                                    </p>
+                                )}
+                                <FootprintLegend className="rounded-sm bg-surface/85 px-2 py-1 backdrop-blur-sm" />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-4 overflow-y-auto p-4">
+                            <PackDownload
+                                state={pack.state}
+                                offered={pack.offered}
+                                received={pack.received}
+                                bytes={pack.bytes}
+                                error={pack.error}
+                                onDownload={pack.download}
+                                onCancel={pack.cancel}
+                                blocking
+                            />
 
-                        {trace.wakeLock === 'denied' && (
-                            <p className="max-w-[36ch] text-center text-ui text-amber">
-                                The screen may switch itself off. If it does, your trace stops
-                                recording, so keep the app open.
+                            {/* Capture still works with no map at all. It is
+                                harder, so it is said plainly rather than left to
+                                be discovered. */}
+                            <p className="max-w-[36ch] text-center text-ui text-muted">
+                                You can still capture without the map. You will be working from
+                                what you can see rather than from the building outlines.
                             </p>
-                        )}
 
-                        {trace.error !== null && (
-                            <p className="max-w-[36ch] text-center text-ui text-alert">{trace.error}</p>
-                        )}
-                    </div>
+                            {tracePoints.length > 1 ? (
+                                <PresenceMark points={tracePoints} size={120} />
+                            ) : trace.current === null ? (
+                                <div className="text-center">
+                                    <p className="text-body text-muted">Finding you</p>
+                                    <p className="mt-1 text-label text-faint">
+                                        Stand in the open for a few seconds
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="text-center">
+                                    <p className="text-body text-ink">Position locked</p>
+                                </div>
+                            )}
+
+                            {accuracy !== null && (
+                                <p
+                                    className={cx(
+                                        'numeric-mono text-mono',
+                                        poorAccuracy ? 'text-amber' : 'text-faint',
+                                    )}
+                                >
+                                    {trace.current?.latitude.toFixed(5) ?? ''},{' '}
+                                    {trace.current?.longitude.toFixed(5) ?? ''}
+                                    {'  '}
+                                    +/- {accuracy.toFixed(1)} m
+                                </p>
+                            )}
+
+                            {trace.wakeLock === 'denied' && (
+                                <p className="max-w-[36ch] text-center text-ui text-amber">
+                                    The screen may switch itself off. If it does, your trace stops
+                                    recording, so keep the app open.
+                                </p>
+                            )}
+
+                            {trace.error !== null && (
+                                <p className="max-w-[36ch] text-center text-ui text-alert">
+                                    {trace.error}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </MapChrome>
             )}
 
@@ -262,6 +385,7 @@ export default function Capture({
                     occupancyStatuses={occupancyStatuses}
                     existing={openStructure}
                     position={trace.current}
+                    externalFootprintId={selectedFootprint}
                     consentScript={consentScript}
                     cellId={cell.id}
                     sessionId={sessionId}
@@ -318,6 +442,8 @@ interface StructureSheetProps {
     occupancyStatuses: Option[];
     existing: CapturedStructure | null;
     position: { latitude: number; longitude: number; accuracy_m: number | null } | null;
+    /** The footprint tapped on the map, or null when there was nothing to tap. */
+    externalFootprintId: number | null;
     consentScript: { version: string; text: string };
     onClose: () => void;
     onSaved: (structure: CapturedStructure) => void;
@@ -340,6 +466,7 @@ function StructureSheet({
     occupancyStatuses,
     existing,
     position,
+    externalFootprintId,
     consentScript,
     onClose,
     onSaved,
@@ -385,6 +512,7 @@ function StructureSheet({
                 observedAt: new Date().toISOString(),
                 serverId: null,
                 resolvedWard: null,
+                externalFootprintId,
             });
 
             await record('structure', {
@@ -401,6 +529,11 @@ function StructureSheet({
                 unit_count: units,
                 observed_at: new Date().toISOString(),
                 assignment_id: assignmentId,
+                // The building the officer pointed at. The server checks it is
+                // real and inside the cell; nothing here is taken on trust.
+                ...(externalFootprintId === null
+                    ? {}
+                    : { external_footprint_id: externalFootprintId }),
                 ...(sessionId === null ? {} : { field_session_id: sessionId }),
             });
 

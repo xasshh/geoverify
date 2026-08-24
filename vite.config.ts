@@ -95,6 +95,14 @@ export default defineConfig({
                             expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
                         },
                     },
+                    {
+                        // The map pack is tens of megabytes and is stored in
+                        // IndexedDB by the app itself. Letting the worker cache it
+                        // as well would keep two copies of 67 MB on a handset that
+                        // has neither to spare.
+                        urlPattern: /\/api\/field\/packs\/\d+/,
+                        handler: 'NetworkOnly',
+                    },
                 ],
             },
 

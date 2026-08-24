@@ -30,4 +30,5 @@ Thumbs.db
 /storage/app/geodata
 
 /public/sw.js
+/public/workbox-*.js
 /public/manifest.webmanifest

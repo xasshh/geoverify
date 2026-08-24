@@ -51,6 +51,7 @@ final class CaptureScreenController
             'assignmentId' => $assignment->id,
             'cell' => [
                 'id' => $cell->id,
+                'coverageAreaId' => $cell->coverage_area_id,
                 'h3' => $cell->h3(),
                 'mandate' => $cell->coverageArea->name ?? '',
                 'footprints' => $cell->footprint_count,

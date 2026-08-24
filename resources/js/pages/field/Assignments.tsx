@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
 import { StatusPill } from '@/components/StatusPill';
 import { SyncIndicator } from '@/components/SyncIndicator';
+import { PackShelf } from '@/components/PackShelf';
 import { cx } from '@/lib/cx';
 import type { StatusTone } from '@/lib/status';
 
@@ -9,6 +10,7 @@ interface Assignment {
     id: number;
     h3: string;
     mandate: string;
+    coverageAreaId: number;
     footprints: number;
     captured: number;
     status: string;
@@ -40,6 +42,15 @@ const TONE: Record<string, StatusTone> = {
 export default function FieldAssignments({ officer, assignments }: Props) {
     const outstanding = assignments.reduce((n, a) => n + Math.max(0, a.footprints - a.captured), 0);
 
+    // One row per mandate, not one per cell: the pack covers the whole mandate
+    // and an officer with nine cells in Abuja does not need nine offers of the
+    // same 67 MB.
+    const mandates = Array.from(
+        new Map(
+            assignments.map((a) => [a.coverageAreaId, { coverageAreaId: a.coverageAreaId, mandate: a.mandate }]),
+        ).values(),
+    );
+
     return (
         <div data-mode="dusk" className="min-h-dvh bg-surface text-ink">
             <Head title="My work" />
@@ -61,6 +72,8 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                     <SyncIndicator connectivity="online" queued={0} lastSync={null} compact />
                 </div>
             </header>
+
+            <PackShelf mandates={mandates} />
 
             <div className="px-4 py-4">
                 <p className="numeric-mono text-ui text-muted">

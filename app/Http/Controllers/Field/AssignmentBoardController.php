@@ -39,6 +39,7 @@ final class AssignmentBoardController
                 'id' => $a->id,
                 'h3' => $a->gridCell instanceof GridCell ? $a->gridCell->h3() : '',
                 'mandate' => $a->gridCell?->coverageArea->name ?? '',
+                'coverageAreaId' => (int) ($a->gridCell->coverage_area_id ?? 0),
                 'footprints' => (int) ($a->gridCell->footprint_count ?? 0),
                 'captured' => (int) ($a->gridCell->structures_captured ?? 0),
                 'status' => $a->status->value,

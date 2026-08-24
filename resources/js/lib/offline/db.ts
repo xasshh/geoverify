@@ -26,6 +26,13 @@ export interface LocalStructure {
     /** Filled in once the server has accepted it. Null while it is only local. */
     serverId: number | null;
     resolvedWard: string | null;
+    /**
+     * The footprint the officer tapped, if they tapped one.
+     *
+     * Null is a real answer: a kiosk between two buildings has no footprint, and
+     * an officer must never be forced to attach one that is wrong.
+     */
+    externalFootprintId: number | null;
 }
 
 export interface LocalEnterprise {
@@ -90,6 +97,43 @@ export interface Meta {
     value: unknown;
 }
 
+/**
+ * A downloaded map pack.
+ *
+ * The blob is the whole PMTiles archive, which is tens of megabytes. It is held
+ * as a Blob rather than an ArrayBuffer on purpose: the browser keeps it on disk
+ * and MapLibre reads slices of it, so the map never pulls the archive into
+ * memory to draw a tile.
+ */
+export interface LocalPack {
+    packId: number;
+    coverageAreaId: number;
+    mandate: string;
+    checksum: string;
+    bytes: number;
+    /** Bytes on the device. Below `bytes` means the download stopped partway. */
+    received: number;
+    minZoom: number;
+    maxZoom: number;
+    bounds: [number, number, number, number];
+    layers: Record<string, number>;
+    /** Set only when the whole archive is here. A partial pack is never opened. */
+    blob: Blob | null;
+    installedAt: string | null;
+}
+
+/**
+ * A piece of a download in progress.
+ *
+ * A 67 MB file on a connection that drops must resume, not restart. Chunks are
+ * written as they land, so an officer who loses wifi at 60 MB has 60 MB.
+ */
+export interface PackChunk {
+    packId: number;
+    index: number;
+    blob: Blob;
+}
+
 const db = new Dexie('geoverify') as Dexie & {
     structures: EntityTable<LocalStructure, 'clientUuid'>;
     enterprises: EntityTable<LocalEnterprise, 'clientUuid'>;
@@ -97,6 +141,8 @@ const db = new Dexie('geoverify') as Dexie & {
     fixes: EntityTable<LocalFix, 'id'>;
     mutations: EntityTable<Mutation, 'clientUuid'>;
     meta: EntityTable<Meta, 'key'>;
+    packs: EntityTable<LocalPack, 'packId'>;
+    packChunks: EntityTable<PackChunk, 'packId'>;
 };
 
 db.version(1).stores({
@@ -108,6 +154,13 @@ db.version(1).stores({
     fixes: '++id, sessionClientUuid, sent',
     mutations: 'clientUuid, state, createdAt',
     meta: 'key',
+});
+
+// The offline basemap. Added in its own version so an officer upgrading mid
+// deployment keeps every capture already on the device.
+db.version(2).stores({
+    packs: 'packId, coverageAreaId',
+    packChunks: '[packId+index], packId',
 });
 
 export { db };
