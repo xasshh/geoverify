@@ -61,7 +61,10 @@ function minutesSince(iso: string | null): number | null {
         return null;
     }
 
-    const then = new Date(iso.replace(' ', 'T')).getTime();
+    // The server sends ISO 8601 with an offset, so this is unambiguous wherever
+    // the console is open. A naive timestamp would be read as browser local and
+    // put "last seen" out by the server's offset.
+    const then = new Date(iso).getTime();
 
     return Number.isNaN(then) ? null : Math.floor((Date.now() - then) / 60_000);
 }

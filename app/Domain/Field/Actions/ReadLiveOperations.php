@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Field\Actions;
 
 use App\Domain\Registry\Models\Structure;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -152,9 +153,9 @@ final class ReadLiveOperations
                 'officer' => (string) $row->officer,
                 'staffRef' => $row->staff_ref,
                 'sessionId' => (int) $row->session_id,
-                'startedAt' => $row->started_at,
-                'endedAt' => $row->ended_at,
-                'lastSeenAt' => $lastSeen,
+                'startedAt' => $this->iso($row->started_at),
+                'endedAt' => $this->iso($row->ended_at),
+                'lastSeenAt' => $this->iso($lastSeen),
                 'active' => $lastSeen !== null
                     && strtotime((string) $lastSeen) >= strtotime('-'.self::ACTIVE_MINUTES.' minutes'),
                 'longitude' => $row->longitude === null ? null : (float) $row->longitude,
@@ -174,6 +175,20 @@ final class ReadLiveOperations
                     : json_decode((string) $row->trace, true, 512, JSON_THROW_ON_ERROR),
             ];
         }, $rows);
+    }
+
+    /**
+     * A raw timestamp from a database row, made unambiguous for a browser.
+     *
+     * The column carries no offset, so a browser parses it as its own local
+     * time. On a server running UTC and a console open in Lagos that is an hour
+     * of error in "last seen", which is exactly the number a supervisor uses to
+     * decide whether to ring somebody. Carbon reads it in the application
+     * timezone and writes the offset back out.
+     */
+    private function iso(mixed $value): ?string
+    {
+        return $value === null ? null : Carbon::parse((string) $value)->toIso8601String();
     }
 
     /**

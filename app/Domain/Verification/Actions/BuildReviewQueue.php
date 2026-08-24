@@ -7,6 +7,7 @@ namespace App\Domain\Verification\Actions;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Verification\Enums\Verdict;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,7 +51,7 @@ final class BuildReviewQueue
             $queue[] = [
                 'id' => (int) $row['id'],
                 'score' => $row['confidence_score'] === null ? null : (int) $row['confidence_score'],
-                'observedAt' => $row['observed_at'],
+                'observedAt' => $this->iso($row['observed_at']),
                 'officer' => $row['officer'],
                 'officerId' => (int) $row['officer_id'],
                 'structureId' => (int) $row['structure_id'],
@@ -69,6 +70,20 @@ final class BuildReviewQueue
             'total' => count($queue),
             'awaiting' => $this->awaiting($coverageAreaId, $officerId),
         ];
+    }
+
+    /**
+     * A raw timestamp from a database row, made unambiguous for a browser.
+     *
+     * The column carries no offset, so a browser parses it as its own local
+     * time. On a server running UTC and a console open in Lagos that is an hour
+     * of error in "last seen", which is exactly the number a supervisor uses to
+     * decide whether to ring somebody. Carbon reads it in the application
+     * timezone and writes the offset back out.
+     */
+    private function iso(mixed $value): ?string
+    {
+        return $value === null ? null : Carbon::parse((string) $value)->toIso8601String();
     }
 
     /**

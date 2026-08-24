@@ -9,6 +9,7 @@ use App\Domain\Registry\Models\StructureObservation;
 use App\Domain\Verification\Actions\ReviewObservation;
 use App\Domain\Verification\Enums\ReviewDecision;
 use App\Enums\Role;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -43,6 +44,27 @@ it('reads who is out there from the last fix, not from a politely closed session
         ->and($reading['active'])->toBeTrue()
         ->and($reading['longitude'])->toBeFloat()
         ->and($reading['trace'])->not->toBeEmpty();
+});
+
+it('sends timestamps with an offset, so a console outside UTC reads them right', function () {
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, person(Role::Supervisor));
+    [$lon, $lat] = cellCentre($cell);
+
+    $session = sessionFor($officer, $cell);
+    recordFixes($session, walkedDay(now()->subMinutes(15), $lon, $lat));
+
+    $reading = app(ReadLiveOperations::class)()['officers'][0];
+
+    // A naive "2026-08-24 17:05:26" is read by a browser as its own local time,
+    // which on a UTC server and a console in Lagos puts "last seen" out by an
+    // hour: exactly the number a supervisor uses to decide whether to ring
+    // somebody. Every timestamp leaves here carrying its offset.
+    foreach (['startedAt', 'lastSeenAt'] as $field) {
+        expect($reading[$field])->toMatch('/[+-]\d{2}:\d{2}$/', "{$field} carries no offset");
+    }
+
+    expect(Carbon::parse($reading['lastSeenAt'])->diffInMinutes(now()))->toBeLessThan(20);
 });
 
 it('calls an officer quiet once the fixes stop, whatever the session says', function () {
