@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\CoverageController;
+use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
@@ -34,6 +35,12 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::get('coverage/{coverageArea}/assignments', [AssignmentController::class, 'index'])->name('assignments');
     Route::post('coverage/{coverageArea}/assignments', [AssignmentController::class, 'store'])->name('assignments.store');
     Route::delete('assignments/{assignment}', [AssignmentController::class, 'destroy'])->name('assignments.release');
+
+    // Review. The queue is ordered worst first, so this is where a supervisor
+    // starts their morning rather than somewhere they end up.
+    Route::get('review', [ReviewController::class, 'index'])->name('review.index');
+    Route::get('review/{observation}', [ReviewController::class, 'show'])->name('review.show');
+    Route::post('review/{observation}', [ReviewController::class, 'decide'])->name('review.decide');
 });
 
 /*

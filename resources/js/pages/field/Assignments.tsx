@@ -18,6 +18,12 @@ interface Assignment {
     dueOn: string | null;
     overdue: boolean;
     returnReason: string | null;
+    returnedCaptures: Array<{
+        id: number;
+        structureType: string;
+        reason: string | null;
+        returnedAt: string;
+    }>;
 }
 
 interface Props {
@@ -151,6 +157,31 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                                         </span>
                                         {a.returnReason}
                                     </p>
+                                )}
+
+                                {a.returnedCaptures.length > 0 && (
+                                    <div className="mt-3 border-l-2 border-amber pl-3">
+                                        <p className="text-label font-semibold tracking-[0.12em] text-amber uppercase">
+                                            {a.returnedCaptures.length === 1
+                                                ? '1 capture to do again'
+                                                : `${String(a.returnedCaptures.length)} captures to do again`}
+                                        </p>
+                                        <ul className="mt-1 flex flex-col gap-1.5">
+                                            {a.returnedCaptures.slice(0, 3).map((capture) => (
+                                                <li key={capture.id} className="text-ui text-muted">
+                                                    <span className="text-ink">
+                                                        {capture.structureType}
+                                                    </span>
+                                                    {capture.reason !== null && `: ${capture.reason}`}
+                                                </li>
+                                            ))}
+                                            {a.returnedCaptures.length > 3 && (
+                                                <li className="text-label text-faint">
+                                                    and {a.returnedCaptures.length - 3} more
+                                                </li>
+                                            )}
+                                        </ul>
+                                    </div>
                                 )}
 
                                 <p className="mt-3 text-ui font-semibold text-gold">Open this cell</p>

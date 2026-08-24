@@ -6,7 +6,11 @@ namespace App\Http\Controllers\Field;
 
 use App\Domain\Coverage\Models\GridCell;
 use App\Domain\Field\Models\Assignment;
+use App\Domain\Registry\Models\Structure;
+use App\Domain\Registry\Models\StructureObservation;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +34,8 @@ final class AssignmentBoardController
             ->orderByRaw('due_on nulls last')
             ->get();
 
+        $returned = $this->returnedCaptures($officer, $assignments->pluck('id')->all());
+
         return Inertia::render('field/Assignments', [
             'officer' => [
                 'name' => $officer->name,
@@ -47,7 +53,70 @@ final class AssignmentBoardController
                 'dueOn' => $a->due_on?->toDateString(),
                 'overdue' => $a->isOverdue(),
                 'returnReason' => $a->return_reason,
+                // Work a supervisor sent back, with the reason they gave. A
+                // return that the officer cannot see is not a return.
+                'returnedCaptures' => $returned[$a->id] ?? [],
             ])->all(),
         ]);
+    }
+
+    /**
+     * Captures a supervisor sent back, grouped by the assignment they belong to.
+     *
+     * The reason is read from the log rather than copied onto the observation,
+     * because the log is where the decision actually lives and a second copy is
+     * a second thing that can drift from it.
+     *
+     * @param  list<int>  $assignmentIds
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function returnedCaptures(User $officer, array $assignmentIds): array
+    {
+        if ($assignmentIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($assignmentIds), '?'));
+
+        $rows = DB::select(<<<SQL
+            select
+                observations.id,
+                observations.assignment_id,
+                observations.structure_type,
+                decision.evidence ->> 'reason' as reason,
+                decision.occurred_at as returned_at
+            from structure_observations observations
+            join lateral (
+                select evidence, occurred_at
+                from verification_events
+                where subject_type = ?
+                  and subject_id = observations.id
+                  and event = 'observation.returned'
+                order by id desc
+                limit 1
+            ) decision on true
+            where observations.captured_by = ?
+              and observations.status = ?
+              and observations.assignment_id in ({$placeholders})
+            order by decision.occurred_at desc
+        SQL, [
+            (new StructureObservation)->getMorphClass(),
+            $officer->id,
+            Structure::STATUS_REJECTED,
+            ...$assignmentIds,
+        ]);
+
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $grouped[(int) $row->assignment_id][] = [
+                'id' => (int) $row->id,
+                'structureType' => (string) $row->structure_type,
+                'reason' => $row->reason,
+                'returnedAt' => $row->returned_at,
+            ];
+        }
+
+        return $grouped;
     }
 }
