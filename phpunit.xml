@@ -12,6 +12,19 @@
             <directory>tests/Feature</directory>
         </testsuite>
     </testsuites>
+
+    <!--
+        The load tests spend a minute proving the sync endpoint holds at two
+        thousand mutations, which is worth knowing and not worth waiting for on
+        every save. Run them explicitly with the "load" group:
+        php artisan test  (with the group flag set to load)
+    -->
+    <groups>
+        <exclude>
+            <group>load</group>
+        </exclude>
+    </groups>
+
     <source>
         <include>
             <directory>app</directory>

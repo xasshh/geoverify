@@ -11,6 +11,7 @@ use App\Domain\Registry\Data\StructureCapture;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Registry\Models\StructureObservation;
 use App\Domain\Verification\Models\VerificationEvent;
+use App\Jobs\RefreshCellProgress;
 use App\Jobs\ScoreCapture;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -233,19 +234,16 @@ final class CaptureStructure
     }
 
     /**
-     * Moves the cell's captured count and coverage. Recomputed from the table
-     * rather than incremented, so a retry cannot inflate it.
+     * Asks for the cell's captured count to be brought up to date.
+     *
+     * Dispatched rather than run here. Doing it inline meant every capture in a
+     * cell wrote to the same grid_cells row, which was measured as the most
+     * expensive statement in the sync path at 25 ms each and, worse, made an
+     * ordinary primary key read of that row cost 16 ms because of the versions
+     * piling up behind it. The job coalesces, so a batch leaves one recompute.
      */
     private function refreshCellProgress(Structure $structure): void
     {
-        DB::statement(<<<'SQL'
-            UPDATE grid_cells g
-               SET structures_captured = c.n,
-                   coverage_pct = CASE WHEN g.footprint_count = 0 THEN 0
-                                       ELSE LEAST(100, round((c.n::numeric / g.footprint_count) * 100, 2)) END,
-                   updated_at = now()
-              FROM (SELECT count(*) AS n FROM structures WHERE grid_cell_id = ?) c
-             WHERE g.id = ?
-        SQL, [$structure->grid_cell_id, $structure->grid_cell_id]);
+        RefreshCellProgress::dispatch($structure->grid_cell_id)->afterCommit();
     }
 }

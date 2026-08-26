@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import type { ComponentType } from 'react';
 import './bootstrap';
@@ -8,18 +9,25 @@ const appName = 'GeoVerify';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} · ${appName}` : appName),
-    resolve: (name) => {
-        const pages = import.meta.glob<{ default: ComponentType }>('./pages/**/*.tsx', {
-            eager: true,
-        });
-        const page = pages[`./pages/${name}.tsx`];
-
-        if (!page) {
-            throw new Error(`Inertia page not found: ${name}`);
-        }
-
-        return page;
-    },
+    /**
+     * Pages are loaded on demand, not all at once.
+     *
+     * Resolving them eagerly put every screen in one bundle, which meant a
+     * field officer downloaded and parsed MapLibre and the whole supervisor
+     * console before they could see their assignment list. The download is a
+     * one time cost on wifi because the service worker precaches it, but the
+     * parse is paid on every cold start, on the cheapest handset in the
+     * programme.
+     *
+     * Splitting is safe offline precisely because of that precache: the
+     * worker's globPatterns take every emitted chunk, so a page loaded on
+     * demand is still a page already on the device.
+     */
+    resolve: (name) =>
+        resolvePageComponent<{ default: ComponentType }>(
+            `./pages/${name}.tsx`,
+            import.meta.glob<{ default: ComponentType }>('./pages/**/*.tsx'),
+        ),
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },
