@@ -9,6 +9,8 @@ use App\Domain\Coverage\Models\GridCell;
 use App\Domain\Field\Actions\AssignCells;
 use App\Domain\Field\Models\Assignment;
 use App\Domain\Field\Models\FieldSession;
+use App\Domain\Identity\Actions\HashIdentityReference;
+use App\Domain\Identity\Models\IdentityClaim;
 use App\Domain\Registry\Actions\CaptureEnterprise;
 use App\Domain\Registry\Actions\CaptureStructure;
 use App\Domain\Registry\Data\StructureCapture;
@@ -22,6 +24,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -194,7 +197,20 @@ final class FieldDaySeeder extends Seeder
     }
 
     /**
-     * A walk along a street grid: legs, corners, dwells, and receiver noise.
+     * A day of systematic enumeration, walked.
+     *
+     * Officers do not wander. They work a cell the way anyone covers ground on
+     * foot: down one street, across to the next, back along it, which draws a
+     * serpentine rather than a circuit. Three things stop that reading as a
+     * drawing:
+     *
+     *  - The grid is rotated per officer. Streets are not aligned to anybody's
+     *    screen, and an axis aligned trace is exactly the shape the naturalness
+     *    signal exists to catch.
+     *  - Legs vary, and a junction is sometimes carried straight through.
+     *  - Every fix carries receiver noise, and every doorway carries a dwell,
+     *    because standing still for four minutes recording a shop is most of
+     *    what the day actually is.
      *
      * @return list<array{lon: float, lat: float, at: Carbon, accuracy: float, satellites: int, mock: bool, network: array{float, float}}>
      */
@@ -202,46 +218,103 @@ final class FieldDaySeeder extends Seeder
     {
         mt_srand($seed * 7919);
 
+        $bearing = (mt_rand(0, 890) / 10.0) * M_PI / 180.0;
+        $block = 0.00011;
+
+        // An officer works the cell they were given. A resolution 9 cell is
+        // about ten hectares, so a day inside one is a few hundred metres of
+        // ground walked over and over, not a route across the district. Without
+        // this the trace leaves the hexagon it belongs to and every capture
+        // along it trips the containment signal for no reason.
+        $reach = 0.00105;
+
+        /** @var list<array{float, float}> $axes */
+        $axes = [];
+
+        for ($i = 0; $i < 4; $i++) {
+            $angle = $bearing + ($i * M_PI / 2);
+            $axes[] = [cos($angle) * $block, sin($angle) * $block];
+        }
+
         $steps = [];
         $x = $lon;
         $y = $lat;
-        $heading = mt_rand(0, 3);
-        $dx = [0.00022, 0.0, -0.00022, 0.0];
-        $dy = [0.0, 0.00022, 0.0, -0.00022];
 
-        for ($leg = 0; $leg < $legs; $leg++) {
-            $length = 3 + mt_rand(0, 4);
+        // Along a street, then across to the next one, then back along it.
+        $along = 0;
+        $across = 1;
+        $direction = 1;
+
+        for ($leg = 0; $leg < max(2, $legs); $leg++) {
+            $heading = $direction === 1 ? $along : ($along + 2) % 4;
+            $length = 4 + mt_rand(0, 7);
 
             for ($step = 0; $step < $length; $step++) {
-                $x += ($dx[$heading] ?? 0.0) * (0.8 + mt_rand(0, 60) / 100);
-                $y += ($dy[$heading] ?? 0.0) * (0.8 + mt_rand(0, 60) / 100);
+                [$ax, $ay] = $axes[$heading];
+                $pace = 0.75 + (mt_rand(0, 70) / 100);
 
-                // Receiver noise. Without it the trace is a drawing, and the
-                // naturalness signal would be right to say so.
+                // The edge of the cell. Turn back rather than walk out of it.
+                if (abs(($x + $ax * $pace) - $lon) > $reach
+                    || abs(($y + $ay * $pace) - $lat) > $reach) {
+                    $heading = ($heading + 2) % 4;
+                    [$ax, $ay] = $axes[$heading];
+                    $direction = -$direction;
+                }
+
+                $x += $ax * $pace;
+                $y += $ay * $pace;
+
                 $steps[] = [
-                    $x + (mt_rand(-14, 14) / 1_000_000),
-                    $y + (mt_rand(-14, 14) / 1_000_000),
+                    $x + (mt_rand(-16, 16) / 1_000_000),
+                    $y + (mt_rand(-16, 16) / 1_000_000),
                 ];
-            }
 
-            // A dwell: the officer stopped here and recorded something.
-            if (mt_rand(0, 100) < 45) {
-                for ($k = 0; $k < 3; $k++) {
-                    $steps[] = [
-                        $x + (mt_rand(-9, 9) / 1_000_000),
-                        $y + (mt_rand(-9, 9) / 1_000_000),
-                    ];
+                // A doorway. The officer stops, and the receiver keeps talking.
+                if (mt_rand(0, 100) < 22) {
+                    foreach (range(1, 2 + mt_rand(0, 3)) as $ignored) {
+                        $steps[] = [
+                            $x + (mt_rand(-7, 7) / 1_000_000),
+                            $y + (mt_rand(-7, 7) / 1_000_000),
+                        ];
+                    }
                 }
             }
 
-            $heading = (int) (($heading + (mt_rand(0, 1) === 0 ? 1 : 3)) % 4);
+            // Across to the next street, and turn back the other way. The
+            // across axis flips at the edge too, so the walk folds into the
+            // cell instead of marching out of one side of it.
+            [$cx, $cy] = $axes[$across];
+            $shift = 1.3 + (mt_rand(0, 50) / 100);
+
+            if (abs(($x + $cx * $shift) - $lon) > $reach
+                || abs(($y + $cy * $shift) - $lat) > $reach) {
+                $across = ($across + 2) % 4;
+                [$cx, $cy] = $axes[$across];
+            }
+
+            $x += $cx * $shift;
+            $y += $cy * $shift;
+            $steps[] = [$x, $y];
+
+            $direction = -$direction;
+
+            // Not every block is a right angle. Occasionally the street bends
+            // and the whole grid bends with it.
+            if (mt_rand(0, 100) < 18) {
+                $bearing += (mt_rand(-12, 12) / 100.0);
+
+                for ($i = 0; $i < 4; $i++) {
+                    $angle = $bearing + ($i * M_PI / 2);
+                    $axes[$i] = [cos($angle) * $block, sin($angle) * $block];
+                }
+            }
         }
 
         $fixes = [];
-        $at = $lastFixAt->copy()->subSeconds(count($steps) * 22);
+        $at = $lastFixAt->copy()->subSeconds(count($steps) * 20);
 
         foreach ($steps as [$stepLon, $stepLat]) {
-            $at = $at->copy()->addSeconds(mt_rand(9, 41));
+            $at = $at->copy()->addSeconds(8 + mt_rand(0, 34));
 
             $fixes[] = [
                 'lon' => $stepLon,
@@ -407,17 +480,25 @@ final class FieldDaySeeder extends Seeder
             ], $officer);
 
             $this->photograph($structure, $enterprise, $officer, $session, $fix, $day['fabricated']);
+            $this->identify($enterprise, $officer, $seed + $n, $day['fabricated']);
         }
 
         return $observations;
     }
 
     /**
-     * Photograph rows, without files behind them.
+     * Photographs, with real files behind them.
      *
-     * The console lists a photograph's kind and its provenance rather than
-     * rendering it, so rows alone make the review screen honest about what it
-     * would show. A seeder has no business inventing image bytes.
+     * The files are generated and they are labelled as generated. That is a
+     * deliberate line: a seeder that produced convincing photographs of
+     * Nigerian shopfronts would be manufacturing exactly the kind of evidence
+     * this system exists to detect, and it would sit in a demo pack alongside
+     * real records with nothing to tell them apart. A frame that says what it
+     * is populates the contact sheet and the review screen honestly.
+     *
+     * Everything around the pixels is real: the SHA-256 is of the actual bytes,
+     * the dimensions are read back from the file, and the three positions are
+     * kept apart the way the schema intends.
      *
      * @param  array{lon: float, lat: float, at: Carbon, accuracy: float, satellites: int, mock: bool, network: array{float, float}}  $fix
      */
@@ -430,11 +511,18 @@ final class FieldDaySeeder extends Seeder
         bool $fabricated,
     ): void {
         $shots = [
-            [$structure->getMorphClass(), $structure->id, 'facade'],
-            [$enterprise->getMorphClass(), $enterprise->id, 'signage'],
+            [$structure->getMorphClass(), $structure->id, 'facade', $structure->structure_type],
+            [$enterprise->getMorphClass(), $enterprise->id, 'signage', $enterprise->trading_name],
         ];
 
-        foreach ($shots as [$type, $id, $kind]) {
+        foreach ($shots as [$type, $id, $kind, $subject]) {
+            $path = 'demo/'.Str::lower(Str::random(24)).'.jpg';
+            $bytes = $this->frame($kind, (string) $subject, $fix, $officer);
+
+            Storage::disk('media')->put($path, $bytes);
+
+            $size = getimagesizefromstring($bytes);
+
             DB::insert(<<<'SQL'
                 insert into media (
                     mediable_type, mediable_id, kind, disk, disk_path, sha256, bytes,
@@ -442,15 +530,16 @@ final class FieldDaySeeder extends Seeder
                     captured_by, field_session_id, status, client_uuid, created_at, updated_at,
                     capture_point, device_reported_point
                 ) values (
-                    ?, ?, ?, 'media', ?, ?, ?, 1280, 960, ?, ?, ?, ?, ?, 'stored', ?, now(), now(),
+                    ?, ?, ?, 'media', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'stored', ?, now(), now(),
                     st_setsrid(st_point(?, ?), 4326)::geography,
                     st_setsrid(st_point(?, ?), 4326)::geography
                 )
             SQL, [
-                $type, $id, $kind,
-                'seed/'.Str::random(24).'.jpg',
-                hash('sha256', $type.$id.$kind.Str::random(8)),
-                mt_rand(180_000, 900_000),
+                $type, $id, $kind, $path,
+                hash('sha256', $bytes),
+                strlen($bytes),
+                $size === false ? null : $size[0],
+                $size === false ? null : $size[1],
                 $fix['at'],
                 // A fabricated day has no camera behind its photographs.
                 ! $fabricated,
@@ -462,6 +551,116 @@ final class FieldDaySeeder extends Seeder
                 $fix['lon'], $fix['lat'],
             ]);
         }
+    }
+
+    /**
+     * What was checked about who runs the business.
+     *
+     * Two kinds on purpose, because they are treated differently everywhere
+     * downstream. A CAC registration is public record and is stored and
+     * exported in full. A NIN goes through the same hashing the field client
+     * uses: what survives is a keyed token, the last four digits so a person
+     * can confirm which credential was checked, and the fact of the check. The
+     * number itself is never held, here or anywhere.
+     */
+    private function identify(Enterprise $enterprise, User $officer, int $n, bool $fabricated): void
+    {
+        $hasher = app(HashIdentityReference::class);
+
+        // Not every business in an informal market is registered, and a seeder
+        // that gave all of them a CAC number would be describing a different
+        // economy from the one this system was built to count.
+        if ($n % 3 !== 0) {
+            $cac = $hasher->hash(IdentityClaim::KIND_CAC, 'RC'.(1_000_000 + ($n * 7_919)));
+
+            IdentityClaim::query()->create([
+                'claimable_type' => $enterprise->getMorphClass(),
+                'claimable_id' => $enterprise->id,
+                'kind' => IdentityClaim::KIND_CAC,
+                'reference_token' => $cac['token'],
+                'reference_last4' => $cac['last4'],
+                'display_name_returned' => $enterprise->trading_name,
+                'status' => IdentityClaim::STATUS_VERIFIED,
+                'verifier' => 'cac',
+                'verified_at' => now()->subMinutes(mt_rand(5, 400)),
+                'captured_by' => $officer->id,
+                'client_uuid' => (string) Str::uuid7(),
+            ]);
+        }
+
+        // A fabricated day does not survive an identity check either.
+        if ($fabricated || $n % 2 !== 0) {
+            return;
+        }
+
+        $nin = $hasher->hash(IdentityClaim::KIND_NIN, str_pad((string) (10_000_000_000 + ($n * 37)), 11, '0', STR_PAD_LEFT));
+
+        IdentityClaim::query()->create([
+            'claimable_type' => $enterprise->getMorphClass(),
+            'claimable_id' => $enterprise->id,
+            'kind' => IdentityClaim::KIND_NIN,
+            'reference_token' => $nin['token'],
+            'reference_last4' => $nin['last4'],
+            'status' => IdentityClaim::STATUS_VERIFIED,
+            'verifier' => 'nimc',
+            'verified_at' => now()->subMinutes(mt_rand(5, 400)),
+            'captured_by' => $officer->id,
+            'client_uuid' => (string) Str::uuid7(),
+        ]);
+    }
+
+    /**
+     * One generated frame, saying plainly what it is.
+     *
+     * @param  array{lon: float, lat: float, at: Carbon, accuracy: float, satellites: int, mock: bool, network: array{float, float}}  $fix
+     */
+    private function frame(string $kind, string $subject, array $fix, User $officer): string
+    {
+        $width = 1280;
+        $height = 960;
+        $image = imagecreatetruecolor($width, $height);
+
+        if ($image === false) {
+            return '';
+        }
+
+        // A quiet ground with a horizon, so a contact sheet of these reads as a
+        // sheet of photographs rather than a sheet of error states.
+        $ground = imagecolorallocate($image, 32, 40, 50);
+        $sky = imagecolorallocate($image, 54, 66, 80);
+        $rule = imagecolorallocate($image, 88, 102, 116);
+        $ink = imagecolorallocate($image, 226, 224, 217);
+        $gold = imagecolorallocate($image, 208, 174, 99);
+
+        imagefilledrectangle($image, 0, 0, $width, $height, $ground);
+        imagefilledrectangle($image, 0, 0, $width, (int) ($height * 0.62), $sky);
+        imageline($image, 0, (int) ($height * 0.62), $width, (int) ($height * 0.62), $rule);
+
+        // A frame, so the label never sits on the very edge of the paper.
+        imagerectangle($image, 40, 40, $width - 40, $height - 40, $rule);
+
+        $font = 5;
+        imagestring($image, $font, 70, 80, 'GEOVERIFY DEMO IMAGE', $gold);
+        imagestring($image, $font, 70, 110, 'GENERATED, NOT A PHOTOGRAPH', $rule);
+
+        imagestring($image, $font, 70, (int) ($height * 0.68), mb_strtoupper($kind), $gold);
+        imagestring($image, $font, 70, (int) ($height * 0.68) + 34, mb_substr($subject, 0, 46), $ink);
+        imagestring($image, $font, 70, (int) ($height * 0.68) + 68, $officer->name, $rule);
+        imagestring(
+            $image,
+            $font,
+            70,
+            (int) ($height * 0.68) + 96,
+            $fix['at']->format('Y-m-d H:i').'  '.number_format($fix['lat'], 5).', '.number_format($fix['lon'], 5),
+            $rule,
+        );
+
+        ob_start();
+        imagejpeg($image, null, 82);
+        $bytes = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $bytes;
     }
 
     /**

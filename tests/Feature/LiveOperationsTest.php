@@ -81,6 +81,30 @@ it('calls an officer quiet once the fixes stop, whatever the session says', func
         ->and($live['officers'][0]['endedAt'])->toBeNull();
 });
 
+it('follows the session the device spoke from, not the one opened last', function () {
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, person(Role::Supervisor));
+    [$lon, $lat] = cellCentre($cell);
+
+    // The session being worked: opened earlier, still reporting.
+    $working = sessionFor($officer, $cell);
+    $working->update(['started_at' => now()->subHours(2)]);
+    recordFixes($working, walkedDay(now()->subMinutes(5), $lon, $lat));
+
+    // A session opened after it and abandoned, which is what an app killed at a
+    // doorstep leaves behind. Picking this one would put a stale position on
+    // the map while the officer is still walking.
+    $abandoned = sessionFor($officer, $cell);
+    $abandoned->update(['started_at' => now()->subMinutes(30)]);
+    recordFixes($abandoned, array_slice(walkedDay(now()->subMinutes(28), $lon, $lat), 0, 2));
+
+    $reading = app(ReadLiveOperations::class)()['officers'][0];
+
+    expect($reading['sessionId'])->toBe($working->id)
+        ->and($reading['active'])->toBeTrue()
+        ->and(count($reading['trace']))->toBeGreaterThan(2);
+});
+
 it('surfaces a mock location provider on the live map', function () {
     $officer = person(Role::Officer);
     $cell = assignedCell($officer, person(Role::Supervisor));

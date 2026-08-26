@@ -62,6 +62,12 @@ final class ReadLiveOperations
                  where sessions.started_at >= now() - interval '18 hours'
             ),
             latest as (
+                -- The officer's current session is the one their device spoke
+                -- from most recently, not the one opened most recently. Those
+                -- are different whenever a session was opened and abandoned,
+                -- which happens every time an app is killed at a doorstep, and
+                -- picking the wrong one puts a stale position on the map while
+                -- the officer is still walking.
                 select distinct on (today.user_id)
                        today.id,
                        today.user_id,
@@ -72,7 +78,12 @@ final class ReadLiveOperations
                        today.distance_m,
                        today.integrity_verdict
                   from today
-                 order by today.user_id, today.started_at desc
+                  left join lateral (
+                      select max(recorded_at) as spoke_at
+                        from position_fixes
+                       where field_session_id = today.id
+                  ) heard on true
+                 order by today.user_id, heard.spoke_at desc nulls last, today.started_at desc
             ),
             last_fix as (
                 select distinct on (fixes.field_session_id)
