@@ -3,6 +3,7 @@ import laravel from 'laravel-vite-plugin';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { copyFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export default defineConfig({
@@ -22,6 +23,31 @@ export default defineConfig({
          * assets are precached, so an officer who opens the app in a dead spot
          * gets the interface rather than a browser error page.
          */
+        {
+            /*
+             * The web app manifest, at the URL the service worker precaches.
+             *
+             * vite-plugin-pwa emits it into the Vite build directory with every
+             * other asset, but injects it into the precache list at the web
+             * root, after the prefix rewrite that fixes up everything else. It
+             * therefore 404s, and one missing precache entry fails the whole
+             * install: the worker goes redundant and the app silently stops
+             * being offline capable, which for a field client is the entire
+             * point of it. Copying the file to the root satisfies the worker
+             * without moving what the document already links to.
+             */
+            name: 'geoverify-webmanifest-at-root',
+            apply: 'build',
+            closeBundle() {
+                const built = resolve(__dirname, 'public/build/manifest.webmanifest');
+                const root = resolve(__dirname, 'public/manifest.webmanifest');
+
+                if (existsSync(built)) {
+                    copyFileSync(built, root);
+                }
+            },
+        },
+
         VitePWA({
             registerType: 'prompt',
             injectRegister: null,
@@ -66,6 +92,7 @@ export default defineConfig({
                 // pointed there explicitly.
                 globDirectory: 'public/build',
                 modifyURLPrefix: { '': '/build/' },
+
 
                 // Fonts are large and never change within a release. Precaching
                 // them is what keeps type from blocking on a 2G connection.

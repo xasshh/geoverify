@@ -11,7 +11,12 @@ export function registerServiceWorker(onUpdateReady: () => void): void {
         return;
     }
 
-    window.addEventListener('load', () => {
+    // Registered on load so it never competes with the first paint, but only
+    // if load is still coming. A module script routinely executes after the
+    // load event has already fired, and a listener attached then never runs:
+    // the worker silently never registers and the officer's app is not
+    // offline capable at all, which is the one thing it has to be.
+    const register = () => {
         void navigator.serviceWorker
             .register('/sw.js', { scope: '/' })
             .then((registration) => {
@@ -33,5 +38,13 @@ export function registerServiceWorker(onUpdateReady: () => void): void {
                 // An officer cannot act on a failed registration, and the app
                 // works without it, so this stays silent rather than alarming.
             });
-    });
+    };
+
+    if (document.readyState === 'complete') {
+        register();
+
+        return;
+    }
+
+    window.addEventListener('load', register, { once: true });
 }
