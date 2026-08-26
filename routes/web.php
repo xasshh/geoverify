@@ -53,7 +53,18 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::get('exports', [ExportController::class, 'index'])->name('exports');
     Route::get('exports/structures.geojson', [ExportController::class, 'structures'])->name('exports.structures');
     Route::get('exports/enterprises.csv', [ExportController::class, 'enterprises'])->name('exports.enterprises');
+    Route::get('exports/cells/{cell}/pack.pdf', [ExportController::class, 'pack'])->name('exports.pack');
 });
+
+/*
+| The evidence pack as HTML, for the browser that prints it.
+|
+| Outside the console group on purpose: the browser doing the printing has no
+| session. The route is signed, short lived, and refused off the loopback
+| interface.
+*/
+Route::get('exports/cells/{cell}/pack.html', [ExportController::class, 'packHtml'])
+    ->name('console.exports.pack.render');
 
 /*
 | The field client. An officer sees their own work and nothing else.

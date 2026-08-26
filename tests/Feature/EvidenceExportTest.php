@@ -11,11 +11,13 @@ use App\Domain\Registry\Models\Structure;
 use App\Domain\Verification\Actions\ReviewObservation;
 use App\Domain\Verification\Enums\ReviewDecision;
 use App\Domain\Verification\Exports\EnterpriseCsv;
+use App\Domain\Verification\Exports\EvidencePack;
 use App\Domain\Verification\Exports\ExportScope;
 use App\Domain\Verification\Exports\StructureGeoJson;
 use App\Domain\Verification\Models\VerificationEvent;
 use App\Enums\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /*
@@ -262,5 +264,117 @@ it('keeps an officer out of the export screen and its files', function () {
     $this->actingAs($officer)->get(route('console.exports'))->assertRedirect('/field');
     $this->actingAs($officer)
         ->get(route('console.exports.structures', ['area' => $cell->coverage_area_id]))
+        ->assertRedirect('/field');
+});
+
+/*
+|--------------------------------------------------------------------------
+| The evidence pack
+|--------------------------------------------------------------------------
+|
+| The PDF itself is printed by a headless browser, which is not something a
+| test suite should depend on being installed. What is tested here is
+| everything up to that: the document the browser is given, and the rules about
+| who is allowed to ask for it.
+|
+*/
+
+it('assembles a pack whose map geometry comes from PostGIS', function () {
+    $supervisor = person(Role::Supervisor);
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, $supervisor);
+    [$lon, $lat] = cellCentre($cell);
+
+    $session = sessionFor($officer, $cell);
+    recordFixes($session, walkedDay(now()->subHours(3), $lon, $lat));
+    $observation = captureIn($cell, $officer, $session, now()->subHours(2));
+    app(ReviewObservation::class)($observation, ReviewDecision::Accept, $supervisor);
+
+    $pack = app(EvidencePack::class)($cell, $supervisor);
+
+    expect($pack['cell']['h3'])->toBe($cell->h3())
+        ->and($pack['records'])->toHaveCount(1)
+        // ST_AsSVG path data, ready to place in an SVG element. Nothing is
+        // projected in PHP, not even to fit the viewport.
+        ->and($pack['map']['cell'])->toStartWith('M ')
+        ->and($pack['map']['traces'])->not->toBeEmpty()
+        ->and($pack['map']['captures'])->toHaveCount(1)
+        ->and($pack['map']['viewBox'])->toMatch('/^-?[\d.]+ -?[\d.]+ [\d.]+ [\d.]+$/')
+        // The audit log is the product, so it had better be in there.
+        ->and($pack['audit'])->not->toBeEmpty();
+
+    $events = array_column($pack['audit'], 'event');
+    expect($events)->toContain('observation.accepted');
+});
+
+it('renders the pack document without a browser anywhere near it', function () {
+    $supervisor = person(Role::Supervisor);
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, $supervisor);
+    [$lon, $lat] = cellCentre($cell);
+
+    $session = sessionFor($officer, $cell);
+    recordFixes($session, walkedDay(now()->subHours(3), $lon, $lat));
+    $observation = captureIn($cell, $officer, $session, now()->subHours(2));
+    app(ReviewObservation::class)($observation, ReviewDecision::Accept, $supervisor);
+
+    $url = URL::temporarySignedRoute(
+        'console.exports.pack.render',
+        now()->addMinutes(2),
+        ['cell' => $cell->id, 'all' => 0, 'by' => $supervisor->id],
+        absolute: false,
+    );
+
+    $html = $this->get($url)->assertOk()->getContent();
+
+    expect($html)->toContain('Evidence pack')
+        ->and($html)->toContain($cell->h3())
+        ->and($html)->toContain('Audit log')
+        // A cover mark, a map, and the running head that repeats.
+        ->and($html)->toContain('Presence mark')
+        ->and($html)->toContain('running-head');
+});
+
+it('refuses the render route without a signature, and after it expires', function () {
+    $supervisor = person(Role::Supervisor);
+    $cell = assignedCell(person(Role::Officer), $supervisor);
+
+    $this->get("/exports/cells/{$cell->id}/pack.html?by={$supervisor->id}")->assertForbidden();
+
+    $expired = URL::temporarySignedRoute(
+        'console.exports.pack.render',
+        now()->subMinute(),
+        ['cell' => $cell->id, 'all' => 0, 'by' => $supervisor->id],
+        absolute: false,
+    );
+
+    $this->get($expired)->assertForbidden();
+});
+
+it('refuses the render route from anywhere but this host', function () {
+    $supervisor = person(Role::Supervisor);
+    $cell = assignedCell(person(Role::Officer), $supervisor);
+
+    $url = URL::temporarySignedRoute(
+        'console.exports.pack.render',
+        now()->addMinutes(2),
+        ['cell' => $cell->id, 'all' => 0, 'by' => $supervisor->id],
+        absolute: false,
+    );
+
+    // A valid signature that leaked is still useless off the loopback
+    // interface, because the only thing that should ever fetch this is the
+    // browser this server started.
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.9'])
+        ->get($url)
+        ->assertForbidden();
+});
+
+it('keeps an officer from asking for a pack at all', function () {
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, person(Role::Supervisor));
+
+    $this->actingAs($officer)
+        ->get(route('console.exports.pack', ['cell' => $cell->id]))
         ->assertRedirect('/field');
 });

@@ -33,6 +33,7 @@ interface ExportsProps {
     } | null;
     cells: Cell[];
     recent: Taken[];
+    packAvailable: boolean;
 }
 
 function bytes(value: number | null): string {
@@ -72,7 +73,14 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
  * a supervisor about to send a register should be able to see that somebody sent
  * one an hour ago without going looking for the log.
  */
-export default function Exports({ areas, area, counts, cells, recent }: ExportsProps) {
+export default function Exports({
+    areas,
+    area,
+    counts,
+    cells,
+    recent,
+    packAvailable,
+}: ExportsProps) {
     const [cellId, setCellId] = useState<number | null>(null);
     const [includeAll, setIncludeAll] = useState(false);
 
@@ -240,7 +248,36 @@ export default function Exports({ areas, area, counts, cells, recent }: ExportsP
                                 >
                                     Business register (CSV)
                                 </a>
+
+                                {/* The pack is per cell. A mandate sized one
+                                    would be thousands of pages and nobody has
+                                    ever wanted that. */}
+                                {chosen !== null && packAvailable && (
+                                    <a
+                                        href={`/console/exports/cells/${String(chosen.id)}/pack.pdf${
+                                            includeAll ? '?all=1' : ''
+                                        }`}
+                                        className="rounded-sm border border-gold bg-gold px-4 py-2 text-ui font-semibold text-on-accent"
+                                    >
+                                        Evidence pack (PDF)
+                                    </a>
+                                )}
                             </div>
+
+                            {chosen === null && (
+                                <p className="mt-3 text-label text-faint">
+                                    Choose a cell above to print its evidence pack: the records, the
+                                    walk, the photographs and the full audit log as one document.
+                                </p>
+                            )}
+
+                            {chosen !== null && ! packAvailable && (
+                                <p className="mt-3 border-l-2 border-amber pl-3 text-label text-amber">
+                                    No headless browser is installed on this server, so the evidence
+                                    pack cannot be printed here. Install Chromium, or set
+                                    CHROMIUM_BINARY.
+                                </p>
+                            )}
 
                             <p className="mt-3 text-label text-faint">
                                 Every download is written to the audit log with the SHA-256 of the

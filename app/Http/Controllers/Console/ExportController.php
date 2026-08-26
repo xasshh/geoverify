@@ -9,13 +9,17 @@ use App\Domain\Coverage\Models\GridCell;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Verification\Actions\RecordExport;
 use App\Domain\Verification\Exports\EnterpriseCsv;
+use App\Domain\Verification\Exports\EvidencePack;
 use App\Domain\Verification\Exports\ExportScope;
+use App\Domain\Verification\Exports\PdfRenderer;
 use App\Domain\Verification\Exports\StructureGeoJson;
 use App\Domain\Verification\Models\VerificationEvent;
 use App\Models\User;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -25,7 +29,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class ExportController
 {
-    public function index(Request $request): Response
+    public function index(Request $request, PdfRenderer $renderer): Response
     {
         Gate::authorize('export', Structure::class);
 
@@ -44,6 +48,9 @@ final class ExportController
             'counts' => $area === null ? null : $this->counts($area),
             'cells' => $area === null ? [] : $this->cellsWithWork($area),
             'recent' => $area === null ? [] : $this->recent($area),
+            // Said on the screen rather than discovered at the moment somebody
+            // needs a pack for a client.
+            'packAvailable' => $renderer->available(),
         ]);
     }
 
@@ -77,6 +84,123 @@ final class ExportController
             'text/csv; charset=utf-8',
             $csv->stream($scope),
         );
+    }
+
+    /**
+     * The evidence pack, printed by a headless browser.
+     *
+     * The browser fetches the document from this application over the loopback
+     * interface using a signed, short lived URL. That is deliberate: rendering
+     * the same HTML and CSS the console already serves means the pack inherits
+     * the self hosted fonts and their subsets rather than growing a second
+     * typographic pipeline that can drift from the first.
+     */
+    public function pack(
+        Request $request,
+        GridCell $cell,
+        PdfRenderer $renderer,
+        RecordExport $record,
+    ): StreamedResponse {
+        Gate::authorize('export', Structure::class);
+
+        $area = CoverageArea::query()->findOrFail($cell->coverage_area_id);
+        $scope = new ExportScope($area, $cell, $request->boolean('all'));
+
+        if (! $renderer->available()) {
+            abort(503, 'No headless browser is installed on this server, so a pack cannot be printed.');
+        }
+
+        // Signed relative to the path, not the host. The browser is sent to
+        // the loopback address rather than to APP_URL, and an absolute
+        // signature would cover a hostname that is deliberately not the one
+        // being fetched.
+        $url = URL::temporarySignedRoute(
+            'console.exports.pack.render',
+            now()->addMinutes(2),
+            [
+                'cell' => $cell->id,
+                'all' => $request->boolean('all') ? 1 : 0,
+                'by' => $this->actor($request)->id,
+            ],
+            absolute: false,
+        );
+
+        $file = tempnam(sys_get_temp_dir(), 'geoverify-pack-').'.pdf';
+
+        $renderer->render($this->loopback($request, $url), $file);
+
+        return $record(
+            $scope,
+            $this->actor($request),
+            'pdf',
+            $scope->filename('pdf'),
+            'application/pdf',
+            $this->readAndDelete($file),
+        );
+    }
+
+    /**
+     * The pack as HTML, for the browser that prints it and for a preview.
+     *
+     * Signed rather than authenticated, because the browser doing the printing
+     * has no session. It is additionally refused off the loopback interface, so
+     * a signature that leaked is still useless to anyone outside this host.
+     */
+    public function packHtml(Request $request, GridCell $cell, EvidencePack $pack): ViewContract
+    {
+        if (! $request->hasValidSignature(absolute: false)) {
+            abort(403, 'That link has expired.');
+        }
+
+        if (! in_array($request->ip(), ['127.0.0.1', '::1', null], true)) {
+            abort(403, 'The pack renders only on the host that asked for it.');
+        }
+
+        $by = User::query()->findOrFail($request->integer('by'));
+
+        return view('exports.pack', [
+            'pack' => $pack($cell, $by, $request->boolean('all')),
+        ]);
+    }
+
+    /**
+     * The rendered file, yielded once and then removed.
+     *
+     * A pack is printed to a temporary file because that is the only thing the
+     * browser's print-to-pdf will write to. It does not outlive the download.
+     *
+     * @return \Generator<int, string>
+     */
+    private function readAndDelete(string $file): \Generator
+    {
+        try {
+            yield (string) file_get_contents($file);
+        } finally {
+            @unlink($file);
+        }
+    }
+
+    /**
+     * The URL the local browser should fetch.
+     *
+     * Not APP_URL. That is what the outside world calls this application, and it
+     * is not necessarily a name this host can resolve or a port it answers on: a
+     * pack that only prints when DNS agrees with itself is a pack that fails in
+     * production. The loopback address with the port this very request arrived
+     * on is always somewhere the application is listening.
+     */
+    private function loopback(Request $request, string $url): string
+    {
+        $parts = parse_url($url);
+        $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
+
+        $base = config('services.chromium.base_url');
+
+        if (is_string($base) && $base !== '') {
+            return rtrim($base, '/').$path;
+        }
+
+        return sprintf('%s://127.0.0.1:%d%s', $request->getScheme(), $request->getPort(), $path);
     }
 
     private function actor(Request $request): User
