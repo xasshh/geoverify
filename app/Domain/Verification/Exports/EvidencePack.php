@@ -430,6 +430,6 @@ final class EvidencePack
             }
         }
 
-        return implode(' \u{b7} ', $parts);
+        return implode(" \u{b7} ", $parts);
     }
 }
