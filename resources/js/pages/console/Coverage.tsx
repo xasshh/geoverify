@@ -281,6 +281,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: false },
                     { label: 'Review', href: '/console/review', current: false },
                     { label: 'Live', href: '/console/live', current: false },
+                    { label: 'Exports', href: '/console/exports', current: false },
                 ]}
             />
 

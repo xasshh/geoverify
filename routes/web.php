@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\CoverageController;
+use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Field\AssignmentBoardController;
@@ -47,6 +48,11 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     // rather than at the end of the week.
     Route::get('live', [LiveOperationsController::class, 'index'])->name('live');
     Route::get('live/feed.json', [LiveOperationsController::class, 'feed'])->name('live.feed');
+
+    // Evidence output. Every download appends to verification_events.
+    Route::get('exports', [ExportController::class, 'index'])->name('exports');
+    Route::get('exports/structures.geojson', [ExportController::class, 'structures'])->name('exports.structures');
+    Route::get('exports/enterprises.csv', [ExportController::class, 'enterprises'])->name('exports.enterprises');
 });
 
 /*

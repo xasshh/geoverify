@@ -145,6 +145,7 @@ export default function Assignments({
                     { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: true },
                     { label: 'Review', href: '/console/review', current: false },
                     { label: 'Live', href: '/console/live', current: false },
+                    { label: 'Exports', href: '/console/exports', current: false },
                 ]}
             />
 

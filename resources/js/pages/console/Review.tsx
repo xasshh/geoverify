@@ -165,6 +165,7 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
                     { label: 'Coverage', href: '/console/coverage', current: false },
                     { label: 'Review', href: '/console/review', current: true },
                     { label: 'Live', href: '/console/live', current: false },
+                    { label: 'Exports', href: '/console/exports', current: false },
                 ]}
             />
 

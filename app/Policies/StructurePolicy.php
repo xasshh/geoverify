@@ -23,6 +23,18 @@ final class StructurePolicy
         return $user->supervises() || $structure->captured_by === $user->id;
     }
 
+    /**
+     * Taking the register out of the system.
+     *
+     * Supervisors only, and named rather than folded into a general view
+     * ability: an officer can see their own captures, which is not the same
+     * permission as handing the register to somebody outside.
+     */
+    public function export(User $user): bool
+    {
+        return $user->supervises();
+    }
+
     public function capture(User $user, Structure $structure): bool
     {
         return $user->supervises() || $this->holdsCell($user, $structure->grid_cell_id);

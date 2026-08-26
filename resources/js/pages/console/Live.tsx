@@ -301,6 +301,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                     { label: 'Coverage', href: '/console/coverage', current: false },
                     { label: 'Review', href: '/console/review', current: false },
                     { label: 'Live', href: '/console/live', current: true },
+                    { label: 'Exports', href: '/console/exports', current: false },
                 ]}
             />
 
