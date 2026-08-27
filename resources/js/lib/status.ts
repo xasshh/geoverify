@@ -6,9 +6,16 @@
  * vision deficiency, still reads the shape and the word. A supervisor learns five
  * shapes once and they never mean anything else.
  */
-export type StatusTone = 'accepted' | 'review' | 'rejected' | 'progress' | 'idle';
+/**
+ * `held` is the portal's addition, and it is a money state rather than a
+ * workflow one: funds taken and not yet earned. It is neither `accepted`
+ * (nothing has settled) nor `review` (nothing is waiting on a person), and
+ * borrowing either would teach a false meaning on the screens where the meaning
+ * is what the customer is buying.
+ */
+export type StatusTone = 'accepted' | 'review' | 'rejected' | 'progress' | 'idle' | 'held';
 
-export type StatusShape = 'circle' | 'triangle' | 'diamond' | 'square' | 'ring';
+export type StatusShape = 'circle' | 'triangle' | 'diamond' | 'square' | 'ring' | 'half';
 
 export const STATUS_SHAPE: Record<StatusTone, StatusShape> = {
     accepted: 'circle',
@@ -16,6 +23,7 @@ export const STATUS_SHAPE: Record<StatusTone, StatusShape> = {
     rejected: 'diamond',
     progress: 'square',
     idle: 'ring',
+    held: 'half',
 };
 
 /** Tailwind text colour class per tone. Backgrounds derive from these. */
@@ -25,6 +33,7 @@ export const STATUS_COLOR: Record<StatusTone, string> = {
     rejected: 'text-alert',
     progress: 'text-gold',
     idle: 'text-graphite',
+    held: 'text-held',
 };
 
 /** Cell assignment lifecycle, from the coverage side. */

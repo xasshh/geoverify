@@ -8,11 +8,32 @@ import { SelectField, TextField } from '@/components/Field';
 import { CoverageBar, FootprintLegend, MapChrome } from '@/components/MapChrome';
 import { PresenceMark } from '@/components/PresenceMark';
 import { PriorObservation, Sheet, SheetSection } from '@/components/Sheet';
+import { MoneyPanel } from '@/components/MoneyPanel';
 import { StatusPill } from '@/components/StatusPill';
+import { VerificationLadder } from '@/components/VerificationLadder';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { cx } from '@/lib/cx';
+import type { Rung } from '@/lib/tiers';
 import { captureStatus, cellStatus, type CellStatus } from '@/lib/status';
 import { fabricatedTrace, walkedTrace } from '@/lib/trace';
+
+/** A believable ladder: enumerated, identity checked, location not yet bought. */
+const LADDER_MIXED: Rung[] = [
+    { tier: 'listed', state: 'current', establishedOn: 'Mar 2026' },
+    { tier: 'identity_verified', state: 'current', establishedOn: 'Mar 2026' },
+    { tier: 'location_verified', state: 'not_established' },
+    { tier: 'operations_verified', state: 'not_established' },
+    { tier: 'monitored', state: 'not_established' },
+];
+
+/** One rung in each state, so the vocabulary can be read in one place. */
+const LADDER_STATES: Rung[] = [
+    { tier: 'listed', state: 'current', establishedOn: 'Mar 2026' },
+    { tier: 'identity_verified', state: 'ageing', establishedOn: 'Aug 2024', elapsed: '18 months' },
+    { tier: 'location_verified', state: 'stale', establishedOn: 'Jan 2023', elapsed: 'over 3 years' },
+    { tier: 'operations_verified', state: 'pending', queueAhead: 3 },
+    { tier: 'monitored', state: 'not_established' },
+];
 
 type Mode = 'daylight' | 'dusk';
 
@@ -618,6 +639,123 @@ export default function Design() {
                                     />
                                 </Sheet>
                             </div>
+                        </div>
+                    </div>
+                </Spec>
+
+                <Spec n="11" title="Portal surfaces" note="phase 2 · a register office, not a field instrument">
+                    <p className="mb-6 max-w-[64ch] text-body text-muted">
+                        The field app is an instrument for an officer working a grid for six hours.
+                        The portal is a counter a shop owner walks up to once, having never used
+                        anything like it, about to send us money. Same tokens, same type system,
+                        same status meanings. Different density, different voice.
+                    </p>
+
+                    <Row label="Added tokens">
+                        <span className="flex items-center gap-2">
+                            <span className="h-6 w-6 rounded-sm border border-rule bg-held" />
+                            <span className="text-ui text-muted">held</span>
+                        </span>
+                        <span className="flex items-center gap-2">
+                            <span className="h-6 w-6 rounded-sm border-2 border-paper-edge" />
+                            <span className="text-ui text-muted">paper-edge</span>
+                        </span>
+                        <span className="text-label text-faint">
+                            daylight only, and nothing else
+                        </span>
+                    </Row>
+
+                    <Row label="Added tone">
+                        <StatusPill tone="held" label="Held" />
+                        <StatusPill tone="held" label="Held" emphasis="filled" />
+                        <span className="max-w-[42ch] text-label text-faint">
+                            Taken, not yet earned. Neither accepted nor in review, because on a
+                            money screen the difference is what is being bought.
+                        </span>
+                    </Row>
+
+                    <Row label="Added step">
+                        <span className="numeric-mono text-display-xl text-ink">&#8358;15,000</span>
+                        <span className="text-label text-faint">
+                            display-xl, for the one number a screen is about
+                        </span>
+                    </Row>
+
+                    <div className="mt-8 grid gap-8 lg:grid-cols-2">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                The ladder &middot; full
+                            </p>
+                            <div className="rounded-sm border border-rule-strong bg-raised p-5">
+                                <VerificationLadder rungs={LADDER_MIXED} />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-8">
+                            <div>
+                                <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                    The ladder &middot; compact
+                                </p>
+                                <div className="max-w-xs rounded-sm border border-rule-strong bg-raised p-4">
+                                    <VerificationLadder rungs={LADDER_MIXED} density="compact" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                    Every rung state
+                                </p>
+                                <div className="max-w-xs rounded-sm border border-rule-strong bg-raised p-4">
+                                    <VerificationLadder rungs={LADDER_STATES} density="compact" />
+                                </div>
+                                <p className="mt-2 max-w-[42ch] text-label text-faint">
+                                    Established, ageing, stale, in progress, not established. Shape
+                                    carries the state as well as colour, and every rung says its
+                                    state in words.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-10 grid gap-8 lg:grid-cols-[380px_1fr]">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Money, at 360px
+                            </p>
+                            <div className="w-[360px] max-w-full rounded-sm border-2 border-paper-edge bg-surface p-5">
+                                <MoneyPanel
+                                    terms={{
+                                        feeNaira: 15000,
+                                        buys: 'We send an officer to your shop and confirm it is there.',
+                                        within: '10 working days',
+                                        queueAhead: 3,
+                                        establishes: 'Location',
+                                        whatHappens:
+                                            'An officer visits, records the position, photographs the front, and writes a report you can show anyone.',
+                                    }}
+                                >
+                                    <Button fullWidth>Pay &#8358;15,000</Button>
+                                </MoneyPanel>
+                            </div>
+                        </div>
+
+                        <div className="max-w-[52ch] text-body text-muted">
+                            <p>
+                                One component, not a screen assembling parts. The fee, the window,
+                                the queue, what a negative finding costs and what a missed window
+                                refunds are one disclosure, and the parts must never come apart.
+                            </p>
+                            <p className="mt-4">
+                                Everything sits above the action. No accordion, no
+                                &ldquo;see terms&rdquo;, no asterisk, and the unwelcome sentence is
+                                set at the same size as the welcome one. A customer surprised after
+                                paying is a chargeback, and is right to be annoyed.
+                            </p>
+                            <p className="mt-4 text-faint">
+                                The word escrow appears nowhere, including in state names. It is
+                                regulated in Nigeria and we are not licensed for it. Funds are held,
+                                then released.
+                            </p>
                         </div>
                     </div>
                 </Spec>

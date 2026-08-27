@@ -28,6 +28,14 @@ export function StatusGlyph({ shape, size = 9 }: StatusGlyphProps) {
             {shape === 'ring' && (
                 <circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
             )}
+            {/* Half filled: taken, not yet earned. Reads as a circle part way
+                to being one, which is what held money is. */}
+            {shape === 'half' && (
+                <>
+                    <circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+                    <path d="M5 1.4a3.6 3.6 0 0 1 0 7.2z" {...common} />
+                </>
+            )}
         </svg>
     );
 }
@@ -50,6 +58,7 @@ export function StatusPill({ tone, label, emphasis = 'outline', size = 'md' }: S
         rejected: 'bg-alert',
         progress: 'bg-gold',
         idle: 'bg-graphite',
+        held: 'bg-held',
     };
 
     return (
