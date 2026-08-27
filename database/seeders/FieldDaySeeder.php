@@ -475,6 +475,7 @@ final class FieldDaySeeder extends Seeder
                 'operating_status' => 'operating',
                 'years_at_location' => 1 + (($seed + $n) % 12),
                 'signage_observed' => ! $day['fabricated'],
+                'phone' => $this->shopPhone($seed + $n),
                 'observed_at' => $observedAt->toIso8601String(),
                 'field_session_id' => $session->id,
             ], $officer);
@@ -484,6 +485,34 @@ final class FieldDaySeeder extends Seeder
         }
 
         return $observations;
+    }
+
+    /**
+     * The number on the shutter, written the way an officer writes it.
+     *
+     * Three deliberate details. One in four shops has no number at all, because
+     * a market stall often does not and a claim flow that assumes one would
+     * work perfectly in the demo and fail on the ground. The formats vary,
+     * because officers type what they see: some copy the spacing off the
+     * signage, some include the country code, some run the digits together. And
+     * nothing here is normalised, because normalising on the way in would hide
+     * whether the claim matcher can handle a real column.
+     */
+    private function shopPhone(int $seed): ?string
+    {
+        if ($seed % 4 === 3) {
+            return null;
+        }
+
+        $prefixes = ['803', '806', '703', '813', '810', '814', '903', '805'];
+        $prefix = $prefixes[$seed % count($prefixes)];
+        $line = str_pad((string) (1000000 + (($seed + 7) * 78713) % 9000000), 7, '0', STR_PAD_LEFT);
+
+        return match ($seed % 3) {
+            0 => '0'.$prefix.' '.substr($line, 0, 3).' '.substr($line, 3),
+            1 => '+234 '.$prefix.substr($line, 0, 3).substr($line, 3),
+            default => '0'.$prefix.$line,
+        };
     }
 
     /**

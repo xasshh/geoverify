@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { SubmitEventHandler } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
+import { consoleLinks } from '@/lib/consoleNav';
 import { Button } from '@/components/Button';
 import { DataTable, type Column } from '@/components/DataTable';
 import { SelectField, TextField } from '@/components/Field';
@@ -140,13 +141,7 @@ export default function Assignments({
             <Head title={`Assignments: ${area.name}`} />
             <AppBar
                 variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: false },
-                    { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: true },
-                    { label: 'Review', href: '/console/review', current: false },
-                    { label: 'Live', href: '/console/live', current: false },
-                    { label: 'Exports', href: '/console/exports', current: false },
-                ]}
+                links={consoleLinks('coverage')}
             />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">

@@ -38,6 +38,16 @@ enum PartyRole: string
         return $this !== self::Viewer;
     }
 
+    /**
+     * Claiming acquires a listing, which is closer to signing for something
+     * than to editing it. A viewer who could claim would be able to bring the
+     * party liabilities it never agreed to.
+     */
+    public function claims(): bool
+    {
+        return $this !== self::Viewer;
+    }
+
     /** Proposing a correction changes what the register says. */
     public function proposesChanges(): bool
     {

@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use RuntimeException;
 
 /**
  * What a business looked like on one visit. Append only.
@@ -70,5 +71,33 @@ final class EnterpriseObservation extends Model
     public function fieldSession(): BelongsTo
     {
         return $this->belongsTo(FieldSession::class);
+    }
+
+    /**
+     * An observation is what an officer saw on a morning, and mornings do not
+     * change.
+     *
+     * Re-enumeration appends a new observation; a correction, when M5 builds
+     * one, will sit beside the original rather than replace it. Enforcing that
+     * here rather than trusting every future caller is the difference between a
+     * rule and a note in a document: this class is now reachable from a portal
+     * where the subject of the record is the one holding the keyboard.
+     *
+     * The guard is on the model, so it catches the Eloquent path that
+     * application code actually uses. A deliberate query-builder update still
+     * goes through, which is correct: a migration or a data repair is a
+     * different act, performed by someone who meant it.
+     */
+    protected static function booted(): void
+    {
+        self::updating(function (): never {
+            throw new RuntimeException(
+                'An enterprise observation cannot be edited. Capture a new observation instead.'
+            );
+        });
+
+        self::deleting(function (): never {
+            throw new RuntimeException('Nothing is hard deleted. Append a status change instead.');
+        });
     }
 }

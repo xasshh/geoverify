@@ -9,6 +9,7 @@ import {
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
 import { AppBar } from '@/components/AppBar';
+import { consoleLinks } from '@/lib/consoleNav';
 import { PresenceMark } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
 
@@ -297,12 +298,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
             <Head title="Live operations" />
             <AppBar
                 variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: false },
-                    { label: 'Review', href: '/console/review', current: false },
-                    { label: 'Live', href: '/console/live', current: true },
-                    { label: 'Exports', href: '/console/exports', current: false },
-                ]}
+                links={consoleLinks('live')}
             />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-20">

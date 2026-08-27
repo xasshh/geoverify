@@ -3,11 +3,11 @@
  * set is closed: a ladder always shows all five.
  */
 export const TIERS = [
-    'listed',
-    'identity_verified',
-    'location_verified',
-    'operations_verified',
-    'monitored',
+    "listed",
+    "identity_verified",
+    "location_verified",
+    "operations_verified",
+    "monitored",
 ] as const;
 
 export type Tier = (typeof TIERS)[number];
@@ -19,7 +19,8 @@ export type Tier = (typeof TIERS)[number];
  * long ago, and that is a fact rather than a warning. `pending` means somebody
  * has paid and an officer is on the way.
  */
-export type RungState = 'current' | 'ageing' | 'stale' | 'pending' | 'not_established';
+export type RungState =
+    "current" | "ageing" | "stale" | "pending" | "not_established";
 
 export interface Rung {
     tier: Tier;
@@ -33,11 +34,11 @@ export interface Rung {
 }
 
 export const TIER_LABEL: Record<Tier, string> = {
-    listed: 'Listed',
-    identity_verified: 'Identity',
-    location_verified: 'Location',
-    operations_verified: 'Operations',
-    monitored: 'Monitored',
+    listed: "Listed",
+    identity_verified: "Identity",
+    location_verified: "Location",
+    operations_verified: "Operations",
+    monitored: "Monitored",
 };
 
 /**
@@ -47,11 +48,16 @@ export const TIER_LABEL: Record<Tier, string> = {
  * happens, not what it is called.
  */
 export const TIER_MEANING: Record<Tier, string> = {
-    listed: 'You told us this business exists and we reached you.',
-    identity_verified: 'We checked that the person or company behind it is real.',
-    location_verified: 'An officer went to the address and confirmed it is there.',
-    operations_verified: 'An officer saw it trading at the size you told us.',
-    monitored: 'We check again every three months so it stays current.',
+    // Two ways onto this rung: an officer recorded the business, or its owner
+    // registered it. The wording has to be true of both, so it says what the
+    // rung means rather than how the record got here.
+    listed: "The business is on the register with a contact we can reach.",
+    identity_verified:
+        "We checked that the person or company behind it is real.",
+    location_verified:
+        "An officer went to the address and confirmed it is there.",
+    operations_verified: "An officer saw it trading, and at what scale.",
+    monitored: "We check again every three months so it stays current.",
 };
 
 /**
@@ -60,18 +66,17 @@ export const TIER_MEANING: Record<Tier, string> = {
  * stale is a triangle, pending is a square, unclimbed is an open ring.
  */
 export const STATE_GLYPH: Record<RungState, string> = {
-    current: '●',
-    ageing: '●',
-    stale: '▲',
-    pending: '■',
-    not_established: '○',
+    current: "●",
+    ageing: "●",
+    stale: "▲",
+    pending: "■",
+    not_established: "○",
 };
 
 export const STATE_COLOR: Record<RungState, string> = {
-    current: 'text-green',
-    ageing: 'text-green',
-    stale: 'text-amber',
-    pending: 'text-gold',
-    not_established: 'text-graphite',
+    current: "text-green",
+    ageing: "text-green",
+    stale: "text-amber",
+    pending: "text-gold",
+    not_established: "text-graphite",
 };
-

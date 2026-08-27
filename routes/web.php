@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Console\AssignmentController;
+use App\Http\Controllers\Console\ClaimReviewController;
 use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\LiveOperationsController;
@@ -13,7 +14,9 @@ use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
+use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\DashboardController;
+use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\SignInController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -45,6 +48,12 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::get('review', [ReviewController::class, 'index'])->name('review.index');
     Route::get('review/{observation}', [ReviewController::class, 'show'])->name('review.show');
     Route::post('review/{observation}', [ReviewController::class, 'decide'])->name('review.decide');
+
+    // Claims. A separate queue from observation review because the question is
+    // different: not "is this capture sound" but "is this person who they say".
+    Route::get('claims', [ClaimReviewController::class, 'index'])->name('claims');
+    Route::post('claims/{claim}', [ClaimReviewController::class, 'decide'])->name('claims.decide');
+    Route::post('disputes/{dispute}', [ClaimReviewController::class, 'resolve'])->name('disputes.resolve');
 
     // Live operations. Who is out, where they are, and what is going wrong now
     // rather than at the end of the week.
@@ -91,6 +100,19 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
 
     Route::middleware('portal')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        // Claiming. Search is the only place a field-captured record is visible
+        // to somebody who has proved nothing, so its projection is thin by
+        // construction: see SearchRegister.
+        Route::get('claim', [ClaimController::class, 'search'])->name('claim.search');
+        Route::post('claim', [ClaimController::class, 'store'])->name('claim.store');
+        Route::get('claim/{claim}', [ClaimController::class, 'show'])->name('claim.show');
+        Route::post('claim/{claim}/code', [ClaimController::class, 'sendCode'])
+            ->middleware('throttle:10,1')->name('claim.code');
+        Route::post('claim/{claim}/confirm', [ClaimController::class, 'confirmCode'])
+            ->middleware('throttle:20,1')->name('claim.confirm');
+
+        Route::get('businesses/{enterprise}', [ListingController::class, 'show'])->name('listing');
     });
 });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
+import { consoleLinks } from '@/lib/consoleNav';
 import { cx } from '@/lib/cx';
 
 interface Cell {
@@ -109,12 +110,7 @@ export default function Exports({
             <Head title="Exports" />
             <AppBar
                 variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: false },
-                    { label: 'Review', href: '/console/review', current: false },
-                    { label: 'Live', href: '/console/live', current: false },
-                    { label: 'Exports', href: '/console/exports', current: true },
-                ]}
+                links={consoleLinks('exports')}
             />
 
             <div className="mx-auto max-w-5xl px-6 pb-20">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Registry\Models;
 
+use App\Domain\Coverage\Models\AdminBoundary;
 use App\Domain\Coverage\Models\CoverageArea;
 use App\Domain\Coverage\Models\GridCell;
 use App\Domain\Media\Models\Media;
@@ -89,6 +90,27 @@ final class Structure extends Model
     public function capturedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'captured_by');
+    }
+
+    /**
+     * The hierarchy this structure resolved into, server side, at ingestion.
+     *
+     * Read-only relations onto the boundaries ResolveAdminHierarchy already
+     * decided. Nothing here recomputes containment: these columns are the
+     * answer, and re-deriving them at display time is how a record starts
+     * saying two different things about where it is.
+     *
+     * @return BelongsTo<AdminBoundary, $this>
+     */
+    public function ward(): BelongsTo
+    {
+        return $this->belongsTo(AdminBoundary::class, 'ward_id');
+    }
+
+    /** @return BelongsTo<AdminBoundary, $this> */
+    public function lga(): BelongsTo
+    {
+        return $this->belongsTo(AdminBoundary::class, 'lga_id');
     }
 
     /** @return HasMany<StructureObservation, $this> */

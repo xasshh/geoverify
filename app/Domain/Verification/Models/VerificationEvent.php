@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Models;
 
+use App\Domain\Party\Models\Party;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -77,6 +78,41 @@ final class VerificationEvent extends Model
             'actor_type' => $actor instanceof User ? self::ACTOR_USER : $actorType,
             'actor_id' => $actor?->id,
             'actor_label' => $actor?->name,
+            'evidence' => $evidence === [] ? null : $evidence,
+            'occurred_at' => now(),
+        ]);
+    }
+
+    /**
+     * The same, when the actor is a party rather than a member of staff.
+     *
+     * A sibling of record() rather than a widened signature. The field platform
+     * calls record() from dozens of places against a User, and loosening that
+     * parameter to accept either kind would put the burden of telling them
+     * apart on every one of those call sites, forever, to serve a caller they
+     * do not know about.
+     *
+     * The party's id and code go in the actor columns because an audit row that
+     * says only "a party did this" cannot answer the question an audit log
+     * exists to answer. The label is the code, never the display name: names
+     * are edited, codes are not, and the row has to still mean something in
+     * three years.
+     *
+     * @param  array<string, mixed>  $evidence
+     */
+    public static function recordForParty(
+        Model $subject,
+        string $event,
+        Party $party,
+        array $evidence = [],
+    ): self {
+        return self::query()->create([
+            'subject_type' => $subject->getMorphClass(),
+            'subject_id' => $subject->getKey(),
+            'event' => $event,
+            'actor_type' => self::ACTOR_PARTY,
+            'actor_id' => $party->id,
+            'actor_label' => $party->code,
             'evidence' => $evidence === [] ? null : $evidence,
             'occurred_at' => now(),
         ]);

@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
+import { consoleLinks } from '@/lib/consoleNav';
 import { DataTable, type Column } from '@/components/DataTable';
 import { PresenceMark, type TracePoint } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
@@ -161,12 +162,7 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
             <Head title="Review queue" />
             <AppBar
                 variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: false },
-                    { label: 'Review', href: '/console/review', current: true },
-                    { label: 'Live', href: '/console/live', current: false },
-                    { label: 'Exports', href: '/console/exports', current: false },
-                ]}
+                links={consoleLinks('review')}
             />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">

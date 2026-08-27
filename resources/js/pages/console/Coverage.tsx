@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { AppBar } from '@/components/AppBar';
+import { consoleLinks } from '@/lib/consoleNav';
 import {
     Map as MapLibreMap,
     NavigationControl,
@@ -276,13 +277,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
             <Head title={`Coverage: ${area.name}`} />
             <AppBar
                 variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: true },
-                    { label: 'Assignments', href: `/console/coverage/${String(area.id)}/assignments`, current: false },
-                    { label: 'Review', href: '/console/review', current: false },
-                    { label: 'Live', href: '/console/live', current: false },
-                    { label: 'Exports', href: '/console/exports', current: false },
-                ]}
+                links={consoleLinks('coverage')}
             />
 
             <header className="shrink-0 border-b border-rule px-6 py-3">
