@@ -31,6 +31,15 @@ final class VerificationEvent extends Model
 
     public const ACTOR_EXTERNAL = 'external';
 
+    /**
+     * A party acting for itself in the portal.
+     *
+     * Distinct from `external`, which is a third party system we called. "A
+     * shop owner did this" and "the CAC API said this" are different claims and
+     * an audit log that flattened them would be answering the wrong question.
+     */
+    public const ACTOR_PARTY = 'party';
+
     public const UPDATED_AT = null;
 
     protected $fillable = [

@@ -69,7 +69,8 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 
 ## Layout
 
-Domain code lives under `app/Domain/{Coverage,Field,Registry,Identity,Media,Verification,Sync}`.
+Domain code lives under `app/Domain/{Coverage,Field,Registry,Identity,Media,Verification,Sync,Party}`.
+`Party` is Phase 2: parties, portal accounts and the access between them.
 Business rules go in action classes, not in controllers and not in models.
 
 ## Commands

@@ -13,6 +13,8 @@ use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
+use App\Http\Controllers\Portal\DashboardController;
+use App\Http\Controllers\Portal\SignInController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -65,6 +67,32 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
 */
 Route::get('exports/cells/{cell}/pack.html', [ExportController::class, 'packHtml'])
     ->name('console.exports.pack.render');
+
+/*
+| The portal. Parties, on their own guard.
+|
+| Signing in is deliberately outside the guarded group: a person proving a
+| phone number does not have a session yet, and the same path serves both a
+| returning owner and somebody who has never been here.
+*/
+Route::prefix('portal')->name('portal.')->group(function (): void {
+    Route::get('sign-in', [SignInController::class, 'show'])->name('sign-in');
+    Route::post('sign-in', [SignInController::class, 'requestCode'])
+        ->middleware('throttle:12,1')->name('request-code');
+
+    Route::get('verify', [SignInController::class, 'verifyForm'])->name('verify');
+    Route::post('verify', [SignInController::class, 'verify'])
+        ->middleware('throttle:20,1')->name('verify.submit');
+
+    Route::get('register', [SignInController::class, 'registerForm'])->name('register');
+    Route::post('register', [SignInController::class, 'register'])->name('register.submit');
+
+    Route::post('sign-out', [SignInController::class, 'signOut'])->name('sign-out');
+
+    Route::middleware('portal')->group(function (): void {
+        Route::get('/', DashboardController::class)->name('dashboard');
+    });
+});
 
 /*
 | The field client. An officer sees their own work and nothing else.

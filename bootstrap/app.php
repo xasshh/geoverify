@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\EnsureCapturesInTheField;
+use App\Http\Middleware\EnsurePortalAccount;
 use App\Http\Middleware\EnsureSupervises;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'supervises' => EnsureSupervises::class,
             'field' => EnsureCapturesInTheField::class,
+            'portal' => EnsurePortalAccount::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

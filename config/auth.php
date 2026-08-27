@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Party\Models\PortalAccount;
 use App\Models\User;
 
 return [
@@ -44,6 +45,20 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        /*
+         * The portal's own guard.
+         *
+         * Parties do not authenticate as staff. Sharing the web guard would
+         * mean one session could be either an officer or a shop owner, and
+         * every middleware in the field platform would have to ask which. Two
+         * guards means a portal session can never satisfy `supervises`, by
+         * construction rather than by check.
+         */
+        'portal' => [
+            'driver' => 'session',
+            'provider' => 'portal_accounts',
+        ],
     ],
 
     /*
@@ -67,6 +82,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'portal_accounts' => [
+            'driver' => 'eloquent',
+            'model' => PortalAccount::class,
         ],
 
         // 'users' => [
