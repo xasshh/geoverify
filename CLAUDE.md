@@ -1,7 +1,13 @@
 # GeoVerify
 
-Phase 1 of the GeoVerify programme: the Field Enumeration Platform. An offline-first
-PWA for field officers, plus the supervisor console behind it.
+Two phases of the GeoVerify programme live here.
+
+**Phase 1, the Field Enumeration Platform**: an offline-first PWA for field
+officers, plus the supervisor console behind it. Complete.
+
+**Phase 2, the Business & Citizen Portal**: the self-service face of the
+register. Business owners claim the listing we enumerated or register a new one,
+and buy physical verification of it. Under construction. Plan in `_plan/phase-2/`.
 
 ## Hard rules
 
@@ -15,10 +21,25 @@ PWA for field officers, plus the supervisor console behind it.
 - **Nothing is hard-deleted.** Status changes append to `verification_events`.
 - **Re-enumeration creates a new observation, never an overwrite.**
 - **The sync endpoint is idempotent**, keyed on `client_uuid` plus payload hash.
-- **Business Portal, Discovery Portal and Command Centre do not exist here.** Do
-  not add routes, scaffolding or "future" placeholders for them.
-- **Nobody self registers.** Fortify's registration feature stays off. Officers,
-  supervisors and admins are created by an admin.
+- **Discovery Portal and Command Centre do not exist here.** No routes, no
+  scaffolding, no "future" placeholders. Design the data so they remain
+  possible; build nothing for them. (The Business Portal was on this list until
+  Phase 2 was commissioned on 2026-08-27.)
+- **No staff member self registers.** Fortify's registration feature stays off.
+  Officers, supervisors and admins are created by an admin. Parties in the
+  portal do self register, on their own guard, against `party_users`. The
+  `users` table stays the staff table: `Role` is never widened to admit a
+  member of the public.
+- **A field-enumerated record is private until its party opts in.** Enumeration
+  is not consent to publication. `enterprises.publication_state` defaults to
+  `private`, and only `opted_in` is ever eligible for publication.
+- **Never the word "escrow".** Not in customer copy, not in state names, not in
+  identifiers. It is a regulated term in Nigeria and we are not licensed for it.
+  Funds are held and released: a completion-linked payment.
+- **Do not refactor the field platform to suit the portal.** Officers are in the
+  field against a shipped client and the sync contract is fixed. If the portal
+  needs something, extract a shared service and leave the field code calling the
+  same behaviour.
 - **People and devices are suspended or revoked, never deleted.** An officer's
   captures must stay attributable after they leave.
 
