@@ -47,6 +47,22 @@ export const TIER_LABEL: Record<Tier, string> = {
  * These are read by someone deciding whether to spend money, so they say what
  * happens, not what it is called.
  */
+/**
+ * The tier said as a statement rather than as a column heading.
+ *
+ * The ladder needs "Location", because it sits in a column beside four other
+ * rungs and the context carries the rest. A search result needs "Location
+ * verified", because it sits alone in a sentence and "Location · August 2026"
+ * says nothing about what happened in August.
+ */
+export const TIER_STATEMENT: Record<Tier, string> = {
+    listed: "Listed",
+    identity_verified: "Identity verified",
+    location_verified: "Location verified",
+    operations_verified: "Operations verified",
+    monitored: "Monitored",
+};
+
 export const TIER_MEANING: Record<Tier, string> = {
     // Two ways onto this rung: an officer recorded the business, or its owner
     // registered it. The wording has to be true of both, so it says what the

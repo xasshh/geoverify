@@ -2,7 +2,13 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests/Browser',
-    fullyParallel: true,
+    // Serial, and not as a workaround. Every test here drives the real
+    // application against the one development database, so two of them at once
+    // are two people using the same register: one test claims the shop another
+    // was about to claim, and the failure surfaces somewhere unrelated. The
+    // suite takes half a minute either way.
+    fullyParallel: false,
+    workers: 1,
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 1 : 0,
     reporter: process.env.CI ? 'github' : 'list',

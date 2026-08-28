@@ -17,6 +17,7 @@ use App\Http\Controllers\Field\SyncController;
 use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\DashboardController;
 use App\Http\Controllers\Portal\ListingController;
+use App\Http\Controllers\Portal\RegisterBusinessController;
 use App\Http\Controllers\Portal\SignInController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -113,6 +114,16 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
             ->middleware('throttle:20,1')->name('claim.confirm');
 
         Route::get('businesses/{enterprise}', [ListingController::class, 'show'])->name('listing');
+
+        // Self-registration. The other way onto the register, for a business no
+        // officer has reached. Every step is an ordinary form post so the whole
+        // thing survives a connection that comes and goes.
+        Route::get('register-business', [RegisterBusinessController::class, 'show'])->name('register-business');
+        Route::post('register-business/name', [RegisterBusinessController::class, 'saveName'])->name('register-business.name');
+        Route::post('register-business/place', [RegisterBusinessController::class, 'savePlace'])->name('register-business.place');
+        Route::post('register-business/back', [RegisterBusinessController::class, 'back'])->name('register-business.back');
+        Route::post('register-business', [RegisterBusinessController::class, 'submit'])->name('register-business.submit');
+
     });
 });
 

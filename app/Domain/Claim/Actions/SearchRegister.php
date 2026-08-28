@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Claim\Actions;
 
+use App\Domain\Registry\Actions\ResolveListingTier;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,6 +29,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class SearchRegister
 {
+    public function __construct(
+        private readonly ResolveListingTier $tiers,
+    ) {}
+
     /**
      * Below this, a trigram hit is noise.
      *
@@ -74,6 +79,8 @@ final class SearchRegister
                 e.id                    AS enterprise_id,
                 e.trading_name          AS trading_name,
                 s.structure_type        AS structure_type,
+                s.origin                AS origin,
+                s.status                AS structure_status,
                 ward.name               AS ward,
                 lga.name                AS lga,
                 e.captured_at           AS enumerated_at,
@@ -131,12 +138,11 @@ final class SearchRegister
             'structure_type' => (string) $row->structure_type,
             'ward' => $row->ward === null ? null : (string) $row->ward,
             'lga' => $row->lga === null ? null : (string) $row->lga,
-            // The tier a field capture actually establishes, said plainly. An
-            // officer stood at the door, fixed the position and photographed
-            // the front, which is precisely location_verified: claiming less
-            // would understate the dataset, claiming more would sell a visit
-            // that never happened.
-            'tier' => 'location_verified',
+            // Resolved, never assumed. Before self-registration existed every
+            // record here was a field capture and this could safely be a
+            // constant; the moment a business could type its own address, a
+            // constant became a lie that sells a visit nobody made.
+            'tier' => $this->tiers->forOrigin((string) $row->origin, (string) $row->structure_status),
             'established_on' => $this->month($row->enumerated_at),
             'is_claimed' => (bool) $row->is_claimed,
             'can_prove_by_phone' => (bool) $row->has_recorded_phone,

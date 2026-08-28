@@ -32,6 +32,10 @@ use Illuminate\Support\Carbon;
  */
 final class Enterprise extends Model
 {
+    public const ORIGIN_FIELD = 'field';
+
+    public const ORIGIN_SELF_REGISTERED = 'self_registered';
+
     public const STATUS_DRAFT = 'draft';
 
     public const STATUS_SUBMITTED = 'submitted';
@@ -42,6 +46,7 @@ final class Enterprise extends Model
         'structure_id', 'unit_label', 'captured_by', 'captured_at',
         'trading_name', 'registered_name', 'sector_code', 'subsector_code',
         'scale_band', 'operating_status', 'status', 'client_uuid',
+        'origin', 'registered_by_party_id',
     ];
 
     protected function casts(): array

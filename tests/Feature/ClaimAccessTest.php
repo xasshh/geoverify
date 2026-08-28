@@ -112,6 +112,13 @@ it('exposes no portal route that could write to an observation', function () {
         'portal.dashboard', 'portal.claim.search', 'portal.claim.store',
         'portal.claim.show', 'portal.claim.code', 'portal.claim.confirm',
         'portal.listing',
+        // Self-registration. These write structures and enterprises, and none
+        // of them touches an observation belonging to somebody else: a party
+        // authors the one observation its own registration creates, and can
+        // never author or alter another.
+        'portal.register-business', 'portal.register-business.name',
+        'portal.register-business.place', 'portal.register-business.back',
+        'portal.register-business.submit',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())

@@ -55,6 +55,26 @@ final class Structure extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    /**
+     * A structure somebody registered themselves, that no officer has stood in
+     * front of yet.
+     *
+     * Deliberately not `submitted`. Submitted means an officer captured it and
+     * a supervisor has not looked yet; unconfirmed means nobody has been. They
+     * are different claims about the world and a review queue that mixed them
+     * would be asking one question about two things.
+     */
+    public const STATUS_UNCONFIRMED = 'unconfirmed';
+
+    public const ORIGIN_FIELD = 'field';
+
+    public const ORIGIN_SELF_REGISTERED = 'self_registered';
+
+    public function isSelfRegistered(): bool
+    {
+        return $this->origin === self::ORIGIN_SELF_REGISTERED;
+    }
+
     protected $fillable = [
         'grid_cell_id', 'coverage_area_id', 'external_footprint_id',
         'ward_id', 'lga_id', 'state_id', 'h3_index', 'plus_code',

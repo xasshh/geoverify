@@ -8,6 +8,7 @@ use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Party\Actions\ActingParty;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Registry\Actions\ResolveListingTier;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\EnterpriseObservation;
 use Illuminate\Http\Request;
@@ -34,6 +35,7 @@ final class ListingController
 {
     public function __construct(
         private readonly ActingParty $acting,
+        private readonly ResolveListingTier $tiers,
     ) {}
 
     public function show(Request $request, Enterprise $enterprise): Response
@@ -69,7 +71,15 @@ final class ListingController
                 'ward' => $enterprise->structure->ward?->name,
                 'lga' => $enterprise->structure->lga?->name,
                 'enumeratedAt' => $enterprise->captured_at->toIso8601String(),
+                'selfRegistered' => $enterprise->structure->isSelfRegistered(),
             ],
+            // Built server side from the record rather than assembled in the
+            // page, so the ladder can never say something the register does not.
+            'rungs' => $this->tiers->rungs(
+                (string) $enterprise->structure->origin,
+                (string) $enterprise->structure->status,
+                $enterprise->captured_at->format('F Y'),
+            ),
             'control' => [
                 'relationship' => $control->relationship->noun(),
                 'since' => $control->established_at->toIso8601String(),

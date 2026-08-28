@@ -12,7 +12,9 @@ interface Props {
         ward: string | null;
         lga: string | null;
         enumeratedAt: string;
+        selfRegistered: boolean;
     };
+    rungs: Rung[];
     control: { relationship: string; since: string; via: string };
     observations: {
         observedAt: string;
@@ -34,11 +36,11 @@ function monthOf(iso: string): string {
 /**
  * The listing a party controls.
  *
- * The ladder is the page's spine, and it is drawn from what the register
- * actually holds. A field-captured business sits at location_verified because
- * an officer stood at the door and fixed the position: that is precisely what
- * the tier means, so it is stated with the month it happened and nothing is
- * inflated above it.
+ * The ladder is the page's spine, and it is resolved on the server rather than
+ * assembled here. Two routes reach this page now: a business an officer stood
+ * in front of, and one that registered itself. They have established different
+ * things, and a page that decided which by reading its own props would sooner
+ * or later credit a self-registration with a visit nobody made.
  *
  * There is no edit form, and the reason is on the page rather than implied. A
  * party who could rewrite an officer's observation would be able to keep the
@@ -46,26 +48,11 @@ function monthOf(iso: string): string {
  */
 export default function Listing({
     business,
+    rungs,
     control,
     observations,
     party,
 }: Props) {
-    const rungs: Rung[] = [
-        {
-            tier: "listed",
-            state: "current",
-            establishedOn: monthOf(business.enumeratedAt),
-        },
-        { tier: "identity_verified", state: "not_established" },
-        {
-            tier: "location_verified",
-            state: "current",
-            establishedOn: monthOf(business.enumeratedAt),
-        },
-        { tier: "operations_verified", state: "not_established" },
-        { tier: "monitored", state: "not_established" },
-    ];
-
     return (
         <PortalShell accountName={party.displayName} width="page">
             <Head title={business.tradingName} />
@@ -98,7 +85,9 @@ export default function Listing({
                 <aside className="flex flex-col gap-4">
                     <section className="rounded-sm border border-rule p-5">
                         <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
-                            What an officer recorded
+                            {business.selfRegistered
+                                ? "What you told us"
+                                : "What an officer recorded"}
                         </h2>
                         <ul className="mt-3 flex flex-col gap-3">
                             {observations.map((observation) => (
@@ -137,12 +126,15 @@ export default function Listing({
                         <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
                             Changing what this says
                         </h2>
+                        {/* Both records are append only, for different
+                            reasons. An officer's is somebody else's account of
+                            a morning. Yours is your own, but a register whose
+                            entries could be quietly rewritten after the fact
+                            would be worth nothing to anybody reading it. */}
                         <p className="mt-2 text-body text-muted">
-                            An officer's record of a visit is not editable, by
-                            you or by us. If something here is wrong, you will
-                            be able to propose a correction: the original stays,
-                            your correction sits beside it, and a reviewer
-                            decides.
+                            {business.selfRegistered
+                                ? "What you have already told us stays on the record. If something changes, or you got something wrong, you will be able to add a correction beside it rather than overwrite it."
+                                : "An officer's record of a visit is not editable, by you or by us. If something here is wrong, you will be able to propose a correction: the original stays, your correction sits beside it, and a reviewer decides."}
                         </p>
                         <p className="mt-3 text-label text-faint">
                             Corrections open in the next release.

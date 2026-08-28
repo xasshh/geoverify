@@ -151,7 +151,12 @@ export default function Dashboard({
                                     </ul>
                                 )}
 
-                                <p className="mt-4">
+                                {/* Claiming first, deliberately. A business an
+                                    officer already recorded arrives with a
+                                    location somebody stood at; registering the
+                                    same shop again would replace that with a
+                                    weaker record and split its history in two. */}
+                                <p className="mt-4 flex flex-col gap-2">
                                     <Link
                                         href="/portal/claim"
                                         className="text-body text-gold underline underline-offset-4"
@@ -159,6 +164,12 @@ export default function Dashboard({
                                         {listings.length === 0
                                             ? "Find your business"
                                             : "Claim another"}
+                                    </Link>
+                                    <Link
+                                        href="/portal/register-business"
+                                        className="text-body text-muted underline underline-offset-4 hover:text-ink"
+                                    >
+                                        Not on the register? Add it
                                     </Link>
                                 </p>
                             </section>

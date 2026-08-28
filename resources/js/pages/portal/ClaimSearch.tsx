@@ -4,6 +4,7 @@ import { PortalShell } from "@/components/PortalShell";
 import { TextField, SelectField } from "@/components/Field";
 import { Button } from "@/components/Button";
 import { StatusPill } from "@/components/StatusPill";
+import { TIER_STATEMENT, type Tier } from "@/lib/tiers";
 
 interface Result {
     enterprise_id: number;
@@ -133,7 +134,7 @@ export default function ClaimSearch({
                                     </p>
                                     {/* The tier never appears without its date. */}
                                     <p className="mt-1 numeric-mono text-label text-faint">
-                                        Location verified ·{" "}
+                                        {TIER_STATEMENT[result.tier as Tier]} ·{" "}
                                         {result.established_on}
                                     </p>
                                     {/* Says that we hold a number, never what it
