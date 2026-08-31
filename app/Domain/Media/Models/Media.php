@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 /**
  * A photograph, on a private disk.
@@ -57,6 +58,7 @@ final class Media extends Model
         'sha256', 'bytes', 'width', 'height', 'captured_at', 'exif',
         'distance_from_subject_m', 'from_device_camera', 'captured_by',
         'field_session_id', 'status', 'client_uuid',
+        'uploaded_by_party_id', 'uploaded_by_account_id',
     ];
 
     protected function casts(): array
@@ -90,12 +92,53 @@ final class Media extends Model
         return $this->belongsTo(FieldSession::class);
     }
 
-    /** Short lived by default: a link that outlives the screen it was made for. */
+    /**
+     * Short lived by default: a link that outlives the screen it was made for.
+     *
+     * Object storage signs its own URL and serves the bytes itself. The local
+     * driver offers no such thing and used to throw, so on a machine without S3
+     * every path that asked for one failed: an officer could photograph a shop,
+     * sync it, and never see it again, and a supervisor could not see it at all.
+     *
+     * The application stands in for the missing capability with a signed route,
+     * which is the contract docs/setup.md already claims: the same short lived
+     * signed link on both, so no calling code differs between a laptop and
+     * production.
+     *
+     * Signed relative to the path, not the host. An absolute signature covers
+     * APP_URL, which is the name the outside world calls this application and
+     * not necessarily the one the request arrived on: reached over a tunnel, or
+     * by a laptop's LAN address, every photograph would 403 against a signature
+     * computed for somewhere else.
+     */
     public function temporaryUrl(int $minutes = 10): string
     {
-        return Storage::disk($this->disk)->temporaryUrl(
-            $this->disk_path,
-            now()->addMinutes($minutes),
+        return self::signedUrl($this->disk, $this->disk_path, $minutes);
+    }
+
+    /**
+     * The same link for a path that is not loaded as a model.
+     *
+     * The review screen assembles its photographs in SQL, so it holds a disk
+     * and a path rather than a Media instance. Sharing this keeps one answer to
+     * "how is a media file addressed" instead of two that can drift.
+     */
+    public static function signedUrl(string $disk, string $path, int $minutes = 10): string
+    {
+        $expiry = now()->addMinutes($minutes);
+
+        // The configured driver, not providesTemporaryUrls(). That reports true
+        // for the local adapter, which declares getTemporaryUrl purely in order
+        // to throw from it.
+        if (config("filesystems.disks.{$disk}.driver") !== 'local') {
+            return Storage::disk($disk)->temporaryUrl($path, $expiry);
+        }
+
+        return URL::temporarySignedRoute(
+            'media.file',
+            $expiry,
+            ['path' => $path],
+            absolute: false,
         );
     }
 }
