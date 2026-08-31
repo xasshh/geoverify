@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Console;
 
+use App\Domain\Coverage\Actions\ReadRoadNetwork;
 use App\Domain\Coverage\Models\CoverageArea;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -130,6 +131,26 @@ final class CoverageController
         );
 
         return JsonResponse::fromJsonString(is_string($geojson) ? $geojson : '{}');
+    }
+
+    /**
+     * The street network inside this mandate.
+     *
+     * Supervisors work from landmarks the same way officers do: a cell with a
+     * low completion figure means something different when you can see it is
+     * the far side of the expressway.
+     */
+    public function roads(Request $request, CoverageArea $coverageArea, ReadRoadNetwork $network): JsonResponse
+    {
+        $boundary = 'select boundary from coverage_areas where id = ?';
+        $level = $request->string('detail')->toString() === ReadRoadNetwork::DETAIL
+            ? ReadRoadNetwork::DETAIL
+            : ReadRoadNetwork::OVERVIEW;
+
+        return new JsonResponse([
+            'roads' => $network->forBoundary($boundary, [$coverageArea->id], $level),
+            'labels' => $network->labelsFor($boundary, [$coverageArea->id]),
+        ]);
     }
 
     /**

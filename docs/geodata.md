@@ -109,6 +109,74 @@ boundary but sit mostly outside. Those are then counted in `external_footprints`
 while belonging to no cell, so the footprint total and the sum of the per-cell
 denominators disagree. One predicate for both makes that impossible.
 
+
+## The street network
+
+| Source | Coverage | Licence |
+|---|---|---|
+| OpenStreetMap, via Overpass | Global, queried by bounding box | ODbL |
+
+Roads are why a map has landmarks. Without them the field client is a field of
+hexagons, the console is a grid on empty ground, and a client's coverage map is
+an outline with nothing inside it.
+
+They were designed into the offline pack from the start and were never in the
+database: `geoverify:pack-build` took a file path and handed it straight to
+tippecanoe, so the only place roads existed was inside a built pack, where
+nothing else could read them. They are now reference data like boundaries, and
+`pack-build` exports them from the register like every other layer.
+
+### Fetching an extract
+
+Overpass rather than a Geofabrik `.pbf`, because it needs no osmium or GDAL and
+returns only the bounding box asked for. A whole LGA is more than one response
+will carry, so it is fetched as a grid of tiles and concatenated. Abuja
+Municipal is nine tiles and about forty one thousand ways.
+
+```bash
+# One tile. Repeat over a grid covering the mandate's bounding box, which
+# PostGIS will tell you:
+#   select ST_YMin(boundary), ST_XMin(boundary), ST_YMax(boundary), ST_XMax(boundary)
+#     from coverage_areas where id = 1;
+curl -sS -o tile.json -X POST \
+  -d 'data=[out:json][timeout:180];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential)$"](8.6294,7.1009,9.1510,7.5947);out geom;' \
+  https://overpass-api.de/api/interpreter
+```
+
+Convert each tile to newline-delimited GeoJSON, one feature per line, keeping
+`id`, `highway`, `name` and `ref` as properties. Tiles overlap at their edges, so
+dedupe on the OSM way id: the ingest would upsert either way, but the reported
+counts stop meaning anything if it does not.
+
+### Loading
+
+```bash
+php artisan geoverify:roads-ingest --path=storage/app/geodata/abuja-roads.geojsonl
+```
+
+Idempotent on `(source, source_id)`, so an interrupted run is repaired by running
+it again. Classes this build does not draw are still stored: the styling can
+change without a re-ingest, and a class nobody thought of is data rather than an
+error. A feature with no `highway` tag at all is skipped, because that is not a
+road.
+
+### What the network is used for
+
+- The offline pack's `roads` layer, exported from the register by `pack-build`.
+  A `--roads` file still wins if one is given, for a client's own authoritative
+  network.
+- `/console/coverage/{area}/roads.json` and
+  `/client/campaigns/{campaign}/roads.json`, both clipped and simplified in
+  PostGIS. Abuja Municipal holds eleven thousand kilometres across forty one
+  thousand ways, and sending that to a map four hundred pixels tall would be
+  megabytes to draw something no eye could resolve.
+
+Labels are drawn as HTML rather than as map symbols. A symbol layer needs a
+glyph endpoint, and this application self hosts its typefaces as web fonts
+rather than as rendered glyph ranges; building that pipeline to put thirty
+street names on a map would be a second typographic system to keep in step with
+the first.
+
 ### Footprints are a work list, not a record
 
 The sources miss buildings, merge adjacent ones and occasionally invent them. An

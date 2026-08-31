@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import {
     Map as MapLibreMap,
     NavigationControl,
     ScaleControl,
     type ExpressionSpecification,
+    type GeoJSONSource,
     type MapLayerMouseEvent,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -197,6 +197,44 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     ),
                 ]);
 
+                /*
+                 * Roads first, so the grid sits over them. A supervisor reads a
+                 * low completion figure differently once they can see the cell
+                 * is the far side of an expressway, and the register's own
+                 * PostGIS is where the network comes from: no basemap, no
+                 * billed tile provider.
+                 */
+                instance.addSource('roads', {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: [] },
+                });
+                instance.addLayer({
+                    id: 'roads',
+                    type: 'line',
+                    source: 'roads',
+                    layout: { 'line-cap': 'round', 'line-join': 'round' },
+                    paint: {
+                        'line-color': [
+                            'match',
+                            ['get', 'highway'],
+                            ['motorway', 'trunk'],
+                            '#8A7340',
+                            ['primary'],
+                            '#4C5C68',
+                            '#31404D',
+                        ],
+                        'line-width': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            8,
+                            ['match', ['get', 'highway'], ['motorway', 'trunk'], 1.2, 0.4],
+                            14,
+                            ['match', ['get', 'highway'], ['motorway', 'trunk'], 4.5, 1.6],
+                        ],
+                    },
+                });
+
                 instance.addSource('cells', { type: 'geojson', data: cells });
                 instance.addSource('mandate', {
                     type: 'geojson',
@@ -230,6 +268,22 @@ export default function Coverage({ area, summary }: CoverageProps) {
                 });
 
                 setLoadedCells(cells.features.length);
+
+                // Fetched after the grid has painted. Eighteen thousand cells
+                // are what this screen is about; the streets are context that
+                // can arrive a moment later.
+                void fetch(`/console/coverage/${String(area.id)}/roads.json`)
+                    .then((response) => response.json() as Promise<{ roads: GeoJSON.FeatureCollection }>)
+                    .then((payload) => {
+                        const source = instance.getSource<GeoJSONSource>('roads');
+
+                        if (source !== undefined) {
+                            void source.setData(payload.roads);
+                        }
+                    })
+                    .catch(() => {
+                        // A mandate with no roads loaded still draws its grid.
+                    });
 
                 instance.on('mousemove', 'cell-fill', (event: MapLayerMouseEvent) => {
                     setHovered(readCell(event.features?.[0]?.properties));
@@ -273,12 +327,8 @@ export default function Coverage({ area, summary }: CoverageProps) {
     ];
 
     return (
-        <div data-mode="dusk" className="flex h-dvh flex-col bg-surface text-ink">
+        <ConsoleShell current="coverage" mode="dusk" fill>
             <Head title={`Coverage: ${area.name}`} />
-            <AppBar
-                variant="console"
-                links={consoleLinks('coverage')}
-            />
 
             <header className="shrink-0 border-b border-rule px-6 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-4">
@@ -373,6 +423,6 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     </div>
                 )}
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

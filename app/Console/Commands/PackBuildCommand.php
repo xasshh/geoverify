@@ -81,10 +81,30 @@ final class PackBuildCommand extends Command
 
         $roads = $this->option('roads');
 
+        // A file still wins if one is given: somebody with an authoritative
+        // network from a client should not have to load it into the register
+        // first. Otherwise the database is the source, like every other layer.
+        $fromRegister = false;
+
+        if (! is_string($roads) || ! is_readable($roads)) {
+            $fromDatabase = "{$work}/roads.geojsonl";
+            $count = $this->export($this->roadsSql(), $area->id, $fromDatabase);
+
+            if ($count > 0) {
+                $roads = $fromDatabase;
+                $fromRegister = true;
+            }
+        }
+
         if (is_string($roads) && is_readable($roads)) {
             $layers[] = "--named-layer=roads:{$roads}";
             $counts['roads'] = $this->countLines($roads);
-            $this->components->twoColumnDetail('Roads', basename($roads).' ('.number_format($counts['roads']).' ways)');
+            $this->components->twoColumnDetail(
+                'Roads',
+                $fromRegister
+                    ? number_format($counts['roads']).' ways from the register'
+                    : basename($roads).' ('.number_format($counts['roads']).' ways)',
+            );
         } else {
             // Said plainly rather than buried: a pack with no roads is usable but
             // an officer has nothing to navigate by except their own trace.
@@ -134,6 +154,31 @@ final class PackBuildCommand extends Command
     /**
      * @return array<string, string>
      */
+    /**
+     * The street network inside this mandate.
+     *
+     * Not part of exports() because roads are optional: a mandate on ground
+     * nobody has loaded roads for still builds a pack, it just warns that an
+     * officer will have no landmarks.
+     */
+    private function roadsSql(): string
+    {
+        return <<<'SQL'
+            SELECT json_build_object(
+                'type', 'Feature',
+                'geometry', ST_AsGeoJSON(ST_Intersection(r.geometry, a.boundary), 6)::json,
+                'properties', json_build_object(
+                    'highway', r.highway, 'name', r.name, 'ref', r.ref
+                )
+            )::text
+              FROM roads r
+              JOIN coverage_areas a ON a.id = ?
+             WHERE ST_Intersects(r.geometry, a.boundary)
+               AND NOT ST_IsEmpty(ST_Intersection(r.geometry, a.boundary))
+        SQL;
+    }
+
+    /** @return array<string, string> */
     private function exports(CoverageArea $area): array
     {
         return [
