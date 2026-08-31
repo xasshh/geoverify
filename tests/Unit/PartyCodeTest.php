@@ -33,24 +33,60 @@ it('issues a code in the shape a person can read down a phone line', function ()
 it('never emits a character that can be misread for another', function () {
     // A thousand codes is 8,000 characters: enough that a confusable slipping
     // into the alphabet would show up here rather than on a printed receipt.
-    $body = '';
-
-    for ($i = 0; $i < 1_000; $i++) {
-        $body .= str_replace(['NBD', '-'], '', code()->issue());
-    }
-
-    // The check character is drawn from the full alphabet, so it is excluded
-    // from this assertion: only the eight body characters are ever read aloud
-    // without the code being validated first.
+    //
+    // Split on the separators rather than stripping the prefix by substring.
+    // N, B and D are all in the generation alphabet, so roughly one code in
+    // eight thousand contains a literal "NBD" in its body: a str_replace of the
+    // prefix eats that too, the group alignment slides by three, and check
+    // characters start leaking into the assertion. That made this test fail on
+    // about one run in nine for reasons that had nothing to do with the code.
     $bodies = '';
 
-    for ($i = 0; $i < strlen($body); $i += 9) {
-        $bodies .= substr($body, $i, 8);
+    for ($i = 0; $i < 1_000; $i++) {
+        [, $first, $second] = explode('-', code()->issue());
+
+        // The check character is deliberately not included. It is drawn from
+        // the full 36 character alphabet, because ISO 7064 MOD 37,36 is defined
+        // over it, and only the eight body characters are ever read aloud
+        // without the code being validated first.
+        $bodies .= $first.$second;
     }
+
+    expect($bodies)->toHaveLength(8_000);
 
     foreach (['O', 'I', 'L', '0', '1'] as $confusable) {
         expect($bodies)->not->toContain($confusable, "the body alphabet contains {$confusable}");
     }
+});
+
+it('validates every code it issues', function () {
+    // The bug this exists for: the check character used to be drawn from the
+    // full 36 character alphabet while normalise() folds O to 0 and I and L to
+    // 1. Roughly one code in twelve came back with a check character that had
+    // been folded on the way in, disagreed with itself, and was rejected by the
+    // system that had just minted it. Two thousand codes puts the odds of that
+    // slipping through this test at nothing.
+    $issuer = code();
+
+    for ($i = 0; $i < 2_000; $i++) {
+        $issued = $issuer->issue();
+
+        expect($issuer->isValid($issued))->toBeTrue("issued code {$issued} did not validate");
+    }
+});
+
+it('does not eat a body that happens to begin with the prefix', function () {
+    // N, B and D are all in the generation alphabet, so about one body in
+    // thirty thousand starts with the letters NBD. Stripping the prefix on a
+    // match alone took three characters out of those and left normalise()
+    // returning something that could never validate.
+    $normalised = code()->normalise('NBD-NBDX-Y7K2-9');
+
+    expect($normalised)->toBe('NBDXY7K29')
+        // Idempotent, which is what the length check buys: a caller that
+        // normalises twice, or normalises an already normalised code, gets the
+        // same nine characters both times.
+        ->and(code()->normalise($normalised))->toBe($normalised);
 });
 
 it('rejects every single character substitution', function () {
