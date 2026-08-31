@@ -3,9 +3,18 @@ import type { SubmitEventHandler } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/Field';
+import { CityBackdrop } from '@/components/CityBackdrop';
+import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 interface LoginProps {
-    status?: string;
+    /**
+     * Null, not undefined, when there is nothing to say.
+     *
+     * The server sends session('status'), which is null on an ordinary visit.
+     * The guard below used to test only for undefined and the empty string, so
+     * every load of this page drew an empty status bar above the form.
+     */
+    status?: string | null;
 }
 
 export default function Login({ status }: LoginProps) {
@@ -22,21 +31,35 @@ export default function Login({ status }: LoginProps) {
     };
 
     return (
-        <div data-mode="daylight" className="flex min-h-dvh items-center justify-center bg-surface px-6 py-12">
+        <div
+            data-mode="daylight"
+            className="relative flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-12"
+        >
             <Head title="Sign in" />
 
-            <div className="w-full max-w-sm">
-                {/* The drawing title block, at the smallest scale it works. */}
-                <div className="border-[1.5px] border-ink">
-                    <div className="border-b border-ink px-6 pt-6 pb-5">
-                        <p className="mb-2 text-label font-semibold tracking-[0.16em] text-gold uppercase">
+            <CityBackdrop />
+
+            <div className="relative w-full max-w-sm">
+                <div className="rounded-md bg-surface shadow-[0_18px_48px_rgb(14_30_46/0.34)]">
+                    <div className="flex flex-col items-center px-6 pt-7 pb-5 text-center sm:pt-8 sm:pb-6">
+                        <GeoVerifyMark
+                            size={64}
+                            className="mb-3 sm:mb-4"
+                            title="GeoVerify"
+                        />
+                        <p className="mb-1 text-label font-semibold tracking-[0.16em] text-gold uppercase">
                             Nigeria Business Directory
                         </p>
                         <h1 className="font-display text-display-m text-ink">GeoVerify</h1>
                     </div>
 
+                    {/* A hairline, not the black keyline that used to box the
+                        whole card in. On a photograph a hard border reads as a
+                        cutout; the shadow does the separating now. */}
+                    <div className="mx-6 border-t border-rule" />
+
                     <form onSubmit={submit} className="flex flex-col gap-5 px-6 py-6">
-                        {status !== undefined && status !== '' && (
+                        {status !== undefined && status !== null && status !== '' && (
                             <p className="border-l-2 border-green bg-raised px-3 py-2 text-ui text-ink">
                                 {status}
                             </p>
@@ -96,7 +119,7 @@ export default function Login({ status }: LoginProps) {
                     </form>
                 </div>
 
-                <p className="mt-4 text-center text-label text-faint">
+                <p className="mt-4 text-center text-label text-[#C6CEDA]">
                     Accounts are created by an administrator. There is no self sign up.
                 </p>
             </div>

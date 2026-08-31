@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cx } from '@/lib/cx';
+import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 interface CoverageBarProps {
     captured: number;
@@ -71,15 +72,7 @@ export function MapChrome({
             <header className="shrink-0 border-b border-rule px-4 py-2.5">
                 <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-2 numeric-mono text-mono text-ink">
-                        <svg width="11" height="12" viewBox="0 0 11 12" aria-hidden="true">
-                            <path
-                                d="M5.5 0.5 10.5 3.25v5.5L5.5 11.5 0.5 8.75v-5.5z"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1"
-                                className="text-gold"
-                            />
-                        </svg>
+                        <GeoVerifyMark size={20} />
                         {cellId}
                     </span>
                     {openFlags > 0 && (
