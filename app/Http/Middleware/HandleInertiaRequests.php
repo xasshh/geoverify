@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Domain\Claim\Actions\CountClaimsAwaitingDecision;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Registry\Actions\CountCorrectionsAwaitingReview;
+use App\Domain\Verification\Actions\CountEscalations;
+use App\Domain\Verification\Actions\CountObservationsAwaitingReview;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -55,10 +59,47 @@ class HandleInertiaRequests extends Middleware
                 'portal' => $this->portal($request),
             ],
 
+            // What the console sidebar puts against Review and Claims. Only
+            // for the people who can act on it, and only on the screens that
+            // show it: this is two counts on every navigation, which is cheap
+            // for a supervisor and pointless everywhere else.
+            'console' => $this->consoleQueues($request),
+
             'flash' => [
                 'status' => $request->session()->get('status'),
             ],
             //
+        ];
+    }
+
+    /**
+     * The waiting counts behind the sidebar.
+     *
+     * Null off the console and null for anyone who cannot act on them, so the
+     * shape itself says whether the numbers mean anything rather than leaving a
+     * zero to be read as "nothing waiting".
+     *
+     * @return array<string, int>|null
+     */
+    private function consoleQueues(Request $request): ?array
+    {
+        $user = $request->user('web');
+
+        if (! $user instanceof User || ! $user->supervises()) {
+            return null;
+        }
+
+        if (! $request->is('console/*') && ! $request->is('admin/*')) {
+            return null;
+        }
+
+        return [
+            'review' => app(CountObservationsAwaitingReview::class)(),
+            'claims' => app(CountClaimsAwaitingDecision::class)(),
+            'corrections' => app(CountCorrectionsAwaitingReview::class)(),
+            // Counted only for the people who can act on it. A supervisor
+            // seeing a number they cannot clear is a number that never moves.
+            'escalations' => $user->administers() ? app(CountEscalations::class)() : 0,
         ];
     }
 

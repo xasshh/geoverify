@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import { cx } from '@/lib/cx';
 
 interface Cell {
@@ -106,12 +105,8 @@ export default function Exports({
         counts === null ? 0 : includeAll ? counts.enterprises : counts.acceptedEnterprises;
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="exports">
             <Head title="Exports" />
-            <AppBar
-                variant="console"
-                links={consoleLinks('exports')}
-            />
 
             <div className="mx-auto max-w-5xl px-6 pb-20">
                 <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
@@ -319,6 +314,6 @@ export default function Exports({
                     </>
                 )}
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

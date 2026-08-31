@@ -56,12 +56,31 @@ Inertia is pinned to v2 on both sides: `inertiajs/inertia-laravel ^2.0` with
 ## Roles and access
 
 Three roles: `officer`, `supervisor`, `admin`. An officer holds assignments and
-captures; a supervisor assigns and reviews; an admin also manages people and
-devices. Route groups are gated by the `supervises` and `field` middleware, and
-per record access by `AssignmentPolicy` and `DevicePolicy`.
+captures; a supervisor assigns and reviews; an admin also rules on escalations,
+reads the audit log, manages people and devices, and contracts mandates.
+
+Three surfaces, three middleware: `field` (`/field`), `supervises` (`/console`)
+and `administers` (`/admin`). Per record access is `AssignmentPolicy` and
+`DevicePolicy`.
+
+`Role::supervises()` is true for an admin too, so the admin views are a separate
+route group behind `administers` rather than a section of the console. That
+separation is load bearing: escalation exists so the supervisor who suspects a
+capture was fabricated is not the person who rules on it, and
+`ResolveEscalation` refuses a ruling from whoever raised it.
+
+A supervisor who reaches `/admin` is refused, not redirected. An officer who
+reaches `/console` is redirected to their own work: the first went looking, the
+second took a wrong turn.
 
 Devices carry their own revocable Sanctum token scoped to `field:capture`, so a
 lost handset is cut off without touching the person's account.
+
+Behind a load balancer or a tunnel, name it in `TRUSTED_PROXIES` (see
+`config/app.php`). Left empty, forwarded headers are ignored, the app generates
+`http://` URLs on an `https://` page and reads every visitor's address as the
+proxy's, which quietly turns the portal's per address rate limits into one
+global limit.
 
 Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 `supervisor@geoverify.test`, `bello@geoverify.test` and the rest, password
@@ -69,8 +88,11 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 
 ## Layout
 
-Domain code lives under `app/Domain/{Coverage,Field,Registry,Identity,Media,Verification,Sync,Party}`.
-`Party` is Phase 2: parties, portal accounts and the access between them.
+Domain code lives under
+`app/Domain/{Claim,Coverage,Field,Identity,Media,Party,Registry,Staff,Sync,Verification}`.
+`Party` and `Claim` are Phase 2: parties, portal accounts, the access between
+them, and the claim and dispute flow. `Staff` is the in-house side: creating,
+suspending and reinstating the people who work this system.
 Business rules go in action classes, not in controllers and not in models.
 
 ## Commands

@@ -33,4 +33,18 @@ enum Role: string
     {
         return $this === self::Officer;
     }
+
+    /**
+     * The in-house view: escalations, the audit log, people, devices, mandates.
+     *
+     * Deliberately not implied by supervises(). A supervisor runs a mandate's
+     * field work; an admin decides escalations raised against supervisors, adds
+     * people and reads everything that happened. Folding the two together would
+     * make the person who escalated a capture the person who rules on it, which
+     * is the one thing escalation exists to prevent.
+     */
+    public function administers(): bool
+    {
+        return $this === self::Admin;
+    }
 }

@@ -18,5 +18,16 @@ declare module '@inertiajs/core' {
     interface PageProps {
         auth: { user: AuthUser | null };
         flash: { status: string | null };
+        /**
+         * What is waiting, for the console sidebar. Null off the console and
+         * null for anyone who cannot act on it, so the shape says whether the
+         * numbers mean anything rather than leaving a zero to be misread.
+         */
+        console: {
+            review: number;
+            claims: number;
+            corrections: number;
+            escalations: number;
+        } | null;
     }
 }

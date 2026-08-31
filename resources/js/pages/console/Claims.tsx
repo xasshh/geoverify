@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Head, useForm } from "@inertiajs/react";
-import { AppBar } from "@/components/AppBar";
+import { ConsoleShell } from "@/components/ConsoleShell";
 import { Button } from "@/components/Button";
-import { consoleLinks } from "@/lib/consoleNav";
 
 interface Signal {
     kind: string;
@@ -63,9 +62,8 @@ function waitingDays(iso: string): number {
  */
 export default function Claims({ disputes, claims }: Props) {
     return (
-        <div className="min-h-dvh bg-surface">
+        <ConsoleShell current="claims">
             <Head title="Claims" />
-            <AppBar variant="console" links={consoleLinks("claims")} />
 
             <div className="mx-auto max-w-5xl px-6 pb-20">
                 <header className="mt-10 mb-8">
@@ -116,7 +114,7 @@ export default function Claims({ disputes, claims }: Props) {
                     </ul>
                 </section>
             </div>
-        </div>
+        </ConsoleShell>
     );
 }
 

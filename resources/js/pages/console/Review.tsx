@@ -1,6 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import { DataTable, type Column } from '@/components/DataTable';
 import { PresenceMark, type TracePoint } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
@@ -158,12 +157,8 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
     ];
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="review">
             <Head title="Review queue" />
-            <AppBar
-                variant="console"
-                links={consoleLinks('review')}
-            />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">
                 <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
@@ -233,6 +228,6 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
                     </p>
                 )}
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

@@ -1,6 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import { DataTable, type Column } from '@/components/DataTable';
 
 interface Area {
@@ -51,9 +50,8 @@ export default function CoverageIndex({ areas }: { areas: Area[] }) {
     ];
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="coverage">
             <Head title="Coverage" />
-            <AppBar variant="console" links={consoleLinks('coverage')} />
             <div className="mx-auto max-w-6xl px-6 pb-20">
                 <header className="mt-8 border-b-[1.5px] border-ink pb-3">
                     <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">Console</p>
@@ -69,6 +67,6 @@ export default function CoverageIndex({ areas }: { areas: Area[] }) {
                     />
                 </div>
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

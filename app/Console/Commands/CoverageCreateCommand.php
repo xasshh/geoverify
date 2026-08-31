@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Coverage\Actions\CreateCoverageArea;
 use App\Domain\Coverage\Models\AdminBoundary;
-use App\Domain\Coverage\Models\CoverageArea;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Creates a mandate from a loaded administrative boundary.
@@ -39,74 +40,23 @@ final class CoverageCreateCommand extends Command
             return self::FAILURE;
         }
 
-        $lga = AdminBoundary::query()
-            ->where('level', AdminBoundary::LEVEL_LGA)
-            ->where('code', $lgaCode)
-            ->first();
-
-        if (! $lga instanceof AdminBoundary) {
-            $this->components->error("No LGA loaded with code {$lgaCode}. Run geoverify:boundaries-load first.");
+        try {
+            $area = app(CreateCoverageArea::class)(
+                lgaCode: $lgaCode,
+                client: $client,
+                name: $this->option('name') === null ? null : (string) $this->option('name'),
+                contractRef: $this->option('contract-ref') === null ? null : (string) $this->option('contract-ref'),
+                accuracyThresholdM: (int) $this->option('accuracy-threshold'),
+                resolution: (int) $this->option('resolution'),
+            );
+        } catch (RuntimeException $e) {
+            $this->components->error($e->getMessage());
 
             return self::FAILURE;
         }
 
-        // Nullable by construction: a state has no parent, and an LGA that failed
-        // hierarchy resolution has none either.
+        $lga = AdminBoundary::query()->findOrFail($area->admin_boundary_id);
         $state = AdminBoundary::query()->find($lga->parent_id);
-
-        $attributes = [
-            'name' => (string) ($this->option('name') ?? $lga->name),
-            'contract_ref' => $this->option('contract-ref'),
-            'state_code' => $state?->code,
-            'admin_boundary_id' => $lga->id,
-            'status' => 'active',
-            'accuracy_threshold_m' => (int) $this->option('accuracy-threshold'),
-            'default_h3_resolution' => (int) $this->option('resolution'),
-        ];
-
-        $area = CoverageArea::query()
-            ->where('lga_code', $lgaCode)
-            ->where('client_name', $client)
-            ->first();
-
-        if ($area instanceof CoverageArea) {
-            $area->fill($attributes)->save();
-        } else {
-            // The boundary is NOT NULL, so it has to be written in the same
-            // statement as the row. It is copied from admin_boundaries rather than
-            // referenced: a mandate's ground is fixed at contract time, and a later
-            // boundary release must not silently move what a client contracted for.
-            $id = DB::scalar(
-                'INSERT INTO coverage_areas (
-                    client_name, contract_ref, name, state_code, lga_code, admin_boundary_id,
-                    status, accuracy_threshold_m, default_h3_resolution, boundary, created_at, updated_at
-                 )
-                 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ab.boundary, now(), now()
-                   FROM admin_boundaries ab WHERE ab.id = ?
-                 RETURNING id',
-                [
-                    $client,
-                    $attributes['contract_ref'],
-                    $attributes['name'],
-                    $attributes['state_code'],
-                    $lgaCode,
-                    $lga->id,
-                    $attributes['status'],
-                    $attributes['accuracy_threshold_m'],
-                    $attributes['default_h3_resolution'],
-                    $lga->id,
-                ],
-            );
-
-            $area = CoverageArea::query()->findOrFail($id);
-        }
-
-        // Refresh the mandate geometry on re-run so a corrected boundary load is
-        // picked up deliberately, by re-running this command.
-        DB::statement(
-            'UPDATE coverage_areas SET boundary = (SELECT boundary FROM admin_boundaries WHERE id = ?) WHERE id = ?',
-            [$lga->id, $area->id],
-        );
 
         $areaKm2 = DB::scalar(
             'select round((ST_Area(boundary::geography)/1e6)::numeric, 1) from coverage_areas where id = ?',

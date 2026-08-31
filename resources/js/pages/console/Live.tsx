@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import {
     Map as MapLibreMap,
     NavigationControl,
@@ -8,8 +9,6 @@ import {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
 import { PresenceMark } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
 
@@ -294,12 +293,8 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
     const quiet = data.officers.filter((o) => !o.active).length;
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="live">
             <Head title="Live operations" />
-            <AppBar
-                variant="console"
-                links={consoleLinks('live')}
-            />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-20">
                 <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
@@ -435,6 +430,6 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                     </aside>
                 </div>
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

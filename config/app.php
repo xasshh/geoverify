@@ -67,7 +67,11 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Africa/Lagos, because every date this system shows is read in Nigeria.
+    // The register's own timestamps are written and compared in this zone, so a
+    // capture made at 00:30 in Abuja belongs to the day the officer thinks it
+    // does, and "days remaining" on a campaign does not step a day early.
+    'timezone' => 'Africa/Lagos',
 
     /*
     |--------------------------------------------------------------------------
@@ -124,5 +128,27 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted Proxies
+    |--------------------------------------------------------------------------
+    |
+    | Load balancers and tunnels terminate TLS and forward the original scheme
+    | and client address in X-Forwarded-* headers. Until the proxy in front is
+    | named here those headers are ignored, so the application generates http://
+    | URLs on an https:// page and reads every visitor's address as the proxy's.
+    |
+    | The second of those matters more than it looks: the portal's sign in and
+    | claim routes are rate limited per address, and one untrusted proxy turns
+    | every one of those limits into a single global one.
+    |
+    | Empty by default, because trusting a header that anyone can set is how a
+    | per address limit becomes bypassable. Name the proxy, a comma separated
+    | list of them, or "*" when the load balancer is the only way in.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
 
 ];

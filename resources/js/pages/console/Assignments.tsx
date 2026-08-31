@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import type { SubmitEventHandler } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
-import { consoleLinks } from '@/lib/consoleNav';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import { Button } from '@/components/Button';
 import { DataTable, type Column } from '@/components/DataTable';
 import { SelectField, TextField } from '@/components/Field';
@@ -137,12 +136,8 @@ export default function Assignments({
     ];
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="coverage">
             <Head title={`Assignments: ${area.name}`} />
-            <AppBar
-                variant="console"
-                links={consoleLinks('coverage')}
-            />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">
                 <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
@@ -261,6 +256,6 @@ export default function Assignments({
                     />
                 </div>
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

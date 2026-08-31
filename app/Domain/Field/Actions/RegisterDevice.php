@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Field\Actions;
 
 use App\Domain\Field\Models\Device;
+use App\Domain\Verification\Models\VerificationEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\NewAccessToken;
@@ -86,13 +87,27 @@ final class RegisterDevice
             throw new RuntimeException('Only a supervisor can revoke a device.');
         }
 
-        return DB::transaction(function () use ($device, $reason): Device {
+        if ($device->status === Device::STATUS_REVOKED) {
+            throw new RuntimeException('That device is already revoked.');
+        }
+
+        return DB::transaction(function () use ($device, $revokedBy, $reason): Device {
             $device->user?->tokens()->where('name', $this->tokenName($device))->delete();
 
             $device->update([
                 'status' => Device::STATUS_REVOKED,
                 'revoked_at' => now(),
                 'revoked_reason' => $reason,
+            ]);
+
+            // Cutting a handset off is a status change like any other, and the
+            // rule is that those append rather than happening quietly. Written
+            // here rather than at the call site so revocation is on the record
+            // however it was triggered.
+            VerificationEvent::record($device, 'device.revoked', $revokedBy, [
+                'device_id' => $device->device_id,
+                'officer_id' => $device->user_id,
+                'reason' => $reason,
             ]);
 
             return $device->fresh() ?? $device;

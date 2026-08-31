@@ -1,20 +1,15 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { cx } from '@/lib/cx';
-
-interface AppBarProps {
-    /** Console links across, field keeps it to identity and sign out. */
-    variant: 'console' | 'field';
-    links?: Array<{ label: string; href: string; current?: boolean }>;
-}
+import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 /**
  * Who is signed in, and the way out.
  *
- * Every screen needs this: without it a supervisor cannot move between the
- * coverage map and the assignment list, and an officer handing a phone back has
- * no way to sign out of it.
+ * The field client's bar, and only the field client's. It carries no navigation
+ * because an officer has one place to be: the cell they are working. The console
+ * moved to ConsoleShell, which puts the whole job in a sidebar and shows what is
+ * waiting in each queue, and this stopped needing a variant the day it did.
  */
-export function AppBar({ variant, links = [] }: AppBarProps) {
+export function AppBar() {
     const user = usePage().props.auth.user;
 
     const signOut = () => {
@@ -22,45 +17,11 @@ export function AppBar({ variant, links = [] }: AppBarProps) {
     };
 
     return (
-        <div
-            className={cx(
-                'flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-rule px-6 py-2',
-                variant === 'field' && 'px-4',
-            )}
-        >
-            <Link
-                href={variant === 'field' ? '/field' : '/console/coverage'}
-                className="flex items-center gap-2 font-display text-display-s text-ink"
-            >
-                <svg width="13" height="14" viewBox="0 0 11 12" aria-hidden="true">
-                    <path
-                        d="M5.5 0.5 10.5 3.25v5.5L5.5 11.5 0.5 8.75v-5.5z"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1"
-                        className="text-gold"
-                    />
-                </svg>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-rule px-4 py-2">
+            <Link href="/field" className="flex items-center gap-2 font-display text-display-s text-ink">
+                <GeoVerifyMark size={22} />
                 GeoVerify
             </Link>
-
-            {links.length > 0 && (
-                <nav className="flex flex-wrap items-center gap-4" aria-label="Console">
-                    {links.map((link) => (
-                        <Link
-                            key={link.href}
-                            href={link.href}
-                            aria-current={link.current === true ? 'page' : undefined}
-                            className={cx(
-                                'text-ui underline-offset-4 hover:underline',
-                                link.current === true ? 'font-semibold text-ink' : 'text-muted',
-                            )}
-                        >
-                            {link.label}
-                        </Link>
-                    ))}
-                </nav>
-            )}
 
             <div className="ml-auto flex items-center gap-4">
                 {user !== null && (
