@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { Head, Link, useForm } from "@inertiajs/react";
 import { PortalShell } from "@/components/PortalShell";
 import { TextField } from "@/components/Field";
 import { Button } from "@/components/Button";
@@ -51,22 +51,12 @@ export default function ClaimShow({
     dispute,
     party,
 }: Props) {
-    const flash = usePage().props.flash as
-        { status?: string | null } | undefined;
-    const status =
-        typeof flash?.status === "string" && flash.status !== ""
-            ? flash.status
-            : null;
-
+    // The flash is rendered by PortalShell, for every portal page rather than
+    // for this one. It used to be drawn here as well, which showed the same
+    // sentence twice the moment the shell learned to do it.
     return (
         <PortalShell accountName={party.code} width="form">
             <Head title={`Claim: ${business.tradingName}`} />
-
-            {status !== null && (
-                <p className="mt-8 border-l-2 border-green bg-raised px-4 py-3 text-body text-ink">
-                    {status}
-                </p>
-            )}
 
             <div className="mt-10 mb-6">
                 <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">

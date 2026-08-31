@@ -60,7 +60,7 @@ export default function FieldAssignments({ officer, assignments }: Props) {
     return (
         <div data-mode="dusk" className="min-h-dvh bg-surface text-ink">
             <Head title="My work" />
-            <AppBar variant="field" />
+            <AppBar />
 
             <header className="sticky top-0 z-10 border-b border-rule bg-surface px-4 pt-4 pb-3">
                 <div className="flex items-baseline justify-between gap-3">

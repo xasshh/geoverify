@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { cx } from '@/lib/cx';
+import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 interface PortalShellProps {
     /** Shown in the bar. Absent before anyone has signed in. */
@@ -33,6 +34,8 @@ export function PortalShell({
     children,
     width = 'form',
 }: PortalShellProps) {
+    const flash = usePage().props.flash.status;
+
     return (
         <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
             <header className="border-b border-rule">
@@ -46,14 +49,7 @@ export function PortalShell({
                         href={accountName === null ? '/portal/sign-in' : '/portal'}
                         className="flex items-center gap-2 font-display text-display-s text-ink"
                     >
-                        <svg width="13" height="14" viewBox="0 0 11 12" aria-hidden="true">
-                            <path
-                                d="M5.5 0.5 10.5 3.25v5.5L5.5 11.5 0.5 8.75v-5.5z"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1"
-                            />
-                        </svg>
+                        <GeoVerifyMark size={22} />
                         Nigeria Business Directory
                     </Link>
 
@@ -77,6 +73,20 @@ export function PortalShell({
                     width === 'form' ? 'max-w-xl' : 'max-w-5xl',
                 )}
             >
+                {/*
+                    Confirmation, which this shell went without until a party
+                    could do something that needed one. A business that submits
+                    a correction and sees the page redraw unchanged has no way
+                    to tell whether it worked, and will submit it again.
+                */}
+                {flash !== null && (
+                    <p
+                        role="status"
+                        className="mt-8 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink"
+                    >
+                        {flash}
+                    </p>
+                )}
                 {(kicker !== undefined || title !== undefined) && (
                     <div className="mt-10 mb-8">
                         {kicker !== undefined && (

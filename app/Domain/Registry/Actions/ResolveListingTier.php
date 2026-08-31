@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Registry\Actions;
 
 use App\Domain\Registry\Models\Structure;
+use DateTimeInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * What a listing has actually established, and on what evidence.
@@ -39,14 +41,21 @@ final class ResolveListingTier
     /**
      * The same answer, said the way the ladder component wants it.
      *
-     * @return list<array{tier: string, state: string, establishedOn?: string}>
+     * Every established rung carries the date it was established and how the
+     * register feels about that date now. A tier with no date beside it invites
+     * the reader to assume it was checked recently, and on a register whose
+     * whole value is knowing how well it knows things, that assumption is the
+     * one thing it must never encourage.
+     *
+     * @return list<array{tier: string, state: string, establishedOn?: string, elapsed?: string}>
      */
-    public function rungs(string $origin, string $status, string $establishedOn): array
+    public function rungs(string $origin, string $status, DateTimeInterface $establishedOn): array
     {
         $reached = $this->forOrigin($origin, $status);
+        $freshness = $this->freshness($establishedOn);
 
         $rungs = [
-            ['tier' => 'listed', 'state' => 'current', 'establishedOn' => $establishedOn],
+            ['tier' => 'listed', ...$freshness],
             ['tier' => 'identity_verified', 'state' => 'not_established'],
             ['tier' => 'location_verified', 'state' => 'not_established'],
             ['tier' => 'operations_verified', 'state' => 'not_established'],
@@ -54,13 +63,67 @@ final class ResolveListingTier
         ];
 
         if ($reached === 'location_verified') {
-            $rungs[2] = [
-                'tier' => 'location_verified',
-                'state' => 'current',
-                'establishedOn' => $establishedOn,
-            ];
+            $rungs[2] = ['tier' => 'location_verified', ...$freshness];
         }
 
         return $rungs;
+    }
+
+    /**
+     * How the register feels about a date.
+     *
+     * Two thresholds out of config, because this is a commercial judgement
+     * rather than a fact: a mandate over an industrial estate and one over a
+     * market where stalls turn over quarterly do not age at the same rate.
+     *
+     * `ageing` and `stale` are both still established. The difference is how
+     * long ago, and that is a fact rather than a warning: nothing here expires,
+     * and a tier that quietly stopped counting after two years would be the
+     * register deleting evidence it had gathered.
+     *
+     * @return array{state: string, establishedOn: string, elapsed: string}
+     */
+    private function freshness(DateTimeInterface $establishedOn): array
+    {
+        $established = Carbon::instance(
+            $establishedOn instanceof Carbon ? $establishedOn : Carbon::parse($establishedOn->format('c')),
+        )->startOfDay();
+
+        $months = (int) $established->diffInMonths(Carbon::now(config('app.timezone'))->startOfDay());
+
+        $current = (int) config('geoverify.tier_freshness.current_months', 12);
+        $stale = (int) config('geoverify.tier_freshness.stale_months', 24);
+
+        return [
+            'state' => match (true) {
+                $months >= $stale => 'stale',
+                $months >= $current => 'ageing',
+                default => 'current',
+            },
+            'establishedOn' => $established->format('F Y'),
+            'elapsed' => $this->elapsed($months),
+        ];
+    }
+
+    /**
+     * How long ago, in the reader's words.
+     *
+     * Months up to two years and then years, because "31 months" is a number a
+     * person has to convert before it means anything, and the point of this
+     * line is that it lands without arithmetic.
+     */
+    private function elapsed(int $months): string
+    {
+        if ($months < 1) {
+            return 'this month';
+        }
+
+        if ($months < 24) {
+            return $months === 1 ? '1 month' : "{$months} months";
+        }
+
+        $years = intdiv($months, 12);
+
+        return "{$years} years";
     }
 }

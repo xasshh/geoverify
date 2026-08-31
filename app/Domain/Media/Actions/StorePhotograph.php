@@ -11,7 +11,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 /**
  * Stores a photograph and records what can be checked about it later.
@@ -31,6 +30,8 @@ final class StorePhotograph
     /** Photographs above this are refused: the client compresses before sending. */
     private const MAX_BYTES = 4 * 1024 * 1024;
 
+    public function __construct(private readonly StoreMediaFile $files) {}
+
     public function store(
         UploadedFile $file,
         Model $subject,
@@ -41,38 +42,13 @@ final class StorePhotograph
         ?float $deviceLatitude = null,
         ?int $fieldSessionId = null,
     ): Media {
-        if ($file->getSize() > self::MAX_BYTES) {
-            throw new RuntimeException(
-                'That photograph is too large. The app should have compressed it before sending.',
-            );
-        }
-
-        $existing = Media::query()->where('client_uuid', $clientUuid)->first();
-
-        if ($existing instanceof Media) {
-            // A retried upload. One photograph, same answer.
-            return $existing;
-        }
-
-        $path = $file->getRealPath();
-        $sha256 = $path === false ? '' : (hash_file('sha256', $path) ?: '');
         $exif = $this->readExif($file);
         $size = @getimagesize($file->getRealPath() ?: '');
 
-        $stored = $file->store("structures/{$subject->getKey()}", 'media');
-
-        if ($stored === false) {
-            throw new RuntimeException('The photograph could not be stored. Try again.');
-        }
-
-        $media = Media::query()->create([
-            'mediable_type' => $subject->getMorphClass(),
-            'mediable_id' => $subject->getKey(),
-            'kind' => $kind,
-            'disk' => 'media',
-            'disk_path' => $stored,
-            'sha256' => $sha256,
-            'bytes' => $file->getSize(),
+        // The file handling, the digest and the row are shared with a party's
+        // document upload. What stays here is what only a photograph has: the
+        // camera metadata, the positions, and an officer standing behind it.
+        $media = $this->files->put($file, $subject, $kind, $clientUuid, [
             'width' => $size === false ? null : $size[0],
             'height' => $size === false ? null : $size[1],
             'captured_at' => now(),
@@ -82,8 +58,12 @@ final class StorePhotograph
             'from_device_camera' => $exif['fromCamera'],
             'captured_by' => $officer->id,
             'field_session_id' => $fieldSessionId,
-            'client_uuid' => $clientUuid,
-        ]);
+        ], self::MAX_BYTES);
+
+        // A retried upload comes back already positioned and already logged.
+        if ($media->wasRecentlyCreated === false) {
+            return $media;
+        }
 
         $this->writePositions($media, $exif, $deviceLongitude, $deviceLatitude, $subject);
 
@@ -91,7 +71,7 @@ final class StorePhotograph
 
         VerificationEvent::record($media, 'media.stored', $officer, [
             'kind' => $kind,
-            'sha256' => $sha256,
+            'sha256' => $media->sha256,
             'bytes' => $file->getSize(),
             'from_device_camera' => $exif['fromCamera'],
             'distance_from_subject_m' => $media->distance_from_subject_m,

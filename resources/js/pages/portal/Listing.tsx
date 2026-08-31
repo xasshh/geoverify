@@ -1,4 +1,8 @@
-import { Head } from "@inertiajs/react";
+import { useState } from "react";
+import { Head, router, useForm } from "@inertiajs/react";
+import { Button } from "@/components/Button";
+import { SelectField, TextField } from "@/components/Field";
+import { StatusPill } from "@/components/StatusPill";
 import { PortalShell } from "@/components/PortalShell";
 import { VerificationLadder } from "@/components/VerificationLadder";
 import type { Rung } from "@/lib/tiers";
@@ -24,6 +28,28 @@ interface Props {
         hasPhone: boolean;
     }[];
     party: { code: string | null; displayName: string | null };
+    corrections: Correction[];
+    correctableFields: { value: string; label: string }[];
+    publication: {
+        state: string;
+        label: string;
+        explanation: string;
+        decidedAt: string | null;
+    };
+}
+
+interface Correction {
+    id: number;
+    field: string;
+    fieldLabel: string;
+    currentValue: string | null;
+    proposedValue: string | null;
+    reason: string;
+    status: string;
+    statusLabel: string;
+    proposedAt: string | null;
+    decidedAt: string | null;
+    decisionNote: string | null;
 }
 
 function monthOf(iso: string): string {
@@ -46,12 +72,248 @@ function monthOf(iso: string): string {
  * party who could rewrite an officer's observation would be able to keep the
  * credibility of a field visit while changing what it found.
  */
+
+/**
+ * Proposing a correction, and what has been proposed before.
+ *
+ * A form that sends a message, not a form that edits a record. The distinction
+ * is the whole milestone, so the page says it in words as well as in structure:
+ * what an officer wrote stays, the business's account is appended beside it, and
+ * a person decides.
+ *
+ * Settled corrections stay on the page with the reason they were settled. A
+ * business told no deserves to see why, and one told yes deserves to see that it
+ * landed rather than wondering whether the form worked.
+ */
+function CorrectionPanel({
+    business,
+    corrections,
+    correctableFields,
+}: {
+    business: Props["business"];
+    corrections: Correction[];
+    correctableFields: { value: string; label: string }[];
+}) {
+    const [open, setOpen] = useState(false);
+    const form = useForm({ field: correctableFields[0]?.value ?? "", proposed_value: "", reason: "" });
+
+    return (
+        <section className="rounded-sm border border-rule p-5">
+            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                Changing what this says
+            </h2>
+
+            {/* Both records are append only, for different reasons. An
+                officer's is somebody else's account of a morning. Yours is your
+                own, but a register whose entries could be quietly rewritten
+                after the fact would be worth nothing to anybody reading it. */}
+            <p className="mt-2 text-body text-muted">
+                {business.selfRegistered
+                    ? "What you have already told us stays on the record. If something changed, or you got something wrong, propose a correction: it sits beside the original rather than replacing it."
+                    : "An officer's record of a visit is not editable, by you or by us. If something here is wrong, propose a correction: the original stays, yours sits beside it, and a reviewer decides."}
+            </p>
+
+            {open ? (
+                <form
+                    className="mt-4 flex flex-col gap-3"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        form.post(`/portal/businesses/${String(business.id)}/corrections`, {
+                            preserveScroll: true,
+                            onSuccess: () => {
+                                form.reset();
+                                setOpen(false);
+                            },
+                        });
+                    }}
+                >
+                    <SelectField
+                        label="What is wrong"
+                        value={form.data.field}
+                        onChange={(event) => {
+                            form.setData("field", event.target.value);
+                        }}
+                    >
+                        {correctableFields.map((field) => (
+                            <option key={field.value} value={field.value}>
+                                {field.label}
+                            </option>
+                        ))}
+                    </SelectField>
+
+                    <TextField
+                        label="What it should say"
+                        value={form.data.proposed_value}
+                        onChange={(event) => {
+                            form.setData("proposed_value", event.target.value);
+                        }}
+                    />
+
+                    <label className="flex flex-col gap-1">
+                        <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            Why
+                        </span>
+                        <textarea
+                            rows={3}
+                            value={form.data.reason}
+                            onChange={(event) => {
+                                form.setData("reason", event.target.value);
+                            }}
+                            className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                        />
+                    </label>
+
+                    {Object.values(form.errors).map((error) => (
+                        <p key={error} className="text-label text-alert">
+                            {error}
+                        </p>
+                    ))}
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button type="submit" busy={form.processing}>
+                            Send for review
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setOpen(false);
+                            }}
+                            className="text-ui text-muted underline underline-offset-2"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            ) : (
+                <div className="mt-4">
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setOpen(true);
+                        }}
+                    >
+                        Propose a correction
+                    </Button>
+                </div>
+            )}
+
+            {corrections.length > 0 && (
+                <ul className="mt-5 flex flex-col gap-3 border-t border-rule pt-4">
+                    {corrections.map((correction) => (
+                        <li key={correction.id} className="flex flex-col gap-1">
+                            <span className="flex flex-wrap items-baseline justify-between gap-2">
+                                <span className="text-ui text-ink">
+                                    {correction.fieldLabel}: {correction.proposedValue ?? "cleared"}
+                                </span>
+                                <StatusPill
+                                    tone={
+                                        correction.status === "accepted"
+                                            ? "accepted"
+                                            : correction.status === "submitted"
+                                              ? "review"
+                                              : "rejected"
+                                    }
+                                    label={correction.statusLabel}
+                                    size="sm"
+                                />
+                            </span>
+
+                            {correction.decisionNote !== null && (
+                                <span className="text-label text-muted">
+                                    {correction.decisionNote}
+                                </span>
+                            )}
+
+                            {correction.status === "submitted" && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        router.post(
+                                            `/portal/corrections/${String(correction.id)}/withdraw`,
+                                            {},
+                                            { preserveScroll: true },
+                                        );
+                                    }}
+                                    className="self-start text-label text-gold underline underline-offset-2"
+                                >
+                                    Withdraw
+                                </button>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </section>
+    );
+}
+
+/**
+ * Whether this listing may be shown outside the register.
+ *
+ * Nobody was asked at the doorstep, so the answer starts as no and only a party
+ * can change it. Withdrawing takes effect at once: a business that has changed
+ * its mind has changed its mind, and there is no window in which we keep
+ * publishing anyway.
+ */
+function PublicationPanel({
+    business,
+    publication,
+}: {
+    business: Props["business"];
+    publication: Props["publication"];
+}) {
+    const choose = (state: "opted_in" | "withheld") => {
+        router.post(
+            `/portal/businesses/${String(business.id)}/publication`,
+            { state },
+            { preserveScroll: true },
+        );
+    };
+
+    return (
+        <section className="rounded-sm border border-rule p-5">
+            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                Showing this publicly
+            </h2>
+
+            <p className="mt-2 text-body text-muted">{publication.explanation}</p>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                    variant={publication.state === "opted_in" ? "primary" : "secondary"}
+                    onClick={() => {
+                        choose("opted_in");
+                    }}
+                >
+                    Publish my listing
+                </Button>
+                <Button
+                    variant={publication.state === "withheld" ? "primary" : "secondary"}
+                    onClick={() => {
+                        choose("withheld");
+                    }}
+                >
+                    Keep it off
+                </Button>
+            </div>
+
+            <p className="mt-3 text-label text-faint">
+                Being on the register and being shown publicly are different things. Nothing here
+                changes what we hold or what a mandate can see.
+            </p>
+        </section>
+    );
+}
+
 export default function Listing({
     business,
     rungs,
     control,
     observations,
     party,
+    corrections,
+    correctableFields,
+    publication,
 }: Props) {
     return (
         <PortalShell accountName={party.displayName} width="page">
@@ -122,24 +384,14 @@ export default function Listing({
                         </ul>
                     </section>
 
-                    <section className="rounded-sm border border-rule p-5">
-                        <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
-                            Changing what this says
-                        </h2>
-                        {/* Both records are append only, for different
-                            reasons. An officer's is somebody else's account of
-                            a morning. Yours is your own, but a register whose
-                            entries could be quietly rewritten after the fact
-                            would be worth nothing to anybody reading it. */}
-                        <p className="mt-2 text-body text-muted">
-                            {business.selfRegistered
-                                ? "What you have already told us stays on the record. If something changes, or you got something wrong, you will be able to add a correction beside it rather than overwrite it."
-                                : "An officer's record of a visit is not editable, by you or by us. If something here is wrong, you will be able to propose a correction: the original stays, your correction sits beside it, and a reviewer decides."}
-                        </p>
-                        <p className="mt-3 text-label text-faint">
-                            Corrections open in the next release.
-                        </p>
-                    </section>
+                    <CorrectionPanel
+                        business={business}
+                        corrections={corrections}
+                        correctableFields={correctableFields}
+                    />
+
+                    <PublicationPanel business={business} publication={publication} />
+
                 </aside>
             </div>
         </PortalShell>

@@ -169,12 +169,18 @@ it('establishes listed and nothing above it', function () {
     $rungs = app(ResolveListingTier::class)->rungs(
         (string) $enterprise->structure->origin,
         (string) $enterprise->structure->status,
-        'August 2026',
+        now(),
     );
 
     $location = collect($rungs)->firstWhere('tier', 'location_verified');
+    $listed = collect($rungs)->firstWhere('tier', 'listed');
 
-    expect($location['state'])->toBe('not_established');
+    expect($location['state'])->toBe('not_established')
+        // An unestablished rung carries no date, because there is nothing to
+        // date. Only what actually happened gets a when.
+        ->and($location)->not->toHaveKey('establishedOn')
+        ->and($listed['state'])->toBe('current')
+        ->and($listed['elapsed'])->toBe('this month');
 });
 
 it('resolves the ward from the point rather than from anything the client says', function () {

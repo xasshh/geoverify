@@ -119,6 +119,20 @@ it('exposes no portal route that could write to an observation', function () {
         'portal.register-business', 'portal.register-business.name',
         'portal.register-business.place', 'portal.register-business.back',
         'portal.register-business.submit',
+        /*
+         * M5. All three write, and none of them writes an observation.
+         *
+         * A correction is a row in correction_proposals saying what a party
+         * thinks is wrong; withdrawing sets that row's status; publication sets
+         * a column on the enterprise. The observation an officer authored is
+         * not reachable from any of them.
+         *
+         * The path that does append an observation is DecideCorrection, and it
+         * runs from the console under a supervisor. That is the whole shape of
+         * the milestone: a party proposes, a person rules, and what an officer
+         * recorded is added to rather than replaced.
+         */
+        'portal.corrections.store', 'portal.corrections.withdraw', 'portal.publication',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())
@@ -153,6 +167,16 @@ it('leaves the officer record untouched after a party does everything it can', f
         'enterprise_id' => $shop->id,
         'relationship' => ClaimRelationship::Owner->value,
     ]);
+
+    // M5's additions, fired at the same listing. Proposing a correction is the
+    // closest a party can get to editing the record, and the point of the
+    // milestone is that it does not get there.
+    $as->post("/portal/businesses/{$shop->id}/corrections", [
+        'field' => 'trading_name',
+        'proposed_value' => 'Rewritten By The Owner',
+        'reason' => 'We would like this changed please.',
+    ]);
+    $as->post("/portal/businesses/{$shop->id}/publication", ['state' => 'opted_in']);
 
     $after = EnterpriseObservation::query()
         ->where('enterprise_id', $shop->id)

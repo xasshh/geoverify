@@ -6,6 +6,7 @@ namespace App\Domain\Registry\Models;
 
 use App\Domain\Identity\Models\IdentityClaim;
 use App\Domain\Media\Models\Media;
+use App\Domain\Registry\Enums\PublicationState;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $structure_id
  * @property string|null $unit_label
+ * @property int|null $floor
  * @property int $captured_by
  * @property Carbon $captured_at
  * @property string $trading_name
@@ -28,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $scale_band
  * @property string|null $operating_status
  * @property string $status
+ * @property PublicationState $publication_state
+ * @property Carbon|null $publication_decided_at
  * @property string $client_uuid
  */
 final class Enterprise extends Model
@@ -43,15 +47,21 @@ final class Enterprise extends Model
     public const STATUS_ACCEPTED = 'accepted';
 
     protected $fillable = [
-        'structure_id', 'unit_label', 'captured_by', 'captured_at',
+        'structure_id', 'unit_label', 'floor', 'captured_by', 'captured_at',
         'trading_name', 'registered_name', 'sector_code', 'subsector_code',
         'scale_band', 'operating_status', 'status', 'client_uuid',
+        'publication_state', 'publication_decided_at',
         'origin', 'registered_by_party_id',
     ];
 
     protected function casts(): array
     {
-        return ['captured_at' => 'datetime'];
+        return [
+            'captured_at' => 'datetime',
+            'floor' => 'integer',
+            'publication_state' => PublicationState::class,
+            'publication_decided_at' => 'datetime',
+        ];
     }
 
     /** @return BelongsTo<Structure, $this> */
