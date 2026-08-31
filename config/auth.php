@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Campaign\Models\ClientUser;
 use App\Domain\Party\Models\PortalAccount;
 use App\Models\User;
 
@@ -59,6 +60,20 @@ return [
             'driver' => 'session',
             'provider' => 'portal_accounts',
         ],
+
+        /*
+         * The commissioning client's own guard.
+         *
+         * Third of three, and for the same reason as the second. An NRS
+         * administrator is not staff: `users` is the staff table and Role is
+         * never widened to admit somebody who does not work here. Separate
+         * guards mean a client session can never satisfy `supervises` or
+         * `administers`, by construction rather than by check.
+         */
+        'client' => [
+            'driver' => 'session',
+            'provider' => 'client_users',
+        ],
     ],
 
     /*
@@ -87,6 +102,11 @@ return [
         'portal_accounts' => [
             'driver' => 'eloquent',
             'model' => PortalAccount::class,
+        ],
+
+        'client_users' => [
+            'driver' => 'eloquent',
+            'model' => ClientUser::class,
         ],
 
         // 'users' => [

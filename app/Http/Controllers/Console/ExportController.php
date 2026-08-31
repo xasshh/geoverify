@@ -11,6 +11,7 @@ use App\Domain\Verification\Actions\RecordExport;
 use App\Domain\Verification\Exports\EnterpriseCsv;
 use App\Domain\Verification\Exports\EvidencePack;
 use App\Domain\Verification\Exports\ExportScope;
+use App\Domain\Verification\Exports\LoopbackPrint;
 use App\Domain\Verification\Exports\PdfRenderer;
 use App\Domain\Verification\Exports\StructureGeoJson;
 use App\Domain\Verification\Models\VerificationEvent;
@@ -180,27 +181,9 @@ final class ExportController
         }
     }
 
-    /**
-     * The URL the local browser should fetch.
-     *
-     * Not APP_URL. That is what the outside world calls this application, and it
-     * is not necessarily a name this host can resolve or a port it answers on: a
-     * pack that only prints when DNS agrees with itself is a pack that fails in
-     * production. The loopback address with the port this very request arrived
-     * on is always somewhere the application is listening.
-     */
     private function loopback(Request $request, string $url): string
     {
-        $parts = parse_url($url);
-        $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
-
-        $base = config('services.chromium.base_url');
-
-        if (is_string($base) && $base !== '') {
-            return rtrim($base, '/').$path;
-        }
-
-        return sprintf('%s://127.0.0.1:%d%s', $request->getScheme(), $request->getPort(), $path);
+        return app(LoopbackPrint::class)->url($request, $url);
     }
 
     private function actor(Request $request): User
