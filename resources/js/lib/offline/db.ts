@@ -39,6 +39,14 @@ export interface LocalEnterprise {
     clientUuid: string;
     structureClientUuid: string;
     unitLabel: string | null;
+    /**
+     * Which storey it trades on. Ground is 0, a basement is negative.
+     *
+     * Null where the officer did not go in and does not know, which is a real
+     * answer. Records written by an earlier build have no key at all, so every
+     * read of this coalesces rather than trusting the shape.
+     */
+    floor: number | null;
     tradingName: string;
     sectorCode: string | null;
     scaleBand: string | null;

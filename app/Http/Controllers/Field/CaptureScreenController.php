@@ -74,7 +74,7 @@ final class CaptureScreenController
     private function structuresIn(int $gridCellId): array
     {
         $structures = Structure::query()
-            ->with(['enterprises:id,structure_id,unit_label,trading_name,sector_code', 'observations'])
+            ->with(['enterprises:id,structure_id,unit_label,floor,trading_name,sector_code', 'observations'])
             ->where('grid_cell_id', $gridCellId)
             ->orderByDesc('captured_at')
             ->limit(200)
@@ -90,11 +90,13 @@ final class CaptureScreenController
                 'clientUuid' => $s->client_uuid,
                 'structureType' => $s->structure_type,
                 'unitCount' => $s->unit_count,
+                'floors' => $s->floors,
                 'occupancyStatus' => $s->occupancy_status,
                 'resolvedWard' => null,
                 'enterprises' => $s->enterprises->map(static fn (Enterprise $e): array => [
                     'id' => $e->id,
                     'unitLabel' => $e->unit_label,
+                    'floor' => $e->floor,
                     'tradingName' => $e->trading_name,
                     'sectorCode' => $e->sector_code,
                 ])->values()->all(),

@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { AppBar } from '@/components/AppBar';
+import { ConsoleShell } from '@/components/ConsoleShell';
 import { Button } from '@/components/Button';
 import { ConfidenceMeter } from '@/components/ConfidenceMeter';
 import { PresenceMark, type TracePoint } from '@/components/PresenceMark';
+import {
+    BuildingMassing,
+    BuildingSection,
+    type Footprint,
+} from '@/components/BuildingSection';
 import { StatusPill } from '@/components/StatusPill';
 import { captureStatus, type CaptureStatus } from '@/lib/status';
 import { cx } from '@/lib/cx';
@@ -43,12 +48,16 @@ interface Record_ {
     photographs: Array<{
         id: number;
         kind: string;
+        url: string | null;
         fromDeviceCamera: boolean | null;
         distanceM: number | null;
         capturedAt: string | null;
     }>;
+    footprint: Footprint | null;
     enterprises: Array<{
         id: number;
+        unitLabel: string | null;
+        floor: number | null;
         tradingName: string;
         registeredName: string | null;
         sectorCode: string | null;
@@ -199,17 +208,8 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
     };
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <ConsoleShell current="review">
             <Head title={`Review: ${record.structureType}`} />
-            <AppBar
-                variant="console"
-                links={[
-                    { label: 'Coverage', href: '/console/coverage', current: false },
-                    { label: 'Review', href: '/console/review', current: true },
-                    { label: 'Live', href: '/console/live', current: false },
-                    { label: 'Exports', href: '/console/exports', current: false },
-                ]}
-            />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-32">
                 <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
@@ -235,6 +235,46 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                         {form.errors.decision}
                     </p>
                 )}
+
+                {/*
+                    The building, before the three questions rather than inside
+                    one of them. It is the thing being judged, not evidence about
+                    it, and a supervisor who cannot picture the building is
+                    reading the presence trace and the photographs blind.
+                */}
+                <section className="mt-6 rounded-sm border border-rule-strong p-4">
+                    <header className="mb-3">
+                        <h2 className="font-display text-display-s text-ink">The building</h2>
+                        <p className="mt-0.5 text-label text-faint">
+                            What was counted, drawn to the outline that was detected.
+                        </p>
+                    </header>
+
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,240px)_minmax(0,780px)]">
+                        <div className="flex flex-col gap-3">
+                            <BuildingMassing footprint={record.footprint} floors={record.floors} />
+
+                            <div className="flex flex-col">
+                                <Fact
+                                    label="Type"
+                                    value={record.structureType.replace(/_/g, ' ')}
+                                />
+                                <Fact
+                                    label="Occupancy"
+                                    value={record.occupancyStatus.replace(/_/g, ' ')}
+                                />
+                                <Fact label="Storeys" value={record.floors ?? 'not recorded'} />
+                                <Fact label="Units" value={record.unitCount ?? 'not recorded'} />
+                            </div>
+                        </div>
+
+                        <BuildingSection
+                            floors={record.floors}
+                            unitCount={record.unitCount}
+                            units={record.enterprises}
+                        />
+                    </div>
+                </section>
 
                 <div className="mt-6 grid gap-5 lg:grid-cols-3">
                     <Question
@@ -280,21 +320,52 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                         caption="Is this the thing they say it is?"
                         readings={record.signals.identification ?? []}
                     >
-                        <ul className="flex flex-col gap-1.5">
+                        {/*
+                            The photographs themselves. This column asks whether
+                            the record is of the thing it claims to be, and a
+                            list of the word "facade" cannot answer that: it is
+                            an assertion where the evidence should be. Opening
+                            one in a new tab gives the full size behind the same
+                            short lived signature.
+                        */}
+                        <ul className="grid grid-cols-2 gap-2">
                             {record.photographs.map((photo) => (
-                                <li
-                                    key={photo.id}
-                                    className="flex items-baseline justify-between gap-3 rounded-sm bg-raised px-3 py-2"
-                                >
-                                    <span className="text-ui text-ink">{photo.kind}</span>
-                                    <span className="numeric-mono text-label text-muted">
-                                        {photo.fromDeviceCamera === true ? 'camera' : 'no metadata'}
-                                        {photo.distanceM !== null && ` · ${String(photo.distanceM)} m`}
+                                <li key={photo.id} className="flex flex-col gap-1">
+                                    {photo.url === null ? (
+                                        <span className="flex h-32 items-center justify-center rounded-sm border border-dashed border-alert px-2 text-center text-label text-alert">
+                                            The file is missing from storage.
+                                        </span>
+                                    ) : (
+                                        <a
+                                            href={photo.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="block overflow-hidden rounded-sm border border-rule"
+                                        >
+                                            <img
+                                                src={photo.url}
+                                                alt={`${photo.kind} photographed at this capture`}
+                                                loading="lazy"
+                                                className="h-32 w-full bg-sunken object-cover"
+                                            />
+                                        </a>
+                                    )}
+                                    <span className="flex items-baseline justify-between gap-2">
+                                        <span className="text-ui text-ink">{photo.kind}</span>
+                                        <span className="numeric-mono text-label text-muted">
+                                            {photo.fromDeviceCamera === true
+                                                ? 'camera'
+                                                : 'no metadata'}
+                                            {photo.distanceM !== null &&
+                                                ` · ${String(photo.distanceM)} m`}
+                                        </span>
                                     </span>
                                 </li>
                             ))}
                             {record.photographs.length === 0 && (
-                                <li className="text-ui text-alert">No photograph was attached.</li>
+                                <li className="col-span-2 text-ui text-alert">
+                                    No photograph was attached.
+                                </li>
                             )}
                         </ul>
 
@@ -470,6 +541,6 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                     </div>
                 )}
             </div>
-        </div>
+        </ConsoleShell>
     );
 }

@@ -60,13 +60,27 @@ enum StructureType: string
         };
     }
 
-    /** @return list<array{value: string, label: string, expectsFootprint: bool}> */
+    /**
+     * Whether asking how many storeys this thing has is a sensible question.
+     *
+     * An umbrella stand does not have one storey, it has none, and a capture
+     * screen that asks anyway teaches officers to type a number to get past a
+     * field. The types that are not buildings are the same ones that expect no
+     * footprint, which is not a coincidence: it is the same distinction.
+     */
+    public function expectsFloors(): bool
+    {
+        return $this->expectsFootprint();
+    }
+
+    /** @return list<array{value: string, label: string, expectsFootprint: bool, expectsFloors: bool}> */
     public static function options(): array
     {
         return array_map(static fn (self $case): array => [
             'value' => $case->value,
             'label' => $case->label(),
             'expectsFootprint' => $case->expectsFootprint(),
+            'expectsFloors' => $case->expectsFloors(),
         ], self::cases());
     }
 }

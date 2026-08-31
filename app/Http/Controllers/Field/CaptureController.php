@@ -158,6 +158,12 @@ final class CaptureController
             'observation_uuid' => ['required', 'uuid'],
             'structure_id' => ['required', 'integer', 'exists:structures,id'],
             'unit_label' => ['nullable', 'string', 'max:32'],
+            // Ground is 0, a basement is negative. Bounded rather than checked
+            // against the building's own storey count: an officer who recorded
+            // two floors and then found a business on the third has miscounted
+            // the building, not the business, and the field client is the one
+            // place this system never blocks. Review sees the contradiction.
+            'floor' => ['nullable', 'integer', 'min:-5', 'max:200'],
             'trading_name' => ['required', 'string', 'max:255'],
             'registered_name' => ['nullable', 'string', 'max:255'],
             'sector_code' => ['nullable', 'string', 'exists:isic_classes,code'],

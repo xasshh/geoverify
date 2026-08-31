@@ -61,6 +61,7 @@ final class CaptureEnterprise
         $enterprise = Enterprise::query()->create([
             'structure_id' => $structure->id,
             'unit_label' => isset($payload['unit_label']) ? (string) $payload['unit_label'] : null,
+            'floor' => self::floorIn($payload),
             'captured_by' => $officer->id,
             'captured_at' => Carbon::parse((string) $payload['observed_at']),
             'trading_name' => $tradingName,
@@ -113,6 +114,12 @@ final class CaptureEnterprise
             'scale_band' => isset($payload['scale_band']) ? (string) $payload['scale_band'] : null,
             'operating_status' => (string) ($payload['operating_status'] ?? 'operating'),
             'status' => Enterprise::STATUS_SUBMITTED,
+
+            // Only when the handset actually said something. A client that does
+            // not send a floor has not told us the business moved to the ground
+            // one, and overwriting a known placement with null on every revisit
+            // would quietly empty the column as the older clients sync.
+            ...(self::floorIn($payload) === null ? [] : ['floor' => self::floorIn($payload)]),
         ]);
 
         VerificationEvent::record($enterprise, 'enterprise.re_observed', $officer, [
@@ -122,6 +129,21 @@ final class CaptureEnterprise
         ]);
 
         return $enterprise->refresh();
+    }
+
+    /**
+     * The storey, if the officer recorded one.
+     *
+     * Ground is 0, so a falsy check here would read the ground floor as "not
+     * answered" and throw away the most common answer in the register.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private static function floorIn(array $payload): ?int
+    {
+        return isset($payload['floor']) && is_numeric($payload['floor'])
+            ? (int) $payload['floor']
+            : null;
     }
 
     /**

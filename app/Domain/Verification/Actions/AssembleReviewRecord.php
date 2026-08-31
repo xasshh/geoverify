@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Actions;
 
+use App\Domain\Media\Models\Media;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Registry\Models\StructureObservation;
 use App\Domain\Verification\Models\ObservationSignal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * One capture, laid out as the three questions a supervisor actually asks.
@@ -53,6 +55,7 @@ final class AssembleReviewRecord
             'trace' => $trace,
             'photographs' => $this->photographs($observation),
             'enterprises' => $this->enterprises($observation),
+            'footprint' => $this->footprint($observation),
             'officer' => $this->officer($observation),
             'place' => $this->place($observation),
         ];
@@ -138,7 +141,8 @@ final class AssembleReviewRecord
     private function photographs(StructureObservation $observation): array
     {
         $rows = DB::select(<<<'SQL'
-            select id, kind, from_device_camera, distance_from_subject_m, captured_at
+            select id, kind, from_device_camera, distance_from_subject_m, captured_at,
+                   disk, disk_path, thumb_path
             from media
             where (mediable_type = ? and mediable_id = ?)
                or (mediable_type = ? and mediable_id in (
@@ -152,17 +156,39 @@ final class AssembleReviewRecord
             $observation->structure_id,
         ]);
 
-        return array_map(static fn (object $row): array => [
-            'id' => (int) $row->id,
-            'kind' => (string) $row->kind,
-            'fromDeviceCamera' => $row->from_device_camera === null ? null : (bool) $row->from_device_camera,
-            'distanceM' => $row->distance_from_subject_m === null
-                ? null
-                : round((float) $row->distance_from_subject_m, 1),
-            'capturedAt' => $row->captured_at === null
-                ? null
-                : Carbon::parse((string) $row->captured_at)->toIso8601String(),
-        ], $rows);
+        return array_map(static function (object $row): array {
+            /*
+             * The photograph itself, not just a line saying one exists.
+             *
+             * A supervisor deciding whether a capture is sound cannot do it
+             * from the word "facade". This screen listed the kind and the
+             * metadata and never showed the picture, which made the whole
+             * Identification column an assertion rather than evidence.
+             *
+             * Short lived and signed, the same contract object storage offers.
+             * The thumbnail is preferred where one exists: this is a contact
+             * sheet, and pulling three full size photographs to draw them at
+             * 160 pixels is the officer's upload wasted twice.
+             */
+            $diskName = (string) ($row->disk ?: 'media');
+            $disk = Storage::disk($diskName);
+            $path = is_string($row->thumb_path) && $row->thumb_path !== ''
+                ? $row->thumb_path
+                : (string) $row->disk_path;
+
+            return [
+                'id' => (int) $row->id,
+                'kind' => (string) $row->kind,
+                'url' => $disk->exists($path) ? Media::signedUrl($diskName, $path, 30) : null,
+                'fromDeviceCamera' => $row->from_device_camera === null ? null : (bool) $row->from_device_camera,
+                'distanceM' => $row->distance_from_subject_m === null
+                    ? null
+                    : round((float) $row->distance_from_subject_m, 1),
+                'capturedAt' => $row->captured_at === null
+                    ? null
+                    : Carbon::parse((string) $row->captured_at)->toIso8601String(),
+            ];
+        }, $rows);
     }
 
     /**
@@ -180,6 +206,73 @@ final class AssembleReviewRecord
     }
 
     /**
+     * The building's outline, in metres, about its own centre.
+     *
+     * Projected to the UTM zone the building actually stands in, so the numbers
+     * that come back are metres on the ground rather than degrees or Mercator
+     * metres that are one percent long at this latitude. The console draws the
+     * massing from this, which is why it has to be the real outline: a generic
+     * box beside a real photograph is a drawing of a building that does not
+     * exist.
+     *
+     * Null for a kiosk, a container or anything else with no detected outline,
+     * and that is a real answer rather than a gap. Nothing is invented to fill
+     * the space.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function footprint(StructureObservation $observation): ?array
+    {
+        $row = DB::selectOne(<<<'SQL'
+            with source as (
+                select
+                    footprint as geom,
+                    -- The UTM zone under the building. Nigeria is northern
+                    -- hemisphere throughout, so the 326xx band holds.
+                    32600 + floor((st_x(st_centroid(footprint)) + 180) / 6)::int + 1 as utm
+                from structures
+                where id = ? and footprint is not null
+            ),
+            centred as (
+                select st_translate(
+                    st_transform(geom, utm),
+                    -st_x(st_centroid(st_transform(geom, utm))),
+                    -st_y(st_centroid(st_transform(geom, utm)))
+                ) as geom
+                from source
+            )
+            select
+                st_asgeojson(geom) as outline,
+                (st_xmax(geom) - st_xmin(geom))::float8 as width_m,
+                (st_ymax(geom) - st_ymin(geom))::float8 as depth_m,
+                st_area(geom)::float8 as area_m2
+            from centred
+        SQL, [$observation->structure_id]);
+
+        if ($row === null) {
+            return null;
+        }
+
+        /** @var array{coordinates?: array<int, array<int, array<int, float>>>} $outline */
+        $outline = json_decode((string) $row->outline, true, 512, JSON_THROW_ON_ERROR);
+
+        return [
+            // The exterior ring only. A courtyard is not drawn: at this size it
+            // would read as a second building rather than a hole.
+            'ring' => array_map(
+                static fn (array $point): array => [
+                    round($point[0], 2),
+                    round($point[1], 2),
+                ],
+                $outline['coordinates'][0] ?? [],
+            ),
+            'widthM' => round((float) $row->width_m, 1),
+            'depthM' => round((float) $row->depth_m, 1),
+            'areaM2' => round((float) $row->area_m2),
+        ];
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     private function enterprises(StructureObservation $observation): array
@@ -187,6 +280,8 @@ final class AssembleReviewRecord
         $rows = DB::select(<<<'SQL'
             select distinct on (enterprises.id)
                 enterprises.id,
+                enterprises.unit_label,
+                enterprises.floor,
                 observations.trading_name,
                 observations.registered_name,
                 observations.sector_code,
@@ -203,6 +298,8 @@ final class AssembleReviewRecord
 
         return array_map(static fn (object $row): array => [
             'id' => (int) $row->id,
+            'unitLabel' => $row->unit_label,
+            'floor' => $row->floor === null ? null : (int) $row->floor,
             'tradingName' => (string) $row->trading_name,
             'registeredName' => $row->registered_name,
             'sectorCode' => $row->sector_code,

@@ -9,6 +9,7 @@ import { StatusPill } from '@/components/StatusPill';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { SelectField, TextField } from '@/components/Field';
 import { cx } from '@/lib/cx';
+import { floorOptions } from '@/lib/floors';
 import { useTrace } from '@/lib/geolocation';
 import { PhotoCapture } from '@/components/PhotoCapture';
 import { FieldMap, type CapturedPoint } from '@/components/FieldMap';
@@ -23,6 +24,7 @@ interface Option {
     value: string;
     label: string;
     expectsFootprint?: boolean;
+    expectsFloors?: boolean;
     expectsEnterprises?: boolean;
 }
 
@@ -39,6 +41,8 @@ interface Cell {
 interface CapturedEnterprise {
     id: number;
     unitLabel: string | null;
+    /** Ground is 0, a basement is negative. Null where nobody went in. */
+    floor: number | null;
     tradingName: string;
     sectorCode: string | null;
 }
@@ -48,6 +52,7 @@ interface CapturedStructure {
     clientUuid: string;
     structureType: string;
     unitCount: number | null;
+    floors: number | null;
     occupancyStatus: string;
     resolvedWard: string | null;
     enterprises: CapturedEnterprise[];
@@ -475,12 +480,23 @@ function StructureSheet({
     const [type, setType] = useState(existing?.structureType ?? 'shophouse');
     const [occupancy, setOccupancy] = useState(existing?.occupancyStatus ?? 'occupied');
     const [unitCount, setUnitCount] = useState(existing?.unitCount?.toString() ?? '1');
+    const [floors, setFloors] = useState(existing?.floors?.toString() ?? '1');
     const [consentGiven, setConsentGiven] = useState(false);
     const [showScript, setShowScript] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [resolvedWard, setResolvedWard] = useState<string | null>(existing?.resolvedWard ?? null);
     const clientUuid = useRef(existing?.clientUuid ?? uuid7());
+
+    /**
+     * Whether storeys are a sensible thing to ask about at all.
+     *
+     * Decided by the type the officer picked, from the same enum the server
+     * reads, so a kiosk is never asked and a shophouse always is. Defaults to
+     * asking: a type this build does not recognise is more likely a building
+     * than not.
+     */
+    const expectsFloors = structureTypes.find((o) => o.value === type)?.expectsFloors ?? true;
 
     const save = async () => {
         if (position === null) {
@@ -493,6 +509,11 @@ function StructureSheet({
         setError(null);
 
         const units = Number.parseInt(unitCount, 10) || 1;
+
+        // Null for the things that are not buildings. An umbrella stand does not
+        // have one storey, and recording it as though it did would put a floor
+        // count in the register that nobody counted.
+        const storeys = expectsFloors ? Number.parseInt(floors, 10) || 1 : null;
 
         try {
             // Written to the device and queued. The officer is finished here
@@ -507,7 +528,7 @@ function StructureSheet({
                 structureType: type,
                 occupancyStatus: occupancy,
                 unitCount: units,
-                floors: null,
+                floors: storeys,
                 notes: null,
                 observedAt: new Date().toISOString(),
                 serverId: null,
@@ -527,6 +548,7 @@ function StructureSheet({
                 structure_type: type,
                 occupancy_status: occupancy,
                 unit_count: units,
+                ...(storeys === null ? {} : { floors: storeys }),
                 observed_at: new Date().toISOString(),
                 assignment_id: assignmentId,
                 // The building the officer pointed at. The server checks it is
@@ -547,6 +569,7 @@ function StructureSheet({
                 clientUuid: clientUuid.current,
                 structureType: type,
                 unitCount: units,
+                floors: storeys,
                 occupancyStatus: occupancy,
                 resolvedWard: stored?.resolvedWard ?? null,
                 enterprises: existing?.enterprises ?? [],
@@ -638,6 +661,21 @@ function StructureSheet({
                                     </option>
                                 ))}
                             </SelectField>
+
+                            {expectsFloors && (
+                                <TextField
+                                    label="Storeys"
+                                    size="field"
+                                    type="number"
+                                    min={1}
+                                    max={200}
+                                    value={floors}
+                                    onChange={(e) => {
+                                        setFloors(e.target.value);
+                                    }}
+                                    hint="Count the ground floor as one. A shop with a flat above is two."
+                                />
+                            )}
 
                             {expectsEnterprises && (
                                 <TextField
@@ -805,10 +843,20 @@ function EnterpriseSheet({
     } | null>(null);
     const [scale, setScale] = useState('micro');
     const [signage, setSignage] = useState(false);
+    const [floor, setFloor] = useState('0');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const unitLabel = `Unit ${String(structure.enterprises.length + 1)}`;
+
+    /*
+     * Asked only where there is more than one answer. In a single storey
+     * shophouse every business is on the ground floor, and a select with one
+     * option in it is a tap that teaches the officer the form wastes their time.
+     */
+    const storeys = structure.floors ?? 1;
+    const asksFloor = storeys > 1;
+    const recordedFloor = asksFloor ? Number.parseInt(floor, 10) : 0;
 
     const save = async () => {
         setSaving(true);
@@ -821,6 +869,7 @@ function EnterpriseSheet({
                 clientUuid,
                 structureClientUuid: structure.clientUuid,
                 unitLabel,
+                floor: recordedFloor,
                 tradingName: tradingName.trim(),
                 sectorCode: sector?.code ?? null,
                 scaleBand: scale,
@@ -837,6 +886,7 @@ function EnterpriseSheet({
                 // business be captured before its building has synced.
                 structure_client_uuid: structure.clientUuid,
                 unit_label: unitLabel,
+                floor: recordedFloor,
                 trading_name: tradingName.trim(),
                 sector_code: sector?.code ?? null,
                 scale_band: scale,
@@ -848,6 +898,7 @@ function EnterpriseSheet({
             onSaved({
                 id: 0,
                 unitLabel,
+                floor: recordedFloor,
                 tradingName: tradingName.trim(),
                 sectorCode: sector?.code ?? null,
             });
@@ -906,6 +957,23 @@ function EnterpriseSheet({
                             />
 
                             <SectorPicker value={sector} onChange={setSector} />
+
+                            {asksFloor && (
+                                <SelectField
+                                    label="Which floor"
+                                    size="field"
+                                    value={floor}
+                                    onChange={(e) => {
+                                        setFloor(e.target.value);
+                                    }}
+                                >
+                                    {floorOptions(structure.floors).map((o) => (
+                                        <option key={o.value} value={o.value}>
+                                            {o.label}
+                                        </option>
+                                    ))}
+                                </SelectField>
+                            )}
 
                             <SelectField
                                 label="Size"

@@ -11,6 +11,12 @@ import { PriorObservation, Sheet, SheetSection } from '@/components/Sheet';
 import { MoneyPanel } from '@/components/MoneyPanel';
 import { StatusPill } from '@/components/StatusPill';
 import { VerificationLadder } from '@/components/VerificationLadder';
+import {
+    BuildingMassing,
+    BuildingSection,
+    type SectionUnit,
+} from '@/components/BuildingSection';
+import { ConsoleNav } from '@/components/ConsoleShell';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { cx } from '@/lib/cx';
 import type { Rung } from '@/lib/tiers';
@@ -108,6 +114,46 @@ const QUEUE: readonly QueueRow[] = [
     { id: '2', officer: 'C. Okafor', cell: '8928308281bffff', structures: 52, confidence: 72, status: 'in_progress', seed: 4522 },
     { id: '3', officer: 'H. Suleiman', cell: '8928308283bffff', structures: 61, confidence: 21, status: 'returned', seed: 19455 },
     { id: '4', officer: 'M. Adeyemi', cell: '89283082847ffff', structures: 38, confidence: 94, status: 'accepted', seed: 23291 },
+];
+
+/**
+ * A real building's proportions, in metres about its own centre: a 14 m by 9 m
+ * shophouse block with a rear extension. Shaped rather than square so the
+ * massing is seen drawing an outline rather than a box.
+ */
+const GALLERY_FOOTPRINT = {
+    ring: [
+        [-7, -4.5],
+        [7, -4.5],
+        [7, 1.5],
+        [2, 1.5],
+        [2, 4.5],
+        [-7, 4.5],
+        [-7, -4.5],
+    ],
+    widthM: 14,
+    depthM: 9,
+    areaM2: 111,
+} as const;
+
+const GALLERY_UNITS: SectionUnit[] = [
+    { id: 1, tradingName: 'Mama Ngozi Provisions', floor: 0, unitLabel: 'G01' },
+    { id: 2, tradingName: 'Chidi Phone Accessories', floor: 0, unitLabel: 'G02' },
+    { id: 3, tradingName: 'Blessed Hair Salon', floor: 0, unitLabel: 'G03' },
+    { id: 4, tradingName: 'Adeyemi & Co Chambers', floor: 1, unitLabel: 'F01' },
+    { id: 5, tradingName: 'Northgate Logistics', floor: 1, unitLabel: 'F02' },
+    { id: 6, tradingName: 'Sunrise Tailoring', floor: 2, unitLabel: 'S01' },
+];
+
+const GALLERY_UNPLACED: SectionUnit[] = [
+    { id: 1, tradingName: 'Mama Ngozi Provisions', floor: 0, unitLabel: 'G01' },
+    { id: 2, tradingName: 'Chidi Phone Accessories', floor: null, unitLabel: 'G02' },
+    { id: 4, tradingName: 'Adeyemi & Co Chambers', floor: 1, unitLabel: 'F01' },
+];
+
+const GALLERY_CONTRADICTION: SectionUnit[] = [
+    { id: 1, tradingName: 'Mama Ngozi Provisions', floor: 0, unitLabel: 'G01' },
+    { id: 6, tradingName: 'Sunrise Tailoring', floor: 5, unitLabel: 'S01' },
 ];
 
 export default function Design() {
@@ -755,6 +801,172 @@ export default function Design() {
                                 The word escrow appears nowhere, including in state names. It is
                                 regulated in Nigeria and we are not licensed for it. Funds are held,
                                 then released.
+                            </p>
+                        </div>
+                    </div>
+                </Spec>
+
+                <Spec
+                    n="12"
+                    title="The building, in section"
+                    note="phase 1 &middot; how many storeys, and what is on each"
+                >
+                    <p className="mb-6 max-w-[64ch] text-body text-muted">
+                        The register has always counted storeys and units. Nothing ever drew them,
+                        so a supervisor reviewing a capture could not tell a three storey plaza
+                        from a lock up shop. Two pieces answer that at different resolutions: the
+                        massing says how big and how tall, the section says what is on each floor.
+                    </p>
+
+                    <p className="mb-8 max-w-[64ch] text-body text-faint">
+                        Neither invents anything. The massing is a wireframe on the outline that
+                        was actually detected, not a render: a shaded solid would be claiming a
+                        roof, a colour and a light direction nobody observed. Where a fact is
+                        missing the drawing says so in words rather than filling the gap with a
+                        plausible shape, because this sits beside a GPS fix and a photograph and
+                        has to be read with the same trust.
+                    </p>
+
+                    <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Massing &middot; three storeys
+                            </p>
+                            <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={3} />
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Section &middot; six of fourteen units recorded
+                            </p>
+                            <BuildingSection floors={3} unitCount={14} units={GALLERY_UNITS} />
+                        </div>
+                    </div>
+
+                    <div className="mt-10 grid gap-8 lg:grid-cols-3">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                One storey
+                            </p>
+                            <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={1} size={150} />
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Six storeys
+                            </p>
+                            <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={6} size={150} />
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Nothing detected
+                            </p>
+                            <BuildingMassing footprint={null} floors={null} size={150} />
+                            <p className="mt-2 max-w-[36ch] text-label text-faint">
+                                A kiosk or a container. Recorded from its position alone, so there
+                                is no outline and none is drawn.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-10 grid gap-8 lg:grid-cols-3">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                No storey recorded
+                            </p>
+                            <BuildingSection
+                                floors={null}
+                                unitCount={3}
+                                units={GALLERY_UNITS.slice(0, 2)}
+                            />
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Some businesses unplaced
+                            </p>
+                            <BuildingSection
+                                floors={2}
+                                unitCount={6}
+                                units={GALLERY_UNPLACED}
+                            />
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                A contradiction
+                            </p>
+                            <BuildingSection
+                                floors={2}
+                                unitCount={4}
+                                units={GALLERY_CONTRADICTION}
+                            />
+                            <p className="mt-2 max-w-[36ch] text-label text-faint">
+                                A business above the roofline is not a gap, it is a disagreement
+                                between two recorded numbers, and it is flagged rather than hidden.
+                            </p>
+                        </div>
+                    </div>
+                </Spec>
+
+                <Spec
+                    n="13"
+                    title="The console frame"
+                    note="phase 1 &middot; the whole job, on screen"
+                >
+                    <p className="mb-6 max-w-[64ch] text-body text-muted">
+                        Five views across the top of a page put a supervisor somewhere without
+                        telling them where else they could be: one who has never opened Claims has
+                        no reason to learn it exists. The sidebar keeps the whole job in view, says
+                        what each screen is for, and carries the two numbers that decide what to
+                        open next.
+                    </p>
+
+                    <p className="mb-8 max-w-[64ch] text-body text-faint">
+                        Those numbers are the point. A queue nobody can see the depth of is a queue
+                        worked when somebody remembers, and the argument for this console is that
+                        review happens in the morning rather than at the end of the week. A count
+                        is absent at zero rather than shown as nought: a row reading
+                        &ldquo;Review 0&rdquo; has to be parsed before it can be dismissed.
+                    </p>
+
+                    <div className="flex flex-wrap gap-8">
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Backed up
+                            </p>
+                            <div className="w-[248px] rounded-sm border border-rule-strong py-3">
+                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3 }} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                All clear
+                            </p>
+                            <div className="w-[248px] rounded-sm border border-rule-strong py-3">
+                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0 }} />
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                Narrow, as a strip
+                            </p>
+                            <div className="w-[380px] overflow-x-auto rounded-sm border border-rule-strong py-2">
+                                <div className="flex gap-1 px-2 [&>a]:shrink-0">
+                                    <ConsoleNav
+                                        current="claims"
+                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3 }}
+                                        dense
+                                    />
+                                </div>
+                            </div>
+                            <p className="mt-2 max-w-[36ch] text-label text-faint">
+                                Below the sidebar breakpoint the same five scroll sideways. A
+                                drawer would hide the counts behind a tap, which is the one thing
+                                they cannot afford to be.
                             </p>
                         </div>
                     </div>

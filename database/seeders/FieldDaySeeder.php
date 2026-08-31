@@ -13,6 +13,7 @@ use App\Domain\Identity\Actions\HashIdentityReference;
 use App\Domain\Identity\Models\IdentityClaim;
 use App\Domain\Registry\Actions\CaptureEnterprise;
 use App\Domain\Registry\Actions\CaptureStructure;
+use App\Domain\Registry\Actions\NearbyFootprints;
 use App\Domain\Registry\Data\StructureCapture;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\Structure;
@@ -435,6 +436,26 @@ final class FieldDaySeeder extends Seeder
                 ? $fixes[0]['at']->copy()->addSeconds(180 * ($n + 1))
                 : $fix['at']->copy()->addSeconds(mt_rand(20, 260));
 
+            $floors = 1 + (($seed + $n) % 3);
+            $unitCount = 1 + (($seed + $n) % 6);
+
+            /*
+             * The building the officer is standing at. In the field this is a
+             * tap on the map, so seeding without it produces captures that no
+             * detected outline belongs to, which is the rare case rather than
+             * the ordinary one. The nearest outline nobody has claimed yet is
+             * the closest thing to what an officer would have picked.
+             */
+            $footprintId = null;
+
+            foreach (app(NearbyFootprints::class)->around($fix['lon'], $fix['lat']) as $candidate) {
+                if (! $candidate['occupied']) {
+                    $footprintId = $candidate['id'];
+
+                    break;
+                }
+            }
+
             $structure = $structures->capture(new StructureCapture(
                 clientUuid: (string) Str::uuid7(),
                 observationUuid: (string) Str::uuid7(),
@@ -445,8 +466,9 @@ final class FieldDaySeeder extends Seeder
                 occupancyStatus: 'occupied',
                 observedAt: $observedAt,
                 accuracyM: $fix['accuracy'],
-                floors: 1 + (($seed + $n) % 3),
-                unitCount: 1 + (($seed + $n) % 6),
+                externalFootprintId: $footprintId,
+                floors: $floors,
+                unitCount: $unitCount,
                 fieldSessionId: $session->id,
                 assignmentId: $assignmentId,
             ), $officer);
@@ -462,23 +484,47 @@ final class FieldDaySeeder extends Seeder
 
             $observations[] = $observation;
 
-            [$name, $sector, $scale] = self::BUSINESSES[($seed * 3 + $n) % count(self::BUSINESSES)];
+            /*
+             * One business per storey, up to what the officer counted from the
+             * street. Never all of them: a building with every unit recorded is
+             * the rare case, and a console that only ever shows finished
+             * buildings cannot be judged on the ones still being worked.
+             */
+            $recorded = max(1, min($floors, $unitCount - 1));
+            $enterprise = null;
 
-            $enterprise = $enterprises->capture([
-                'client_uuid' => (string) Str::uuid7(),
-                'observation_uuid' => (string) Str::uuid7(),
-                'structure_id' => $structure->id,
-                'trading_name' => $name,
-                'sector_code' => $sector,
-                'scale_band' => $scale,
-                'employee_band' => '1-4',
-                'operating_status' => 'operating',
-                'years_at_location' => 1 + (($seed + $n) % 12),
-                'signage_observed' => ! $day['fabricated'],
-                'phone' => $this->shopPhone($seed + $n),
-                'observed_at' => $observedAt->toIso8601String(),
-                'field_session_id' => $session->id,
-            ], $officer);
+            for ($slot = 0; $slot < $recorded; $slot++) {
+                [$name, $sector, $scale] = self::BUSINESSES[
+                    ($seed * 3 + $n + $slot * 2) % count(self::BUSINESSES)
+                ];
+
+                $captured = $enterprises->capture([
+                    'client_uuid' => (string) Str::uuid7(),
+                    'observation_uuid' => (string) Str::uuid7(),
+                    'structure_id' => $structure->id,
+                    'unit_label' => sprintf('%s%02d', $slot === 0 ? 'G' : 'F'.$slot, 1),
+                    'floor' => $slot,
+                    'trading_name' => $name,
+                    'sector_code' => $sector,
+                    'scale_band' => $scale,
+                    'employee_band' => '1-4',
+                    'operating_status' => 'operating',
+                    'years_at_location' => 1 + (($seed + $n + $slot) % 12),
+                    'signage_observed' => ! $day['fabricated'],
+                    'phone' => $this->shopPhone($seed + $n + $slot),
+                    'observed_at' => $observedAt->toIso8601String(),
+                    'field_session_id' => $session->id,
+                ], $officer);
+
+                // Photographs and identity hang off the ground floor business.
+                // An officer photographs the front of the building once, not
+                // once per tenant.
+                $enterprise ??= $captured;
+            }
+
+            if ($enterprise === null) {
+                continue;
+            }
 
             $this->photograph($structure, $enterprise, $officer, $session, $fix, $day['fabricated']);
             $this->identify($enterprise, $officer, $seed + $n, $day['fabricated']);
