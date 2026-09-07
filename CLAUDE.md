@@ -21,10 +21,11 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
 - **Nothing is hard-deleted.** Status changes append to `verification_events`.
 - **Re-enumeration creates a new observation, never an overwrite.**
 - **The sync endpoint is idempotent**, keyed on `client_uuid` plus payload hash.
-- **Discovery Portal and Command Centre do not exist here.** No routes, no
-  scaffolding, no "future" placeholders. Design the data so they remain
-  possible; build nothing for them. (The Business Portal was on this list until
-  Phase 2 was commissioned on 2026-08-27.)
+- **The Command Centre does not exist here.** No routes, no scaffolding, no
+  "future" placeholders. Design the data so it remains possible; build nothing
+  for it. (The Business Portal was on this list until Phase 2 was commissioned
+  on 2026-08-27. The Discovery Portal was on it until the public marketplace
+  was commissioned on 2026-09-07.)
 - **No staff member self registers.** Fortify's registration feature stays off.
   Officers, supervisors and admins are created by an admin. Parties in the
   portal do self register, on their own guard, against `party_users`. The
@@ -32,7 +33,23 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
   member of the public.
 - **A field-enumerated record is private until its party opts in.** Enumeration
   is not consent to publication. `enterprises.publication_state` defaults to
-  `private`, and only `opted_in` is ever eligible for publication.
+  `private`, and only `opted_in` is eligible for full publication.
+
+- **An unclaimed record appears in the directory in reduced form or not at
+  all.** Narrowed from the rule above on 2026-09-07 so the public marketplace
+  can exist. A `private` record may expose trading name, sector, ward and LGA,
+  and only when the latest observation recorded `signage_observed`: a business
+  that put its name on the street has published that much itself, and one that
+  did not has published nothing. Never the phone, never the email, never a
+  photograph, never an exact coordinate, whatever the publication state. The
+  reduced projection is fixed in the SELECT and asserted by test, like the claim
+  search it is modelled on.
+
+- **Only a claimed and opted-in listing is indexable.** Unclaimed reduced
+  listings render `noindex`. Indexing is the step that cannot be taken back, so
+  it waits for consent, and becoming findable is what a business gets for
+  claiming. Every directory surface offers removal without requiring a claim,
+  which writes `withheld`.
 - **Money moves only on a signed provider webhook.** Not on a callback, not on
   a redirect, not on anything a customer's browser can reach. `RecordPayment`
   is reachable from `HandlePaymentWebhook` and nowhere else.
