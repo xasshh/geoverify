@@ -104,6 +104,18 @@ second took a wrong turn.
 Devices carry their own revocable Sanctum token scoped to `field:capture`, so a
 lost handset is cut off without touching the person's account.
 
+Four things answer with no session at all, each for a stated reason.
+`webhooks/paystack` is authenticated by the provider's signature over the body
+and is named individually in the CSRF exemption list in `bootstrap/app.php`, so
+a second route cannot join that exemption by being filed beside it.
+`media/file/{path}` is signed and short lived, standing in on a local disk for
+the presigned object storage link it replaces. `verify/{token}` is how the
+holder of a printed certificate checks it without an account, so the token is
+forty random characters rather than anything derivable from the reference
+printed next to it, and what may be disclosed is decided in
+`ResolvePublicVerification` rather than in the controller. The print routes
+below are signed, short lived and refused off the loopback interface.
+
 Behind a load balancer or a tunnel, name it in `TRUSTED_PROXIES` (see
 `config/app.php`). Left empty, forwarded headers are ignored, the app generates
 `http://` URLs on an `https://` page and reads every visitor's address as the
@@ -134,14 +146,47 @@ The full model is in `CAMPAIGNS.md`; read it before touching anything under
 `app/Domain/Campaign` or `app/Http/Controllers/Client`.
 
 Controllers render Inertia pages that mirror the route group:
-`resources/js/pages/{admin,auth,client,console,field,portal}/*.tsx`, resolved by
-name in `resources/js/app.tsx`. `Inertia::render('console/Review')` means
-`resources/js/pages/console/Review.tsx`, so a renamed page needs both sides.
+`resources/js/pages/{admin,auth,client,console,field,portal,public}/*.tsx`,
+resolved by name in `resources/js/app.tsx`. `Inertia::render('console/Review')`
+means `resources/js/pages/console/Review.tsx`, so a renamed page needs both
+sides. Two pages sit outside the groups: `Health.tsx` behind `/`, which reports
+whatever `CheckSpatialStack` finds, and `Design.tsx` behind `/design`, the
+primitives gallery that is only routed when the application is local. Pages
+resolve lazily so an officer does not parse MapLibre and the whole console
+before seeing their assignments, which stays safe offline only because the
+service worker precaches every emitted chunk.
 
 The sync contract's idempotency lives in `ProcessMutationBatch`: a
 `client_uuid` plus `payload_hash` lookup against `sync_receipts` short circuits
 a replay, and a child arriving before its parent throws `DeferredMutation` to
 be retried later in the same batch rather than rejected.
+
+The client half of that contract is `resources/js/lib/offline`: `db.ts` is the
+Dexie schema, `queue.ts` the outbound mutation queue the sync endpoint answers,
+`pack.ts` the stored PMTiles pack, and the two hooks beside them are what
+screens actually consume. `lib/pwa.ts` registers the worker with
+`registerType: 'prompt'`, so an update waits for the officer instead of
+reloading the app part way through a building.
+
+`config/geoverify.php` is short and load bearing: the tier freshness thresholds
+that `ResolveListingTier` and `IssuePublicVerification` both read, so a scanned
+QR code and a listing page cannot disagree about whether a check is still
+current, and the public holidays `WorkingDays` counts against when the SLA sweep
+decides an order is late.
+
+## Documents a browser prints
+
+Three documents leave the system as PDF: the evidence pack, the campaign brief
+and the verification certificate. All three take one path, and a fourth should
+join it rather than grow a second pipeline. A Blade view in
+`resources/views/exports` is served by a signed, short lived HTML route
+registered outside the guard group that owns the feature, because the headless
+browser fetching it has no session. `PdfRenderer` drives Chromium over that URL
+and `LoopbackPrint` builds it, pointing at `127.0.0.1` on the port the request
+arrived on rather than at `APP_URL`: a document that only prints when DNS agrees
+with itself is a document that fails in production. Set `CHROMIUM_BINARY` when
+the browser is not in one of the usual places, and `services.chromium.base_url`
+when loopback is not where the application answers, as in a container.
 
 ## Commands
 
@@ -190,6 +235,21 @@ listing per run and never give it back, drawing from disjoint pools (the
 correction spec wants a listing whose latest observation has no phone). Once a
 pool is empty the spec fails in its own `controlledListing` helper with a JSON
 parse error, which is exhaustion and not a regression. Reseed to refill it.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs the gates in this order, and any one of them
+fails the build: `pint --test`, `phpstan analyse`, `tsc --noEmit`, `eslint .`,
+`php artisan test`, then Playwright. PHP 8.3 and 8.5 are both held green, 8.3
+being the brief's target and 8.5 what the development machine runs. The browser
+suite runs on 8.3 only, under `APP_ENV=local` because the design gallery and the
+field client are local only routes, and after `FieldTeamSeeder` because those
+specs need somebody to sign in as. Its screenshots are uploaded as an artifact.
+
+The database is not a published image: `docker/postgres/Dockerfile` compiles
+h3-pg against PostGIS at a pinned commit, and the workflow pins the same commit
+in `H3PG_COMMIT`. Change one and change the other, or the image CI builds stops
+being the image `docs/setup.md` describes.
 
 ### Data pipeline and operations
 
