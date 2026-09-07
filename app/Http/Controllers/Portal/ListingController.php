@@ -13,10 +13,15 @@ use App\Domain\Registry\Enums\CorrectableField;
 use App\Domain\Registry\Models\CorrectionProposal;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\EnterpriseObservation;
+use App\Domain\Verification\Actions\ResolveServiceZone;
+use App\Domain\Verification\Actions\ResolveVerificationPrice;
+use App\Domain\Verification\Enums\OrderUrgency;
+use App\Domain\Verification\Models\VerificationOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
@@ -38,6 +43,8 @@ final class ListingController
     public function __construct(
         private readonly ActingParty $acting,
         private readonly ResolveListingTier $tiers,
+        private readonly ResolveServiceZone $zones,
+        private readonly ResolveVerificationPrice $prices,
     ) {}
 
     public function show(Request $request, Enterprise $enterprise): Response
@@ -126,6 +133,27 @@ final class ListingController
 
             'correctableFields' => CorrectableField::options(),
 
+            // The next rung, and what it costs, or nothing at all. A listing
+            // with an order already in flight is not offered the same thing
+            // again: the sell is over and what the party wants now is to know
+            // where their visit has got to.
+            'nextRung' => $this->nextRung($enterprise),
+
+            'orders' => VerificationOrder::query()
+                ->where('enterprise_id', $enterprise->id)
+                ->orderByDesc('created_at')
+                ->limit(10)
+                ->get()
+                ->map(static fn (VerificationOrder $o): array => [
+                    'id' => $o->id,
+                    'reference' => $o->reference,
+                    'tier' => str_replace('_', ' ', $o->tier),
+                    'status' => $o->status->value,
+                    'statusLabel' => $o->status->label(),
+                    'dueBy' => $o->due_by?->toDateString(),
+                    'feeNaira' => (int) round($o->amount_minor / 100),
+                ])->values()->all(),
+
             'publication' => [
                 'state' => $enterprise->publication_state->value,
                 'label' => $enterprise->publication_state->label(),
@@ -133,6 +161,60 @@ final class ListingController
                 'decidedAt' => $enterprise->publication_decided_at?->toIso8601String(),
             ],
         ]);
+    }
+
+    /**
+     * What this listing could establish next, and what that costs today.
+     *
+     * Priced here rather than on the money screen so the offer on the listing
+     * is the offer on the next page. A figure that changes when you click it is
+     * the fastest way to lose somebody who was about to pay.
+     *
+     * Null when something is already in flight for that tier, which the unique
+     * index would refuse anyway. Better to not offer it than to offer it and
+     * then explain.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function nextRung(Enterprise $enterprise): ?array
+    {
+        $established = $this->tiers->forOrigin(
+            (string) $enterprise->structure->origin,
+            (string) $enterprise->structure->status,
+        );
+
+        $next = $established === 'location_verified'
+            ? 'operations_verified'
+            : 'location_verified';
+
+        $live = VerificationOrder::query()
+            ->where('enterprise_id', $enterprise->id)
+            ->where('tier', $next)
+            ->get()
+            ->contains(static fn (VerificationOrder $o): bool => ! $o->status->isSettled());
+
+        if ($live) {
+            return null;
+        }
+
+        try {
+            $price = ($this->prices)(
+                $next,
+                OrderUrgency::Standard,
+                ($this->zones)($enterprise->structure),
+            );
+        } catch (RuntimeException) {
+            // No live price for that rung means we are not selling it today.
+            // Saying nothing is the honest surface for that.
+            return null;
+        }
+
+        return [
+            'tier' => $next,
+            'label' => ucfirst(str_replace('_', ' ', $next)),
+            'feeNaira' => (int) round($price->amount_minor / 100),
+            'within' => "{$price->sla_working_days} working days",
+        ];
     }
 
     private function membership(Request $request): PartyUser

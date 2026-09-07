@@ -5,6 +5,8 @@ import { SelectField, TextField } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { PortalShell } from "@/components/PortalShell";
 import { VerificationLadder } from "@/components/VerificationLadder";
+import { StatusPill as OrderPill } from "@/components/StatusPill";
+import { orderTone, type OrderStatus } from "@/lib/status";
 import type { Rung } from "@/lib/tiers";
 
 interface Props {
@@ -28,6 +30,21 @@ interface Props {
         hasPhone: boolean;
     }[];
     party: { code: string | null; displayName: string | null };
+    nextRung: {
+        tier: string;
+        label: string;
+        feeNaira: number;
+        within: string;
+    } | null;
+    orders: {
+        id: number;
+        reference: string;
+        tier: string;
+        status: OrderStatus;
+        statusLabel: string;
+        dueBy: string | null;
+        feeNaira: number;
+    }[];
     corrections: Correction[];
     correctableFields: { value: string; label: string }[];
     publication: {
@@ -95,7 +112,11 @@ function CorrectionPanel({
     correctableFields: { value: string; label: string }[];
 }) {
     const [open, setOpen] = useState(false);
-    const form = useForm({ field: correctableFields[0]?.value ?? "", proposed_value: "", reason: "" });
+    const form = useForm({
+        field: correctableFields[0]?.value ?? "",
+        proposed_value: "",
+        reason: "",
+    });
 
     return (
         <section className="rounded-sm border border-rule p-5">
@@ -118,13 +139,16 @@ function CorrectionPanel({
                     className="mt-4 flex flex-col gap-3"
                     onSubmit={(event) => {
                         event.preventDefault();
-                        form.post(`/portal/businesses/${String(business.id)}/corrections`, {
-                            preserveScroll: true,
-                            onSuccess: () => {
-                                form.reset();
-                                setOpen(false);
+                        form.post(
+                            `/portal/businesses/${String(business.id)}/corrections`,
+                            {
+                                preserveScroll: true,
+                                onSuccess: () => {
+                                    form.reset();
+                                    setOpen(false);
+                                },
                             },
-                        });
+                        );
                     }}
                 >
                     <SelectField
@@ -203,7 +227,8 @@ function CorrectionPanel({
                         <li key={correction.id} className="flex flex-col gap-1">
                             <span className="flex flex-wrap items-baseline justify-between gap-2">
                                 <span className="text-ui text-ink">
-                                    {correction.fieldLabel}: {correction.proposedValue ?? "cleared"}
+                                    {correction.fieldLabel}:{" "}
+                                    {correction.proposedValue ?? "cleared"}
                                 </span>
                                 <StatusPill
                                     tone={
@@ -276,11 +301,17 @@ function PublicationPanel({
                 Showing this publicly
             </h2>
 
-            <p className="mt-2 text-body text-muted">{publication.explanation}</p>
+            <p className="mt-2 text-body text-muted">
+                {publication.explanation}
+            </p>
 
             <div className="mt-4 flex flex-wrap gap-3">
                 <Button
-                    variant={publication.state === "opted_in" ? "primary" : "secondary"}
+                    variant={
+                        publication.state === "opted_in"
+                            ? "primary"
+                            : "secondary"
+                    }
                     onClick={() => {
                         choose("opted_in");
                     }}
@@ -288,7 +319,11 @@ function PublicationPanel({
                     Publish my listing
                 </Button>
                 <Button
-                    variant={publication.state === "withheld" ? "primary" : "secondary"}
+                    variant={
+                        publication.state === "withheld"
+                            ? "primary"
+                            : "secondary"
+                    }
                     onClick={() => {
                         choose("withheld");
                     }}
@@ -298,8 +333,9 @@ function PublicationPanel({
             </div>
 
             <p className="mt-3 text-label text-faint">
-                Being on the register and being shown publicly are different things. Nothing here
-                changes what we hold or what a mandate can see.
+                Being on the register and being shown publicly are different
+                things. Nothing here changes what we hold or what a mandate can
+                see.
             </p>
         </section>
     );
@@ -314,6 +350,8 @@ export default function Listing({
     corrections,
     correctableFields,
     publication,
+    nextRung,
+    orders,
 }: Props) {
     return (
         <PortalShell accountName={party.displayName} width="page">
@@ -342,6 +380,64 @@ export default function Listing({
                         What is established
                     </h2>
                     <VerificationLadder rungs={rungs} />
+
+                    {/* The offer sits under the ladder rather than in a banner,
+                        because the ladder is the argument for it: a party looks
+                        at what is not established yet and the next line tells
+                        them what establishing it costs. */}
+                    {nextRung !== null && (
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-sm border border-rule-strong bg-sunken px-4 py-3.5">
+                            <div>
+                                <p className="text-ui text-ink">
+                                    Establish {nextRung.label.toLowerCase()}
+                                </p>
+                                <p className="numeric-mono text-label text-muted">
+                                    ₦{nextRung.feeNaira.toLocaleString("en-NG")}{" "}
+                                    · within {nextRung.within}
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => {
+                                    router.get(
+                                        `/portal/businesses/${String(business.id)}/verify/${nextRung.tier}`,
+                                    );
+                                }}
+                            >
+                                See what it involves
+                            </Button>
+                        </div>
+                    )}
+
+                    {orders.length > 0 && (
+                        <div className="mt-6">
+                            <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                Verifications you have bought
+                            </h3>
+                            <ul className="mt-2 flex flex-col">
+                                {orders.map((order) => (
+                                    <li
+                                        key={order.id}
+                                        className="flex flex-wrap items-center justify-between gap-3 border-b border-rule py-2.5 last:border-b-0"
+                                    >
+                                        <a
+                                            href={`/portal/orders/${String(order.id)}`}
+                                            className="text-ui text-ink underline underline-offset-4"
+                                        >
+                                            {order.tier}
+                                        </a>
+                                        <span className="numeric-mono text-label text-faint">
+                                            {order.reference}
+                                        </span>
+                                        <OrderPill
+                                            label={order.statusLabel}
+                                            tone={orderTone(order.status)}
+                                            size="sm"
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </section>
 
                 <aside className="flex flex-col gap-4">
@@ -390,8 +486,10 @@ export default function Listing({
                         correctableFields={correctableFields}
                     />
 
-                    <PublicationPanel business={business} publication={publication} />
-
+                    <PublicationPanel
+                        business={business}
+                        publication={publication}
+                    />
                 </aside>
             </div>
         </PortalShell>

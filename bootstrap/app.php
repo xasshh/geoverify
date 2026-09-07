@@ -25,6 +25,19 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        /*
+         * The payment provider does not carry a session and cannot hold a CSRF
+         * token. Its authenticity is established by the signature on the body,
+         * which HandlePaymentWebhook checks before reading a single field out
+         * of it, and which is a stronger guarantee than a token would be.
+         *
+         * Named explicitly rather than exempting a prefix, so a second route
+         * cannot join this exemption by being filed in the same folder.
+         */
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/paystack',
+        ]);
+
         $middleware->alias([
             'supervises' => EnsureSupervises::class,
             'field' => EnsureCapturesInTheField::class,

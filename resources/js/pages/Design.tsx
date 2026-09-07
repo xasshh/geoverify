@@ -798,8 +798,9 @@ export default function Design() {
                                 paying is a chargeback, and is right to be annoyed.
                             </p>
                             <p className="mt-4 text-faint">
-                                The word escrow appears nowhere, including in state names. It is
-                                regulated in Nigeria and we are not licensed for it. Funds are held,
+                                The regulated word for holding somebody else&rsquo;s money
+                                appears nowhere here, including in state names. It is a licensed
+                                activity in Nigeria and we are not licensed for it. Funds are held,
                                 then released.
                             </p>
                         </div>
@@ -937,7 +938,7 @@ export default function Design() {
                                 Backed up
                             </p>
                             <div className="w-[248px] rounded-sm border border-rule-strong py-3">
-                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3 }} />
+                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6 }} />
                             </div>
                         </div>
 
@@ -946,7 +947,7 @@ export default function Design() {
                                 All clear
                             </p>
                             <div className="w-[248px] rounded-sm border border-rule-strong py-3">
-                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0 }} />
+                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0, orders: 0 }} />
                             </div>
                         </div>
 
@@ -958,7 +959,7 @@ export default function Design() {
                                 <div className="flex gap-1 px-2 [&>a]:shrink-0">
                                     <ConsoleNav
                                         current="claims"
-                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3 }}
+                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6 }}
                                         dense
                                     />
                                 </div>

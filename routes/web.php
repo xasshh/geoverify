@@ -18,16 +18,19 @@ use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\ReviewController;
+use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
 use App\Http\Controllers\MediaFileController;
+use App\Http\Controllers\Payments\PaystackWebhookController;
 use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\CorrectionController as PortalCorrectionController;
 use App\Http\Controllers\Portal\DashboardController;
 use App\Http\Controllers\Portal\ListingController;
+use App\Http\Controllers\Portal\OrderController;
 use App\Http\Controllers\Portal\RegisterBusinessController;
 use App\Http\Controllers\Portal\SignInController;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +76,15 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     // business right about itself".
     Route::get('corrections', [CorrectionReviewController::class, 'index'])->name('corrections');
     Route::post('corrections/{proposal}', [CorrectionReviewController::class, 'decide'])->name('corrections.decide');
+
+    /*
+    | Paid verifications. The step before a visit becomes an ordinary
+    | assignment, and the acceptance that turns held money into income.
+    */
+    Route::get('orders', [VerificationOrderController::class, 'index'])->name('orders');
+    Route::post('orders/{order}/assign', [VerificationOrderController::class, 'assign'])->name('orders.assign');
+    Route::post('orders/{order}/complete', [VerificationOrderController::class, 'complete'])->name('orders.complete');
+    Route::post('orders/{order}/refund', [VerificationOrderController::class, 'refund'])->name('orders.refund');
 
     // Live operations. Who is out, where they are, and what is going wrong now
     // rather than at the end of the week.
@@ -243,6 +255,16 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
         Route::post('register-business/back', [RegisterBusinessController::class, 'back'])->name('register-business.back');
         Route::post('register-business', [RegisterBusinessController::class, 'submit'])->name('register-business.submit');
 
+        // Buying verification. The order is placed here, but it is only ever
+        // paid by the provider's signed webhook: nothing on this guard, and
+        // nothing a customer's browser can reach, marks money as received.
+        Route::get('businesses/{enterprise}/verify/{tier}', [OrderController::class, 'create'])
+            ->name('orders.create');
+        Route::post('businesses/{enterprise}/verify', [OrderController::class, 'store'])
+            ->name('orders.store');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/pay', [OrderController::class, 'pay'])->name('orders.pay');
+        Route::get('orders/{order}/return', [OrderController::class, 'return'])->name('orders.return');
     });
 });
 
@@ -277,3 +299,16 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     // Where a handset that has been offline tells the server what happened.
     Route::post('sync', SyncController::class)->name('sync');
 });
+
+/*
+| The payment provider, calling us.
+|
+| Outside every guard and outside CSRF, because a server-to-server call has
+| neither a session nor a token. Its authenticity is the signature on the body,
+| which is checked before a single field is read out of it.
+|
+| This is the only route in the application that can cause money to be recorded
+| as received.
+*/
+Route::post('webhooks/paystack', PaystackWebhookController::class)
+    ->name('webhooks.paystack');

@@ -133,6 +133,21 @@ it('exposes no portal route that could write to an observation', function () {
          * recorded is added to rather than replaced.
          */
         'portal.corrections.store', 'portal.corrections.withdraw', 'portal.publication',
+        /*
+         * M6. Buying a visit, and none of it writes an observation either.
+         *
+         * store creates a verification_orders row; pay asks the provider for a
+         * checkout page and records nothing; return is inert by construction
+         * and is tested as such. What an officer eventually records on the
+         * visit is authored by the officer through the field capture flow,
+         * which no portal session can reach.
+         *
+         * Nothing on this guard can mark an order paid. That is reachable only
+         * from the provider's signed webhook, which is outside the portal
+         * prefix entirely and so cannot appear in this list.
+         */
+        'portal.orders.create', 'portal.orders.store', 'portal.orders.show',
+        'portal.orders.pay', 'portal.orders.return',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())

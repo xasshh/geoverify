@@ -16,6 +16,9 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $grid_cell_id
+ * @property int|null $structure_id
+ * @property string $kind
+ * @property int $priority
  * @property int $user_id
  * @property int $assigned_by
  * @property Carbon $assigned_at
@@ -32,8 +35,27 @@ use Illuminate\Support\Carbon;
  */
 final class Assignment extends Model
 {
+    /**
+     * Cover this ground and record what is on it.
+     *
+     * The default, and what every assignment written before Phase 2 was. A
+     * sweep names a cell and no particular building, and one cell may only have
+     * one open at a time.
+     */
+    public const KIND_SWEEP = 'sweep';
+
+    /**
+     * Go to this building, because somebody paid us to.
+     *
+     * Named against a structure and exempt from the one-open-per-cell rule: a
+     * paid visit must be givable to an officer today whether or not the cell it
+     * falls in is already being swept by somebody else.
+     */
+    public const KIND_VISIT = 'visit';
+
     protected $fillable = [
-        'grid_cell_id', 'user_id', 'assigned_by', 'assigned_at', 'due_on',
+        'grid_cell_id', 'structure_id', 'kind', 'priority',
+        'user_id', 'assigned_by', 'assigned_at', 'due_on',
         'status', 'started_at', 'submitted_at', 'reviewed_at', 'reviewed_by',
         'return_reason', 'closed_at',
     ];
@@ -42,6 +64,7 @@ final class Assignment extends Model
     {
         return [
             'status' => AssignmentStatus::class,
+            'priority' => 'integer',
             'assigned_at' => 'datetime',
             'due_on' => 'date',
             'started_at' => 'datetime',

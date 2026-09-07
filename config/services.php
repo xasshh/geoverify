@@ -56,6 +56,24 @@ return [
         'base_url' => env('CHROMIUM_BASE_URL'),
     ],
 
+    /*
+     * The payment provider.
+     *
+     * Paystack because the customer is a Nigerian business paying in naira from
+     * a Nigerian bank, and card is the smaller half of how that is done: bank
+     * transfer and USSD carry most of it, and a provider without them locally
+     * would exclude a good part of the audience.
+     *
+     * The secret is what signs the webhook, and the webhook is the only thing
+     * this application believes about money. A missing secret must therefore
+     * fail loudly rather than default to trusting the caller, which is what an
+     * empty-string default would quietly do.
+     */
+    'paystack' => [
+        'secret' => env('PAYSTACK_SECRET_KEY'),
+        'public' => env('PAYSTACK_PUBLIC_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

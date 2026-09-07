@@ -9,6 +9,7 @@ use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Registry\Actions\CountCorrectionsAwaitingReview;
 use App\Domain\Verification\Actions\CountEscalations;
 use App\Domain\Verification\Actions\CountObservationsAwaitingReview;
+use App\Domain\Verification\Actions\CountOrdersAwaitingAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -59,7 +60,7 @@ class HandleInertiaRequests extends Middleware
                 'portal' => $this->portal($request),
             ],
 
-            // What the console sidebar puts against Review and Claims. Only
+            // What the console sidebar puts against its queues. Only
             // for the people who can act on it, and only on the screens that
             // show it: this is two counts on every navigation, which is cheap
             // for a supervisor and pointless everywhere else.
@@ -97,6 +98,9 @@ class HandleInertiaRequests extends Middleware
             'review' => app(CountObservationsAwaitingReview::class)(),
             'claims' => app(CountClaimsAwaitingDecision::class)(),
             'corrections' => app(CountCorrectionsAwaitingReview::class)(),
+            // The one that costs money if it is left alone: every one of these
+            // is somebody who has paid and is owed a visit by a date.
+            'orders' => app(CountOrdersAwaitingAssignment::class)(),
             // Counted only for the people who can act on it. A supervisor
             // seeing a number they cannot clear is a number that never moves.
             'escalations' => $user->administers() ? app(CountEscalations::class)() : 0,

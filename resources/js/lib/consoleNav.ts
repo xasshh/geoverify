@@ -1,5 +1,5 @@
 /**
- * The console's five working views.
+ * The console's working views.
  *
  * Collected here because the navigation was built by repeating the same array on
  * every page, and adding a view meant editing all of them and hoping none was
@@ -15,6 +15,7 @@ export type ConsoleView =
     | 'review'
     | 'claims'
     | 'corrections'
+    | 'orders'
     | 'live'
     | 'exports'
     | 'escalations'
@@ -24,7 +25,7 @@ export type ConsoleView =
     | 'campaigns';
 
 /** Which waiting count belongs against a view, where one does. */
-export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations';
+export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders';
 
 export interface ConsoleNavItem {
     key: ConsoleView;
@@ -72,6 +73,15 @@ const VIEWS: ConsoleNavItem[] = [
         // A record, and a mark against one line of it.
         icon: 'M2.8 3h7.4m-7.4 3h5m-5 3h4M11 9.6l1.4 1.4 2.4-3M2.8 12h3',
         queue: 'corrections',
+    },
+    {
+        key: 'orders',
+        label: 'Verifications',
+        href: '/console/orders',
+        caption: 'Paid, and owed a visit',
+        // A mark of value, and the promise around it.
+        icon: 'M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 1 0 8 2.4M8 5.2v3.4l2.2 1.4',
+        queue: 'orders',
     },
     {
         key: 'live',

@@ -24,6 +24,40 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public holidays
+    |--------------------------------------------------------------------------
+    |
+    | The SLA is stated in working days, and working days in Nigeria means
+    | weekends plus these. Held as data because half of them move: the Islamic
+    | dates follow the lunar calendar and are announced by the Federal
+    | Government a few days ahead, so this list has to be maintained rather than
+    | computed, and a year with no entries is a year whose SLAs are wrong.
+    |
+    | Dates for a year that is not listed fall back to weekends alone, which
+    | errs towards promising sooner rather than later. That is the safer
+    | direction: it costs us a refund rather than costing a customer a promise
+    | we quietly moved.
+    |
+    */
+
+    'public_holidays' => [
+        '2026-01-01', // New Year's Day
+        '2026-03-20', // Eid al-Fitr, announced
+        '2026-03-21', // Eid al-Fitr, second day
+        '2026-04-03', // Good Friday
+        '2026-04-06', // Easter Monday
+        '2026-05-01', // Workers' Day
+        '2026-05-27', // Eid al-Adha, announced
+        '2026-05-28', // Eid al-Adha, second day
+        '2026-06-12', // Democracy Day
+        '2026-08-25', // Eid al-Mawlid, announced
+        '2026-10-01', // Independence Day
+        '2026-12-25', // Christmas Day
+        '2026-12-26', // Boxing Day
+    ],
+
     'tier_freshness' => [
         // Up to here, the register presents a tier without qualification.
         'current_months' => (int) env('GEOVERIFY_TIER_CURRENT_MONTHS', 12),

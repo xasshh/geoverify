@@ -28,6 +28,7 @@ declare module '@inertiajs/core' {
             claims: number;
             corrections: number;
             escalations: number;
+            orders: number;
         } | null;
     }
 }
