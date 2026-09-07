@@ -23,6 +23,7 @@ interface Props {
         within: string;
     };
     payable: boolean;
+    certificate: boolean;
     errors: Record<string, string>;
 }
 
@@ -50,7 +51,12 @@ function on(date: string | null): string {
  * promised date is stated as a date rather than as a countdown: a customer
  * chasing us needs to know whether we are late, not how many hours are left.
  */
-export default function OrderStatus({ order, payable, errors }: Props) {
+export default function OrderStatus({
+    order,
+    payable,
+    certificate,
+    errors,
+}: Props) {
     const form = useForm({});
 
     return (
@@ -149,6 +155,29 @@ export default function OrderStatus({ order, payable, errors }: Props) {
                             promise start from then.
                         </p>
                     </form>
+                )}
+
+                {certificate && (
+                    <div className="flex flex-col gap-3 border-l-2 border-gold bg-raised px-4 py-3">
+                        <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            Your certificate
+                        </h2>
+                        <p className="text-ui text-muted">
+                            One page, with what the officer found, where they
+                            stood and how accurately, and a code anybody you show
+                            it to can check for themselves.
+                        </p>
+                        <a
+                            href={`/portal/orders/${String(order.id)}/certificate.pdf`}
+                            className="self-start border border-ink px-4 py-2.5 text-ui text-ink hover:bg-sunken"
+                        >
+                            Download the certificate
+                        </a>
+                        <p className="text-label text-faint">
+                            Printed fresh each time rather than stored, so it
+                            always says what this register says today.
+                        </p>
+                    </div>
                 )}
 
                 <Link

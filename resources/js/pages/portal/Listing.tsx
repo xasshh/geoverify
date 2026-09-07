@@ -52,6 +52,13 @@ interface Props {
         label: string;
         explanation: string;
         decidedAt: string | null;
+        receipts: {
+            token: string;
+            reference: string;
+            granted: boolean;
+            agreedOn: string;
+            withdrawnOn: string | null;
+        }[];
     };
 }
 
@@ -71,6 +78,16 @@ interface Correction {
 
 function monthOf(iso: string): string {
     return new Date(iso).toLocaleDateString("en-NG", {
+        month: "long",
+        year: "numeric",
+    });
+}
+
+// Consent is dated to the day, not the month. "You agreed in September" is not
+// an answer anybody would accept about a document they signed.
+function dayOf(iso: string): string {
+    return new Date(iso).toLocaleDateString("en-NG", {
+        day: "numeric",
         month: "long",
         year: "numeric",
     });
@@ -337,6 +354,42 @@ function PublicationPanel({
                 things. Nothing here changes what we hold or what a mandate can
                 see.
             </p>
+
+            {publication.receipts.length > 0 && (
+                <div className="mt-5 border-t border-rule pt-4">
+                    <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        What you agreed to
+                    </h3>
+                    <ul className="mt-2 flex flex-col">
+                        {publication.receipts.map((receipt) => (
+                            <li
+                                key={receipt.token}
+                                className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule py-2 last:border-b-0"
+                            >
+                                <span className="text-ui text-ink">
+                                    {receipt.granted
+                                        ? `Agreed on ${dayOf(receipt.agreedOn)}`
+                                        : `Withdrawn on ${dayOf(receipt.agreedOn)}`}
+                                    {receipt.granted &&
+                                        receipt.withdrawnOn !== null &&
+                                        `, withdrawn on ${dayOf(receipt.withdrawnOn)}`}
+                                </span>
+                                <a
+                                    href={`/receipts/${receipt.token}`}
+                                    className="numeric-mono text-mono text-muted underline underline-offset-4 hover:text-ink"
+                                >
+                                    {receipt.reference}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="mt-2 text-label text-faint">
+                        Your copy of the exact words you were shown, on a link
+                        you can keep. Anybody holding the link can read it, so
+                        pass it on only to somebody you mean to.
+                    </p>
+                </div>
+            )}
         </section>
     );
 }

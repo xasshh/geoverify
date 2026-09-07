@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Registry\Actions;
 
 use App\Domain\Claim\Models\PartyBusiness;
+use App\Domain\Identity\Actions\RecordConsentReceipt;
+use App\Domain\Identity\Actions\WithdrawConsentReceipt;
+use App\Domain\Identity\Models\ConsentReceipt;
+use App\Domain\Identity\Models\ProcessingPurpose;
 use App\Domain\Party\Models\Party;
 use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Registry\Enums\PublicationState;
@@ -32,6 +36,19 @@ use RuntimeException;
  */
 final class SetPublicationState
 {
+    /**
+     * What publishing actually discloses. Frozen onto the receipt so a later
+     * widening of the directory cannot claim to have been agreed today.
+     */
+    private const PUBLISHED_FIELDS = [
+        'trading_name', 'sector', 'ward', 'lga', 'state', 'opening_hours',
+    ];
+
+    public function __construct(
+        private readonly RecordConsentReceipt $record,
+        private readonly WithdrawConsentReceipt $withdraw,
+    ) {}
+
     public function __invoke(
         Party $party,
         PortalAccount $actor,
@@ -66,6 +83,38 @@ final class SetPublicationState
                 'publication_state' => $state,
                 'publication_decided_at' => Carbon::now(config('app.timezone')),
             ]);
+
+            // Consent is a document, not a column. The state on the row says
+            // what is true now; the receipt says what was agreed, in the words
+            // shown, on the day, and survives this row changing again.
+            if ($state->publishable()) {
+                ($this->record)(
+                    $enterprise,
+                    ProcessingPurpose::PUBLICATION,
+                    true,
+                    VerificationEvent::ACTOR_PARTY,
+                    $actor->id,
+                    $party->display_name,
+                    self::PUBLISHED_FIELDS,
+                );
+            } else {
+                $live = ConsentReceipt::query()
+                    ->where('subject_type', $enterprise->getMorphClass())
+                    ->where('subject_id', $enterprise->id)
+                    ->where('granted', true)
+                    ->whereNull('withdrawn_at')
+                    ->latest('agreed_at')
+                    ->first();
+
+                if ($live instanceof ConsentReceipt) {
+                    ($this->withdraw)(
+                        $live,
+                        VerificationEvent::ACTOR_PARTY,
+                        $actor->id,
+                        $party->display_name,
+                    );
+                }
+            }
 
             VerificationEvent::record(
                 $enterprise,

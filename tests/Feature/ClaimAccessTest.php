@@ -148,6 +148,20 @@ it('exposes no portal route that could write to an observation', function () {
          */
         'portal.orders.create', 'portal.orders.store', 'portal.orders.show',
         'portal.orders.pay', 'portal.orders.return',
+        /*
+         * M7. The certificate, which is read only in both halves.
+         *
+         * certificate prints a document from what the register already holds
+         * and appends a download event, nothing more. certificate.render is
+         * the HTML the printing browser fetches: it sits outside the guarded
+         * group because that browser has no session, and it is signed, short
+         * lived and refused off the loopback interface.
+         *
+         * Neither writes an observation, and neither can: the certificate is
+         * assembled from the accepted visit, and a party that disagrees with
+         * what it says is asking for another visit rather than an edit.
+         */
+        'portal.certificate', 'portal.certificate.render',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())

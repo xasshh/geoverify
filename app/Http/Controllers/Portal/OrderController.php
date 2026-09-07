@@ -166,6 +166,12 @@ final class OrderController
                 'within' => $this->within($order->sla_working_days),
             ],
             'payable' => $order->status === OrderStatus::AwaitingPayment,
+
+            // The certificate exists once the work is accepted and not before.
+            // Decided here rather than in the page from the status string, so
+            // the button cannot appear over an order whose visit was refunded
+            // or is still out.
+            'certificate' => $order->status === OrderStatus::Completed,
         ]);
     }
 

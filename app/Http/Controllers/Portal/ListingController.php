@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Portal;
 
 use App\Domain\Claim\Models\PartyBusiness;
+use App\Domain\Identity\Actions\ResolveConsentReceipt;
+use App\Domain\Identity\Models\ConsentReceipt;
 use App\Domain\Party\Actions\ActingParty;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
@@ -159,6 +161,28 @@ final class ListingController
                 'label' => $enterprise->publication_state->label(),
                 'explanation' => $enterprise->publication_state->explanation(),
                 'decidedAt' => $enterprise->publication_decided_at?->toIso8601String(),
+
+                // The consent history, and the tokens that open it. The token
+                // is the whole authorisation on those pages, which is exactly
+                // why it belongs here and nowhere else: this screen is already
+                // behind the check that the party controls this business, and
+                // handing somebody their own receipt is the point of keeping
+                // one. Both directions are listed, because "they agreed in
+                // March and withdrew in September" is two facts and a page
+                // showing only the second has hidden half the history from the
+                // person it belongs to.
+                'receipts' => ConsentReceipt::query()
+                    ->where('subject_type', $enterprise->getMorphClass())
+                    ->where('subject_id', $enterprise->id)
+                    ->orderByDesc('agreed_at')
+                    ->get()
+                    ->map(static fn (ConsentReceipt $r): array => [
+                        'token' => $r->token,
+                        'reference' => ResolveConsentReceipt::reference($r),
+                        'granted' => $r->granted,
+                        'agreedOn' => $r->agreed_at->toDateString(),
+                        'withdrawnOn' => $r->withdrawn_at?->toDateString(),
+                    ])->values()->all(),
             ],
         ]);
     }

@@ -133,6 +133,12 @@ final class Structure extends Model
         return $this->belongsTo(AdminBoundary::class, 'lga_id');
     }
 
+    /** @return BelongsTo<AdminBoundary, $this> */
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(AdminBoundary::class, 'state_id');
+    }
+
     /** @return HasMany<StructureObservation, $this> */
     public function observations(): HasMany
     {

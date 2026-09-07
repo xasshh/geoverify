@@ -83,7 +83,7 @@ final class ResolveListingTier
      *
      * @return array{state: string, establishedOn: string, elapsed: string}
      */
-    private function freshness(DateTimeInterface $establishedOn): array
+    public function freshness(DateTimeInterface $establishedOn): array
     {
         $established = Carbon::instance(
             $establishedOn instanceof Carbon ? $establishedOn : Carbon::parse($establishedOn->format('c')),

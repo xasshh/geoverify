@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\MandateController;
 use App\Http\Controllers\Admin\PeopleController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
 use App\Http\Controllers\Client\SignInController as ClientSignInController;
+use App\Http\Controllers\ConsentReceiptController;
 use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\ClaimReviewController;
 use App\Http\Controllers\Console\CorrectionReviewController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\Payments\PaystackWebhookController;
+use App\Http\Controllers\Portal\CertificateController;
 use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\CorrectionController as PortalCorrectionController;
 use App\Http\Controllers\Portal\DashboardController;
@@ -33,6 +35,7 @@ use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\OrderController;
 use App\Http\Controllers\Portal\RegisterBusinessController;
 use App\Http\Controllers\Portal\SignInController;
+use App\Http\Controllers\PublicVerificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -200,6 +203,52 @@ Route::get('exports/cells/{cell}/pack.html', [ExportController::class, 'packHtml
     ->name('console.exports.pack.render');
 
 /*
+| Checking a certificate. Open to anybody holding one, which is the point.
+|
+| Outside every guard: the value of a printed certificate is that its holder can
+| check it without an account. The token is the whole authorisation, so it is 40
+| characters of random rather than anything derivable from the reference printed
+| beside it, and what the page may disclose is decided in the action rather than
+| in the controller.
+*/
+Route::get('verify/{token}', PublicVerificationController::class)
+    ->where('token', '[a-z0-9]{16,64}')
+    ->middleware('throttle:30,1')
+    ->name('verify.show');
+
+/*
+| The certificate as HTML, for the browser that prints it. Outside the portal
+| group for the same reason the evidence pack is outside the console one: the
+| browser doing the printing has no session. Signed, short lived, and refused
+| off the loopback interface.
+*/
+Route::get('portal/orders/{order}/certificate.html', [CertificateController::class, 'render'])
+    ->name('portal.certificate.render');
+
+/*
+| A person's copy of what they agreed to. Open on its token, like the
+| certificate check and for a neighbouring reason: the Act gives the person a
+| right to this document, and somebody who was asked at their door may never
+| have had an account here to sign into.
+|
+| The token is longer than the certificate's because this one is handed over
+| rather than scanned off a page the holder already has: 48 characters, minted
+| in ConsentReceipt, and the only thing standing between one person's receipt
+| and everybody's.
+*/
+Route::prefix('receipts')->name('receipts.')->where(['token' => '[a-z0-9]{16,64}'])->group(function (): void {
+    Route::get('{token}', [ConsentReceiptController::class, 'show'])
+        ->middleware('throttle:30,1')->name('show');
+
+    Route::get('{token}/copy.pdf', [ConsentReceiptController::class, 'download'])
+        ->middleware('throttle:10,1')->name('download');
+
+    // The HTML the printing browser fetches, signed and loopback only.
+    Route::get('{token}/copy.html', [ConsentReceiptController::class, 'render'])
+        ->name('render');
+});
+
+/*
 | The portal. Parties, on their own guard.
 |
 | Signing in is deliberately outside the guarded group: a person proving a
@@ -265,6 +314,11 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::post('orders/{order}/pay', [OrderController::class, 'pay'])->name('orders.pay');
         Route::get('orders/{order}/return', [OrderController::class, 'return'])->name('orders.return');
+
+        // The certificate, printed on demand rather than stored. A file on disk
+        // would keep asserting a finding after the result was overturned.
+        Route::get('orders/{order}/certificate.pdf', [CertificateController::class, 'download'])
+            ->name('certificate');
     });
 });
 

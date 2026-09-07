@@ -34,6 +34,7 @@ final class CompleteOrder
     public function __construct(
         private readonly PostTransaction $post,
         private readonly SyncOrderToVisit $visits,
+        private readonly IssuePublicVerification $publish,
     ) {}
 
     public function __invoke(
@@ -85,6 +86,11 @@ final class CompleteOrder
                 'completed_by' => $supervisor->id,
                 'completed_at' => now(),
             ]);
+
+            // The checkable token is minted inside the same transaction that
+            // recognises the income. A certificate whose QR resolves to nothing
+            // because a later statement failed would be worse than no QR.
+            ($this->publish)($fresh);
 
             VerificationEvent::record($fresh, 'order.completed', $supervisor, array_filter([
                 'reference' => $fresh->reference,
