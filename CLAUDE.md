@@ -33,6 +33,9 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
 - **A field-enumerated record is private until its party opts in.** Enumeration
   is not consent to publication. `enterprises.publication_state` defaults to
   `private`, and only `opted_in` is ever eligible for publication.
+- **Money moves only on a signed provider webhook.** Not on a callback, not on
+  a redirect, not on anything a customer's browser can reach. `RecordPayment`
+  is reachable from `HandlePaymentWebhook` and nowhere else.
 - **Never the word "escrow".** Not in customer copy, not in state names, not in
   identifiers. It is a regulated term in Nigeria and we are not licensed for it.
   Funds are held and released: a completion-linked payment.
@@ -55,13 +58,21 @@ Inertia is pinned to v2 on both sides: `inertiajs/inertia-laravel ^2.0` with
 
 ## Roles and access
 
-Three roles: `officer`, `supervisor`, `admin`. An officer holds assignments and
-captures; a supervisor assigns and reviews; an admin also rules on escalations,
-reads the audit log, manages people and devices, and contracts mandates.
+Three staff roles: `officer`, `supervisor`, `admin`. An officer holds assignments
+and captures; a supervisor assigns and reviews; an admin also rules on
+escalations, reads the audit log, manages people and devices, and contracts
+mandates.
 
-Three surfaces, three middleware: `field` (`/field`), `supervises` (`/console`)
-and `administers` (`/admin`). Per record access is `AssignmentPolicy` and
-`DevicePolicy`.
+Three session guards, and they never overlap: `web` (staff, against `users`),
+`portal` (parties, against `party_users`) and `client` (the commissioning body,
+against `client_users`). A portal or client session cannot satisfy `supervises`
+by construction rather than by check, which is the entire reason there are three
+rather than one table with a wider `Role`.
+
+Five surfaces, five middleware aliases, all registered in `bootstrap/app.php`:
+`field` (`/field`), `supervises` (`/console`), `administers` (`/admin`),
+`portal` (`/portal`) and `client` (`/client`). Per record access is
+`AssignmentPolicy` and `DevicePolicy`.
 
 `Role::supervises()` is true for an admin too, so the admin views are a separate
 route group behind `administers` rather than a section of the console. That
@@ -89,21 +100,99 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Claim,Coverage,Field,Identity,Media,Party,Registry,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Claim,Coverage,Field,Identity,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
 `Party` and `Claim` are Phase 2: parties, portal accounts, the access between
 them, and the claim and dispute flow. `Staff` is the in-house side: creating,
-suspending and reinstating the people who work this system.
+suspending and reinstating the people who work this system. `Ledger` is the
+double-entry record behind paid verification: one signed `amount_minor` column,
+append-only by database trigger, and `PostTransaction` is the only writer.
 Business rules go in action classes, not in controllers and not in models.
+
+`Campaign` is the layer above enumeration: a commissioned exercise, its
+mandates, its declared schema and its stakeholders. A campaign's areas *are*
+`coverage_areas`: there is no `campaign_areas` table and there is not going to
+be one. Commercials are admin-only and `AssembleCampaignDossier`, which builds
+every client-facing payload, has no code path to `campaign_commercials` at all.
+The full model is in `CAMPAIGNS.md`; read it before touching anything under
+`app/Domain/Campaign` or `app/Http/Controllers/Client`.
+
+Controllers render Inertia pages that mirror the route group:
+`resources/js/pages/{admin,auth,client,console,field,portal}/*.tsx`, resolved by
+name in `resources/js/app.tsx`. `Inertia::render('console/Review')` means
+`resources/js/pages/console/Review.tsx`, so a renamed page needs both sides.
+
+The sync contract's idempotency lives in `ProcessMutationBatch`: a
+`client_uuid` plus `payload_hash` lookup against `sync_receipts` short circuits
+a replay, and a child arriving before its parent throws `DeferredMutation` to
+be retried later in the same batch rather than rejected.
 
 ## Commands
 
 ```bash
-php artisan test                                  # Pest, against PostgreSQL
+composer run dev            # server, queue, pail logs and Vite together
+npm run dev                 # Vite alone
+
 ./vendor/bin/pint                                 # formatting
 ./vendor/bin/phpstan analyse --memory-limit=1G    # Larastan level 6
-npx tsc --noEmit && npx eslint .                  # frontend checks
-npm run dev                                       # Vite
+npm run types && npm run lint                     # tsc --noEmit, then ESLint
 ```
 
-Setup, including the h3-pg build, is in `docs/setup.md`. The design and build plan
-is in `_plan/design-plan.html`.
+### Tests
+
+```bash
+php artisan test                                  # Pest, against PostgreSQL
+php artisan test --filter=ClaimFlowTest           # one file
+php artisan test --filter='arrive shuffled'       # one test by name
+php artisan test tests/Feature/SyncTest.php       # one path
+php artisan test --group=load                     # the load suite, excluded by default
+```
+
+Feature tests need a real PostgreSQL database named `geoverify_testing` with
+PostGIS and h3-pg. There is no SQLite fallback and there will not be one: this
+system's behaviour is defined by spatial predicates, so a suite that does not
+exercise them proves nothing. `RefreshDatabase` is applied to `Feature` only
+(`tests/Pest.php`); `tests/Unit` runs without a database.
+
+The `load` group is excluded in `phpunit.xml` because it spends a minute proving
+the sync endpoint holds at two thousand mutations. Run it before touching
+`ProcessMutationBatch`.
+
+Browser tests are Playwright against a running application, serial by design
+(one development database, so two at once are two people claiming the same
+shop):
+
+```bash
+php artisan serve --port=8123          # or set GV_BASE_URL
+npx playwright test                    # tests/Browser
+npx playwright test tests/Browser/claim-flow.spec.ts
+```
+
+Unlike the Pest suite these run against the *development* database and leave
+their marks in it. The claim and correction specs each consume one unclaimed
+listing per run and never give it back, drawing from disjoint pools (the
+correction spec wants a listing whose latest observation has no phone). Once a
+pool is empty the spec fails in its own `controlledListing` helper with a JSON
+parse error, which is exhaustion and not a regression. Reseed to refill it.
+
+### Data pipeline and operations
+
+The register is built by commands, in this order, and `docs/geodata.md` covers
+the sources:
+
+```bash
+php artisan geoverify:boundaries-load <path> --preset=  # first, always
+php artisan geoverify:taxonomy-load                     # ISIC sectors and aliases
+php artisan geoverify:coverage-create --lga-code=        # a mandate
+php artisan geoverify:grid-generate <area>              # its H3 cells
+php artisan geoverify:footprints-ingest <area> --path=   # buildings
+php artisan geoverify:roads-ingest --path=              # streets, for map landmarks
+php artisan geoverify:pack-build <area>                 # the offline PMTiles pack
+php artisan geoverify:score                             # confidence over captures
+php artisan orders:sweep-sla --dry-run                  # SLA refunds, daily at 07:00
+```
+
+Seeders: `FieldTeamSeeder` (staff sign in), `VerificationPricingSeeder` (prices
+and ledger accounts), `CampaignSeeder`, `FieldDaySeeder`.
+
+Setup, including the h3-pg build, is in `docs/setup.md`. The Phase 1 design and
+build plan is in `_plan/design-plan.html`; Phase 2 is in `_plan/phase-2/`.
