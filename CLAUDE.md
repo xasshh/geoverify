@@ -251,6 +251,15 @@ They also need a register to exist at all: a coverage area, its cells and a
 seeded field day. On a machine that has never run the data pipeline these specs
 cannot run, and the failure looks like an empty pool rather than a missing one.
 
+Every spec reaches the application from 127.0.0.1, so they share one bucket in
+every per address rate limit. `portal.claim.code` allows ten a minute, and the
+suite spends three or four of those; running single specs repeatedly and then
+the whole suite inside the same minute can cross it. A run that stops waiting
+for "we sent a code", with no error in `storage/logs/laravel.log`, is that
+limit refusing the request and Inertia showing the 429 in its error frame.
+Wait a minute and run it again rather than reaching for the throttle: it guards
+an endpoint that sends codes to real phones.
+
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs the gates in this order, and any one of them
