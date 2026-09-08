@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { execSync } from 'node:child_process';
 
 const SHOTS =
     process.env.GV_SHOT_DIR ??
@@ -12,9 +13,28 @@ const SHOTS =
  * prove nothing about whether an officer sees a map in Wuse.
  */
 
-// Inside the cell bello holds, so the position is on the map rather than off it.
+/**
+ * The centre of the cell bello actually holds, read from the register.
+ *
+ * This was a hard coded pair of coordinates, which is only correct for the one
+ * dataset it was written against: point it at a differently built register and
+ * the officer stands kilometres outside the mandate, the map opens on empty
+ * ground, and the failure reads as a broken map rather than as a stale fixture.
+ * The other specs in this suite already read their fixtures from the database,
+ * and this one now does too.
+ */
+const HERE = JSON.parse(
+    execSync(
+        `php artisan tinker --execute="echo json_encode(DB::selectOne(\\"select ST_X(h3_cell_to_lat_lng(g.h3_index::h3index)::geometry) lng, ST_Y(h3_cell_to_lat_lng(g.h3_index::h3index)::geometry) lat from assignments a join grid_cells g on g.id = a.grid_cell_id join users u on u.id = a.user_id where u.email = 'bello@geoverify.test' and a.closed_at is null order by a.id limit 1\\"));"`,
+    )
+        .toString()
+        .trim()
+        .split('\n')
+        .at(-1) ?? '{}',
+) as { lat: number; lng: number };
+
 test.use({
-    geolocation: { latitude: 9.068962, longitude: 7.383084, accuracy: 6 },
+    geolocation: { latitude: Number(HERE.lat), longitude: Number(HERE.lng), accuracy: 6 },
     viewport: { width: 412, height: 915 },
 });
 
@@ -67,10 +87,15 @@ test('an officer downloads the pack and the map draws from it', async ({ page })
     // answer this: MapLibre creates it without preserveDrawingBuffer, so reading
     // its pixels back gives a blank image whether the map worked or not. The
     // count of rendered pack features can, and an empty map reads as zero.
+    // Polled rather than read once. The count is republished on every idle, and
+    // the first idle happens when the cell and ward outlines are up but the
+    // footprint tiles are still decoding: reading then gives a handful of
+    // features and calls a working map broken. A large pack hid this by being
+    // slow enough that the first idle already had everything.
     const drawn = page.locator('[data-testid="field-map"]');
-    await expect(drawn).toHaveAttribute('data-drawn', /^[1-9][0-9]*$/, { timeout: 30_000 });
-
-    expect(Number(await drawn.getAttribute('data-drawn'))).toBeGreaterThan(100);
+    await expect
+        .poll(async () => Number(await drawn.getAttribute('data-drawn')), { timeout: 30_000 })
+        .toBeGreaterThan(100);
 
     // Selecting a second building has to clear the flag on the first, and that
     // removal is by id: MapLibre throws when a feature state is removed with a

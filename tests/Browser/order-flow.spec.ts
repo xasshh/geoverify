@@ -55,14 +55,19 @@ async function registerParty(page: Page, phone: string, name: string) {
 }
 
 /**
- * An unclaimed listing with a phone on its latest observation.
+ * An unclaimed listing with a phone on its latest observation, and no claim on
+ * it at all.
  *
- * Drawn from the same pool as the claim spec and consumed the same way: this
- * test claims one and does not give it back. An empty pool fails here in the
- * JSON parse, which is exhaustion rather than a regression. Reseed to refill.
+ * Drawn from the same pool as the claim spec, from the opposite end, and
+ * consumed the same way: this test claims one and does not give it back. The
+ * "no claim at all" part matters for a run that failed halfway: a listing
+ * carrying somebody's abandoned pending claim would make the next run open a
+ * dispute instead of taking control, and fail somewhere that looks nothing
+ * like the cause. An empty pool fails here in the JSON parse, which is
+ * exhaustion rather than a regression. Reseed to refill.
  */
 const TARGET = queryOne<{ name: string; ward: string }>(
-    "select e.trading_name name, w.name ward from enterprises e join structures s on s.id=e.structure_id left join admin_boundaries w on w.id=s.ward_id left join party_businesses pb on pb.enterprise_id=e.id and pb.status='active' join lateral (select phone from enterprise_observations where enterprise_id=e.id order by observed_at desc limit 1) o on true where o.phone is not null and s.status <> 'rejected' and pb.id is null order by e.id asc limit 1",
+    "select e.trading_name name, w.name ward from enterprises e join structures s on s.id=e.structure_id left join admin_boundaries w on w.id=s.ward_id left join party_businesses pb on pb.enterprise_id=e.id and pb.status='active' join lateral (select phone from enterprise_observations where enterprise_id=e.id order by observed_at desc limit 1) o on true where o.phone is not null and s.status <> 'rejected' and pb.id is null and not exists (select 1 from claims c where c.enterprise_id = e.id) order by e.id asc limit 1",
 );
 
 test("a business buys a verification of itself, over a throttled 3G link", async ({
@@ -88,6 +93,12 @@ test("a business buys a verification of itself, over a throttled 3G link", async
 
     await expect(page).toHaveURL(/\/portal\/claim\/\d+/);
     await page.getByRole("button", { name: /send the code/i }).click();
+
+    // Waited for before the log is read. Without it the read races the POST
+    // that writes the code, picks up whatever claim code was last issued on
+    // this machine, and fails five screens later saying the code is wrong.
+    await expect(page.getByText(/we sent a code/i)).toBeVisible();
+
     await page.getByLabel(/six digit code/i).fill(
         lastLoggedCode(/Claim code to \+\d+: GeoVerify: (\d{6})/g),
     );
