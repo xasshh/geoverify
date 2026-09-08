@@ -215,9 +215,18 @@ system's behaviour is defined by spatial predicates, so a suite that does not
 exercise them proves nothing. `RefreshDatabase` is applied to `Feature` only
 (`tests/Pest.php`); `tests/Unit` runs without a database.
 
-The `load` group is excluded in `phpunit.xml` because it spends a minute proving
-the sync endpoint holds at two thousand mutations. Run it before touching
-`ProcessMutationBatch`.
+The `load` group is excluded in `phpunit.xml` because it spends about two
+minutes: one proving the sync endpoint holds at two thousand mutations, one
+searching a generated register of fifty thousand businesses. Run the first
+before touching `ProcessMutationBatch` and the second before touching
+`SearchRegister`.
+
+`ClaimSearchLoadTest` generates its register in SQL and reports numbers rather
+than asserting a plan, because the plan is not always the same and should not
+be. A distinctive name is answered from the trigram index; a name built from
+the words every shop uses (Stores, Ventures, Enterprises) matches thousands of
+rows, and PostgreSQL is right to read the table for it. What is held to a
+budget there is the answer, not the plan.
 
 Browser tests are Playwright against a running application, serial by design
 (one development database, so two at once are two people claiming the same
@@ -230,11 +239,17 @@ npx playwright test tests/Browser/claim-flow.spec.ts
 ```
 
 Unlike the Pest suite these run against the *development* database and leave
-their marks in it. The claim and correction specs each consume one unclaimed
-listing per run and never give it back, drawing from disjoint pools (the
-correction spec wants a listing whose latest observation has no phone). Once a
-pool is empty the spec fails in its own `controlledListing` helper with a JSON
-parse error, which is exhaustion and not a regression. Reseed to refill it.
+their marks in it. The claim, correction and order specs each consume one
+unclaimed listing per run and never give it back. The correction spec draws
+from a disjoint pool (it wants a listing whose latest observation has no
+phone); the claim and order specs share one and take from opposite ends of it,
+oldest and newest, so a single run of the suite does not have them fighting for
+the same shop. Once a pool is empty the spec fails in its own helper with a
+JSON parse error, which is exhaustion and not a regression. Reseed to refill it.
+
+They also need a register to exist at all: a coverage area, its cells and a
+seeded field day. On a machine that has never run the data pipeline these specs
+cannot run, and the failure looks like an empty pool rather than a missing one.
 
 ### Continuous integration
 
@@ -266,7 +281,14 @@ php artisan geoverify:roads-ingest --path=              # streets, for map landm
 php artisan geoverify:pack-build <area>                 # the offline PMTiles pack
 php artisan geoverify:score                             # confidence over captures
 php artisan orders:sweep-sla --dry-run                  # SLA refunds, daily at 07:00
+php artisan geoverify:reconcile-ledger --from= --to=    # provider drift, daily at 07:30
 ```
+
+`geoverify:reconcile-ledger` exits non-zero when the ledger and the payment
+provider disagree, which is what makes it worth scheduling: the failure is the
+notification. It compares successful charges against the cash legs posted on
+receiving them, reports refunds without matching them, and changes nothing. A
+correction to the ledger is a posted movement, made by somebody who has looked.
 
 Seeders: `FieldTeamSeeder` (staff sign in), `VerificationPricingSeeder` (prices
 and ledger accounts), `CampaignSeeder`, `FieldDaySeeder`.

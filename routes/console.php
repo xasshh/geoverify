@@ -22,3 +22,20 @@ Schedule::command('orders:sweep-sla')
     ->dailyAt('07:00')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
+
+/*
+| The two records of the same money, compared every morning.
+|
+| After the sweep rather than before it, so a refund posted at seven is inside
+| the window this reads rather than arriving halfway through it. Seven days
+| back each time on purpose: a webhook that failed on Friday and was retried
+| into nothing over the weekend is exactly what this exists to catch, and a
+| window of one day would call Monday clean.
+|
+| It exits non-zero on drift, which is what makes it worth scheduling: the
+| failure is the notification.
+*/
+Schedule::command('geoverify:reconcile-ledger')
+    ->dailyAt('07:30')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
