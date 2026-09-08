@@ -8,7 +8,9 @@ use App\Domain\Verification\Models\VerificationEvent;
 use App\Enums\Role;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Symfony\Component\Finder\SplFileInfo;
 
 it('has no column anywhere that could hold a raw NIN or BVN', function () {
     // The guarantee is structural. A column that does not exist cannot be filled
@@ -27,6 +29,33 @@ it('has no column anywhere that could hold a raw NIN or BVN', function () {
     SQL);
 
     expect($suspect)->toBeEmpty();
+});
+
+it('lets no queued job carry more than an identifier', function () {
+    // Phase 2 added a rule the field platform never needed: no raw NIN in a
+    // queue payload either. The way that rule gets broken is not by somebody
+    // typing a number into a job. It is by a job growing a model or an array
+    // that happens to hold nothing sensitive this year, and something else
+    // entirely after a column is added to it.
+    //
+    // So the guard is on shape. A queued job takes identifiers and reads what
+    // it needs when it runs, which is also the only version that is correct
+    // after a retry: a payload serialised on Tuesday describes Tuesday.
+    $jobs = array_map(
+        static fn (SplFileInfo $file): string => 'App\\Jobs\\'.$file->getFilenameWithoutExtension(),
+        File::files(app_path('Jobs')),
+    );
+
+    expect($jobs)->not->toBeEmpty();
+
+    foreach ($jobs as $job) {
+        $parameters = (new ReflectionClass($job))->getConstructor()?->getParameters() ?? [];
+
+        foreach ($parameters as $parameter) {
+            expect((string) $parameter->getType())
+                ->toBeIn(['int', 'string', '?int', '?string'], "{$job} takes a {$parameter->getType()}");
+        }
+    }
 });
 
 it('hashes a NIN irreversibly and keeps only the last four digits', function () {
