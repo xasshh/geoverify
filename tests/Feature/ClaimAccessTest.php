@@ -162,6 +162,22 @@ it('exposes no portal route that could write to an observation', function () {
          * what it says is asking for another visit rather than an edit.
          */
         'portal.certificate', 'portal.certificate.render',
+        /*
+         * P2. Photographs a business shows of itself, and taking one down.
+         *
+         * These write media rows authored by a party, which the database keeps
+         * apart from an officer's photographs with a check constraint: exactly
+         * one of captured_by and uploaded_by_party_id is set. Neither route can
+         * touch an observation, and withdraw refuses anything that is not a
+         * storefront photograph with a party author, so a business cannot use
+         * it to erase the evidence of its own visit.
+         *
+         * The upload is the only portal route that puts something new in front
+         * of strangers on the party's own authority rather than by proposing it
+         * to a supervisor. That is correct: a photograph of your own shopfront
+         * is an assertion about yourself, not a claim about what an officer saw.
+         */
+        'portal.photos.store', 'portal.photos.withdraw',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())

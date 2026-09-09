@@ -31,6 +31,14 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
   portal do self register, on their own guard, against `party_users`. The
   `users` table stays the staff table: `Role` is never widened to admit a
   member of the public.
+- **A business may publish photographs of itself; an officer's never leave.**
+  Both live in `media`, kept apart by the `media_one_author` check constraint
+  (exactly one of `captured_by` and `uploaded_by_party_id`). What publishes them
+  is `kind = storefront` with a party author, asked for by name in the SELECT:
+  never a query that takes everything and excludes the evidence, because that
+  filter is one refactor away from publishing an interior shot with somebody's
+  family in it. Withdrawing sets `status = withdrawn` and keeps the row.
+
 - **A field-enumerated record is private until its party opts in.** Enumeration
   is not consent to publication. `enterprises.publication_state` defaults to
   `private`, and only `opted_in` is eligible for full publication.

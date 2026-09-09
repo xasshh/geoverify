@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Domain\Claim\Actions\GrantControl;
+use App\Domain\Media\Actions\PublishStorefrontPhoto;
+use App\Domain\Media\Models\Media;
 use App\Domain\Registry\Actions\SearchDirectory;
 use App\Domain\Registry\Actions\SetPublicationState;
 use App\Domain\Registry\Actions\WithholdOnRequest;
@@ -10,7 +12,11 @@ use App\Domain\Registry\Enums\PublicationState;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Registry\Models\EnterpriseObservation;
 use App\Domain\Verification\Models\VerificationEvent;
+use App\Enums\Role;
 use Database\Seeders\VerificationPricingSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * P2: the directory anybody can read.
@@ -47,17 +53,26 @@ it('shows a business that put its name on the street, and nothing more of it', f
     $shop = signpostedShop();
 
     $page = app(SearchDirectory::class)->run();
-    $row = collect($page['results'])->firstWhere('id', $shop->id);
 
-    expect($row)->not->toBeNull()
-        ->and($row['depth'])->toBe('reduced')
+    // Filtered rather than firstWhere'd, so the row keeps its shape all the
+    // way to the assertion about its keys.
+    $matches = array_values(array_filter(
+        $page['results'],
+        static fn (array $row): bool => $row['id'] === $shop->id,
+    ));
+
+    expect($matches)->toHaveCount(1);
+
+    $row = $matches[0];
+
+    expect($row['depth'])->toBe('reduced')
         ->and($row['tradingName'])->toBe('Signposted Stores');
 
     // The whole projection, named. A key appearing here that is not in this
     // list is a disclosure somebody added without deciding to.
     expect(array_keys($row))->toEqualCanonicalizing([
         'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
-        'ward', 'lga', 'tier', 'verified', 'openingHours',
+        'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
     ]);
 
     // And the things that must never appear, whatever the state.
@@ -208,7 +223,146 @@ it('filters by sector without widening what a row says', function () {
         expect($row['sectorCode'])->toBe($shop->sector_code)
             ->and(array_keys($row))->toEqualCanonicalizing([
                 'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
-                'ward', 'lga', 'tier', 'verified', 'openingHours',
+                'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
             ]);
     }
+});
+
+/*
+| Photographs.
+|
+| One media table holds an officer's evidence and a business's own shopfront
+| photographs, kept apart by a database constraint on authorship. What follows
+| is the other half of that: the directory asks for storefront photographs with
+| a party author by name, and never gets anything else.
+*/
+
+it('shows a photograph the business took of itself, once it has published', function () {
+    Storage::fake('local');
+
+    $it = buyerWithShop('Photo Owner', '08039990789');
+    $shop = $it['shop'];
+
+    EnterpriseObservation::query()
+        ->where('enterprise_id', $shop->id)
+        ->update(['signage_observed' => true]);
+
+    app(PublishStorefrontPhoto::class)(
+        UploadedFile::fake()->image('shopfront.jpg', 1200, 800),
+        $shop,
+        $it['party'],
+        $it['account'],
+        (string) Str::uuid7(),
+    );
+
+    // Not yet: a photograph is not a publication decision. Until the owner
+    // opts in there is no listing to put it on.
+    expect(collect(app(SearchDirectory::class)->run()['results'])->firstWhere('id', $shop->id))
+        ->toBeNull();
+
+    app(SetPublicationState::class)(
+        $it['party'],
+        $it['account'],
+        $shop->refresh(),
+        PublicationState::OptedIn,
+    );
+
+    $row = collect(app(SearchDirectory::class)->run()['results'])->firstWhere('id', $shop->id);
+
+    expect($row['photos'])->toHaveCount(1)
+        ->and($row['photos'][0]['url'])->toContain('/media/file/')
+        // The whole photo projection: a URL and nothing else.
+        ->and(array_keys($row['photos'][0]))->toBe(['url']);
+});
+
+it('never puts an officer photograph in the directory', function () {
+    Storage::fake('local');
+
+    $it = buyerWithShop('Evidence Owner', '08039990790');
+    $shop = $it['shop'];
+
+    EnterpriseObservation::query()
+        ->where('enterprise_id', $shop->id)
+        ->update(['signage_observed' => true]);
+
+    // An officer's facade shot, attached to the same business. It is evidence
+    // of a visit and it may show an interior, a neighbour or a passer-by who
+    // consented to nothing.
+    Media::query()->create([
+        'mediable_type' => $shop->getMorphClass(),
+        'mediable_id' => $shop->id,
+        'kind' => Media::KIND_FACADE,
+        'disk' => 'local',
+        'disk_path' => 'evidence/officer-facade.jpg',
+        'sha256' => str_repeat('a', 64),
+        'bytes' => 1024,
+        'captured_by' => person(Role::Officer, 'Evidence Officer')->id,
+        'captured_at' => now(),
+        'status' => Media::STATUS_STORED,
+        'client_uuid' => (string) Str::uuid7(),
+    ]);
+
+    app(SetPublicationState::class)(
+        $it['party'],
+        $it['account'],
+        $shop->refresh(),
+        PublicationState::OptedIn,
+    );
+
+    $row = collect(app(SearchDirectory::class)->run()['results'])->firstWhere('id', $shop->id);
+
+    expect($row['photos'])->toBe([]);
+});
+
+it('stops showing a photograph the business takes down, without deleting it', function () {
+    Storage::fake('local');
+
+    $it = buyerWithShop('Withdrawing Owner', '08039990791');
+    $shop = $it['shop'];
+
+    EnterpriseObservation::query()
+        ->where('enterprise_id', $shop->id)
+        ->update(['signage_observed' => true]);
+
+    $publish = app(PublishStorefrontPhoto::class);
+
+    $photo = $publish(
+        UploadedFile::fake()->image('front.jpg', 900, 600),
+        $shop,
+        $it['party'],
+        $it['account'],
+        (string) Str::uuid7(),
+    );
+
+    app(SetPublicationState::class)(
+        $it['party'],
+        $it['account'],
+        $shop->refresh(),
+        PublicationState::OptedIn,
+    );
+
+    $publish->withdraw($photo, $it['party'], $it['account']);
+
+    $row = collect(app(SearchDirectory::class)->run()['results'])->firstWhere('id', $shop->id);
+
+    expect($row['photos'])->toBe([])
+        // Withdrawn, not deleted: what this listing showed last March is still
+        // an answerable question.
+        ->and(Media::query()->whereKey($photo->id)->exists())->toBeTrue()
+        ->and($photo->refresh()->status)->toBe(Media::STATUS_WITHDRAWN);
+});
+
+it('refuses a photograph from somebody who does not manage the business', function () {
+    Storage::fake('local');
+
+    $it = buyerWithShop('Real Owner', '08039990792');
+    $stranger = claimant('Passing Stranger', '08039990793');
+
+    $this->actingAs($stranger['account'], 'portal')
+        ->post("/portal/businesses/{$it['shop']->id}/photos", [
+            'photo' => UploadedFile::fake()->image('not-mine.jpg'),
+        ])
+        ->assertForbidden();
+
+    expect(PublishStorefrontPhoto::countFor($it['shop']))->toBe(0);
 });

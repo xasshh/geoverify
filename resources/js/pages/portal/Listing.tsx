@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Head, router, useForm } from "@inertiajs/react";
+import { Head, router, useForm, usePage } from "@inertiajs/react";
 import { Button } from "@/components/Button";
 import { SelectField, TextField } from "@/components/Field";
 import { StatusPill } from "@/components/StatusPill";
 import { PortalShell } from "@/components/PortalShell";
+import { StorefrontPhotos, type StorefrontPhoto } from "@/components/StorefrontPhotos";
 import { VerificationLadder } from "@/components/VerificationLadder";
 import { StatusPill as OrderPill } from "@/components/StatusPill";
 import { orderTone, type OrderStatus } from "@/lib/status";
@@ -47,6 +48,8 @@ interface Props {
     }[];
     corrections: Correction[];
     correctableFields: { value: string; label: string }[];
+    photos: StorefrontPhoto[];
+    photoLimit: number;
     publication: {
         state: string;
         label: string;
@@ -405,7 +408,11 @@ export default function Listing({
     publication,
     nextRung,
     orders,
+    photos,
+    photoLimit,
 }: Props) {
+    const errors = usePage().props.errors;
+
     return (
         <PortalShell accountName={party.displayName} width="page">
             <Head title={business.tradingName} />
@@ -537,6 +544,14 @@ export default function Listing({
                         business={business}
                         corrections={corrections}
                         correctableFields={correctableFields}
+                    />
+
+                    <StorefrontPhotos
+                        enterpriseId={business.id}
+                        photos={photos}
+                        limit={photoLimit}
+                        published={publication.state === "opted_in"}
+                        {...(typeof errors.photo === "string" && { error: errors.photo })}
                     />
 
                     <PublicationPanel

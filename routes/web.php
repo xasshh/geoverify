@@ -36,6 +36,7 @@ use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\OrderController;
 use App\Http\Controllers\Portal\RegisterBusinessController;
 use App\Http\Controllers\Portal\SignInController;
+use App\Http\Controllers\Portal\StorefrontPhotoController;
 use App\Http\Controllers\PublicVerificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -319,6 +320,15 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
             ->name('corrections.withdraw');
         Route::post('businesses/{enterprise}/publication', [PortalCorrectionController::class, 'publication'])
             ->name('publication');
+
+        // Photographs a business shows of itself. The only portal route that
+        // puts something new in front of strangers on the party's own
+        // authority, which is why control is checked before the file is read.
+        Route::post('businesses/{enterprise}/photos', [StorefrontPhotoController::class, 'store'])
+            ->middleware('throttle:20,1')->name('photos.store');
+
+        Route::post('businesses/{enterprise}/photos/{media}/withdraw', [StorefrontPhotoController::class, 'withdraw'])
+            ->name('photos.withdraw');
 
         // Self-registration. The other way onto the register, for a business no
         // officer has reached. Every step is an ordinary form post so the whole

@@ -14,6 +14,7 @@ interface Entry {
     tier: string;
     verified: boolean;
     openingHours: string | null;
+    photos: { url: string }[];
 }
 
 interface Props {
@@ -208,8 +209,16 @@ export default function Directory({
                                 <li key={entry.id}>
                                     <Link
                                         href={`/directory/${String(entry.id)}`}
-                                        className="flex h-full flex-col rounded-sm border border-rule bg-surface p-5 transition-colors hover:border-rule-strong"
+                                        className="flex h-full flex-col overflow-hidden rounded-sm border border-rule bg-surface transition-colors hover:border-rule-strong"
                                     >
+                                        {entry.photos.length > 0 && (
+                                            <img
+                                                src={entry.photos[0]?.url}
+                                                alt=""
+                                                className="aspect-3/2 w-full border-b border-rule object-cover"
+                                            />
+                                        )}
+                                        <span className="flex flex-grow flex-col p-5">
                                         <DepthMark depth={entry.depth} />
                                         <h3 className="mt-2.5 font-display text-display-s text-ink">
                                             {entry.tradingName}
@@ -221,6 +230,7 @@ export default function Directory({
                                             {[entry.ward, entry.lga].filter(Boolean).join(', ') ||
                                                 'Location not resolved'}
                                         </p>
+                                        </span>
                                     </Link>
                                 </li>
                             ))}

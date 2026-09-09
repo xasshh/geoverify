@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Registry\Actions;
 
+use App\Domain\Media\Models\Media;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -152,6 +153,41 @@ final class SearchDirectory
     }
 
     /**
+     * The photographs a business chose to show.
+     *
+     * Signed and short lived, like every other file this system serves. The
+     * signature is the authorisation, which is what lets a public page carry
+     * one at all: there is no session behind a directory reader. Thirty minutes
+     * rather than ten, because a directory page is read for longer than a
+     * console screen and a photograph that 403s halfway down the page reads as
+     * a broken business rather than an expired link.
+     *
+     * Dimensions are deliberately not returned. StoreMediaFile does not read
+     * them on this path, so they would be two null fields on every row of the
+     * widest disclosure surface in the system, and a projection that carries
+     * fields meaning nothing is a projection nobody reads carefully.
+     *
+     * @return list<array{url: string}>
+     */
+    private function photosFor(int $enterpriseId): array
+    {
+        return Media::query()
+            ->where('mediable_type', 'App\\Domain\\Registry\\Models\\Enterprise')
+            ->where('mediable_id', $enterpriseId)
+            ->where('kind', Media::KIND_STOREFRONT)
+            ->whereNotNull('uploaded_by_party_id')
+            ->where('status', Media::STATUS_STORED)
+            ->orderBy('id')
+            ->limit(6)
+            ->get()
+            ->map(static fn (Media $media): array => [
+                'url' => $media->temporaryUrl(30),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * One row, at its own depth.
      *
      * Opening hours are the single field that appears only at `claimed`: an
@@ -186,6 +222,13 @@ final class SearchDirectory
             'openingHours' => $claimed && $row->opening_hours !== null
                 ? (string) $row->opening_hours
                 : null,
+
+            // Only what the business took of itself, and only once it has
+            // published. An officer's photographs are in the same table and are
+            // never asked for here: this SELECT names storefront photographs
+            // with a party author rather than asking for everything and
+            // dropping the evidence afterwards.
+            'photos' => $claimed ? $this->photosFor((int) $row->enterprise_id) : [],
         ];
     }
 }

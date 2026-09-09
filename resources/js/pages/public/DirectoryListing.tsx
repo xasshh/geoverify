@@ -13,6 +13,7 @@ interface Listing {
     tier: string;
     verified: boolean;
     openingHours: string | null;
+    photos: { url: string }[];
 }
 
 /**
@@ -93,6 +94,25 @@ export default function DirectoryListing({ listing }: { listing: Listing }) {
                     </p>
                 </section>
 
+                {listing.photos.length > 0 && (
+                    <section className="mt-8" aria-label="Photographs of this business">
+                        <ul className="grid list-none gap-3 sm:grid-cols-3">
+                            {listing.photos.map((photo) => (
+                                <li key={photo.url}>
+                                    <img
+                                        src={photo.url}
+                                        alt=""
+                                        className="aspect-4/3 w-full rounded-sm border border-rule object-cover"
+                                    />
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="mt-2 text-label text-faint">
+                            Photographs published by the business itself, not by this register.
+                        </p>
+                    </section>
+                )}
+
                 <dl className="mt-8 grid gap-x-8 sm:grid-cols-2">
                     <Fact term="What it does">{listing.sector ?? 'Not recorded'}</Fact>
                     <Fact term="Premises">{listing.structureType}</Fact>
@@ -112,8 +132,10 @@ export default function DirectoryListing({ listing }: { listing: Listing }) {
                     </h2>
                     <p className="mt-2 max-w-[62ch] text-ui text-muted">
                         Not the phone number or email recorded at the door, not the exact
-                        coordinate, and no photograph. Those belong to the business, and being
-                        surveyed is not consent to publish them.
+                        coordinate, and none of the photographs an officer took. Those belong to
+                        the business, and being surveyed is not consent to publish them.
+                        {listing.photos.length > 0 &&
+                            ' The photographs above are the ones the business published itself.'}
                     </p>
                 </section>
 

@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Portal;
 use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Identity\Actions\ResolveConsentReceipt;
 use App\Domain\Identity\Models\ConsentReceipt;
+use App\Domain\Media\Actions\PublishStorefrontPhoto;
+use App\Domain\Media\Models\Media;
 use App\Domain\Party\Actions\ActingParty;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
@@ -155,6 +157,25 @@ final class ListingController
                     'dueBy' => $o->due_by?->toDateString(),
                     'feeNaira' => (int) round($o->amount_minor / 100),
                 ])->values()->all(),
+
+            // The photographs this business shows of itself. Officer evidence
+            // is in the same table and is not asked for here: the query names
+            // storefront photographs with a party author, which is the same
+            // discipline the directory uses to publish them.
+            'photos' => Media::query()
+                ->where('mediable_type', $enterprise->getMorphClass())
+                ->where('mediable_id', $enterprise->id)
+                ->where('kind', Media::KIND_STOREFRONT)
+                ->whereNotNull('uploaded_by_party_id')
+                ->where('status', Media::STATUS_STORED)
+                ->orderBy('id')
+                ->get()
+                ->map(static fn (Media $media): array => [
+                    'id' => $media->id,
+                    'url' => $media->temporaryUrl(30),
+                ])->values()->all(),
+
+            'photoLimit' => PublishStorefrontPhoto::MAX_PER_BUSINESS,
 
             'publication' => [
                 'state' => $enterprise->publication_state->value,

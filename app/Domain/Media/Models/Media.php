@@ -51,6 +51,27 @@ final class Media extends Model
 
     public const KIND_STREET_CONTEXT = 'street_context';
 
+    /**
+     * A photograph a business took of itself, for the public directory.
+     *
+     * The only kind in this table that is ever shown to a stranger, and the
+     * only one a party authors. Named rather than inferred so the directory
+     * asks for storefront photographs by name instead of asking for everything
+     * and excluding the evidence.
+     */
+    public const KIND_STOREFRONT = 'storefront';
+
+    /** Held and published. */
+    public const STATUS_STORED = 'stored';
+
+    /**
+     * Taken down by the party that put it up.
+     *
+     * Not deleted: the file stops being published, and the row stays so a
+     * question about what this listing showed last March still has an answer.
+     */
+    public const STATUS_WITHDRAWN = 'withdrawn';
+
     protected $table = 'media';
 
     protected $fillable = [
