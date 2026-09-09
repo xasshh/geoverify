@@ -50,6 +50,16 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
   it waits for consent, and becoming findable is what a business gets for
   claiming. Every directory surface offers removal without requiring a claim,
   which writes `withheld`.
+
+- **The directory has three depths and `SearchDirectory` owns all of them.**
+  `reduced` (unclaimed, signage observed), `claimed` (control proved and opted
+  in) and `verified` (an officer attended). The listing page resolves through
+  the same action as the list, so a detail page can never show what the list
+  withheld, and `DirectoryTest` names the whole projection key by key: a key
+  appearing there that is not in the list is a disclosure somebody added without
+  deciding to. Removal by a stranger is honoured (`WithholdOnRequest`) unless an
+  owner opted in deliberately, in which case the request is recorded for a
+  supervisor instead. Publishing takes proof; being left alone does not.
 - **Money moves only on a signed provider webhook.** Not on a callback, not on
   a redirect, not on anything a customer's browser can reach. `RecordPayment`
   is reachable from `HandlePaymentWebhook` and nowhere else.

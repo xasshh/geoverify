@@ -20,6 +20,7 @@ use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Console\VerificationOrderController;
+use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
@@ -201,6 +202,30 @@ Route::get('client/campaigns/{campaign}/brief.html', [ClientCampaignController::
 */
 Route::get('exports/cells/{cell}/pack.html', [ExportController::class, 'packHtml'])
     ->name('console.exports.pack.render');
+
+/*
+| The public directory. The first surface here that anybody may read.
+|
+| Open, unauthenticated and rate limited, and every projection on it is decided
+| in SearchDirectory rather than in the controller. Three depths: a reduced row
+| for a business that put its name on the street and never claimed the listing,
+| the owner's own account of itself once claimed and opted in, and the tier and
+| date once an officer has actually been.
+|
+| Removal takes no account and no proof. Publishing requires proving control;
+| being left alone does not, and a business with a reason to be invisible should
+| not have to argue with a form about it.
+*/
+Route::prefix('directory')->name('directory.')->group(function (): void {
+    Route::get('/', [DirectoryController::class, 'index'])
+        ->middleware('throttle:60,1')->name('index');
+
+    Route::get('{enterprise}', [DirectoryController::class, 'show'])
+        ->whereNumber('enterprise')->middleware('throttle:60,1')->name('show');
+
+    Route::post('{enterprise}/remove', [DirectoryController::class, 'remove'])
+        ->whereNumber('enterprise')->middleware('throttle:6,1')->name('remove');
+});
 
 /*
 | Checking a certificate. Open to anybody holding one, which is the point.

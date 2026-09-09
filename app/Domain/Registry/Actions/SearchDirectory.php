@@ -1,0 +1,191 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Registry\Actions;
+
+use Illuminate\Support\Facades\DB;
+
+/**
+ * The public directory: what a stranger with no account may see of the register.
+ *
+ * This is the widest disclosure surface in the system and the only query in it
+ * that anybody at all can run. Everything it returns is therefore a decision
+ * rather than a convenience, and the decisions are these.
+ *
+ * **Depth is a property of the record, not of the reader.** Three depths:
+ *
+ * 1. `reduced` - unclaimed, and only where the latest observation recorded
+ *    signage. A business that put its name on the street has published that
+ *    much itself; one that did not has published nothing, and does not appear.
+ * 2. `claimed` - somebody proved control and opted in. Adds what the owner
+ *    chose to say about themselves.
+ * 3. `verified` - an officer attended. Adds the tier, the date and the code a
+ *    buyer can check.
+ *
+ * A record that is `withheld` is absent at every depth. Removal is honoured
+ * before it is verified, because the cost of wrongly showing a business that
+ * asked to be left alone is not symmetrical with the cost of wrongly hiding one.
+ *
+ * **What never leaves, at any depth, whatever the publication state:** the
+ * phone, the email, the exact coordinate, any officer photograph, the officer,
+ * the accuracy, the confidence score, the internal id of anything but the
+ * enterprise. Those are enforced in the SELECT rather than by dropping columns
+ * afterwards, for the same reason the claim search is: a projection that is
+ * filtered in PHP is one refactor away from being a scraping endpoint for every
+ * enumerated business in the country.
+ */
+final class SearchDirectory
+{
+    /** Below this a trigram hit is noise. Same floor as the claim search. */
+    private const SIMILARITY_FLOOR = 0.18;
+
+    private const PER_PAGE = 24;
+
+    public function __construct(private readonly ResolveListingTier $tiers) {}
+
+    /**
+     * @return array{results: list<array<string, mixed>>, total: int, page: int, pages: int}
+     */
+    public function run(
+        string $term = '',
+        ?string $sector = null,
+        ?string $lga = null,
+        int $page = 1,
+    ): array {
+        $term = trim($term);
+        $page = max(1, $page);
+
+        DB::statement('SELECT set_limit(?)', [self::SIMILARITY_FLOOR]);
+
+        $bindings = [
+            'term' => $term,
+            'has_term' => $term !== '',
+            'sector' => $sector,
+            'has_sector' => $sector !== null && $sector !== '',
+            'lga' => $lga,
+            'has_lga' => $lga !== null && $lga !== '',
+        ];
+
+        $total = (int) DB::selectOne(
+            'SELECT count(*) AS n FROM ('.$this->baseQuery().') AS d',
+            $bindings,
+        )->n;
+
+        $rows = DB::select(
+            $this->baseQuery().'
+            ORDER BY
+                CASE WHEN :has_term2 THEN similarity(trading_name, :term2) ELSE 0 END DESC,
+                depth_rank ASC,
+                trading_name ASC
+            LIMIT :limit OFFSET :offset',
+            $bindings + [
+                'term2' => $term,
+                'has_term2' => $term !== '',
+                'limit' => self::PER_PAGE,
+                'offset' => ($page - 1) * self::PER_PAGE,
+            ],
+        );
+
+        return [
+            'results' => array_map(fn (object $row): array => $this->project($row), $rows),
+            'total' => $total,
+            'page' => $page,
+            'pages' => (int) max(1, (int) ceil($total / self::PER_PAGE)),
+        ];
+    }
+
+    /**
+     * The one SELECT, shared by the count and the page.
+     *
+     * `withheld` is excluded first and unconditionally. An unclaimed record
+     * needs signage to appear at all; a claimed one needs its owner to have
+     * opted in. There is no branch in which a private, unsignposted record is
+     * returned.
+     */
+    private function baseQuery(): string
+    {
+        return <<<'SQL'
+            SELECT
+                e.id                        AS enterprise_id,
+                e.trading_name              AS trading_name,
+                e.sector_code               AS sector_code,
+                isic.name                   AS sector_name,
+                s.structure_type            AS structure_type,
+                s.origin                    AS origin,
+                s.status                    AS structure_status,
+                e.captured_at               AS established_at,
+                ward.name                   AS ward,
+                lga.name                    AS lga,
+                (pb.id IS NOT NULL)         AS is_claimed,
+                (e.publication_state = 'opted_in') AS opted_in,
+                CASE
+                    WHEN pb.id IS NOT NULL AND e.publication_state = 'opted_in' THEN 1
+                    ELSE 2
+                END                         AS depth_rank,
+                latest.opening_hours        AS opening_hours,
+                latest.signage_observed     AS signage_observed
+            FROM enterprises e
+            JOIN structures s ON s.id = e.structure_id
+            LEFT JOIN admin_boundaries ward ON ward.id = s.ward_id
+            LEFT JOIN admin_boundaries lga  ON lga.id  = s.lga_id
+            LEFT JOIN isic_classes isic ON isic.code = e.sector_code
+            LEFT JOIN party_businesses pb
+                   ON pb.enterprise_id = e.id AND pb.status = 'active'
+            LEFT JOIN LATERAL (
+                SELECT o.opening_hours, o.signage_observed
+                FROM enterprise_observations o
+                WHERE o.enterprise_id = e.id
+                ORDER BY o.observed_at DESC
+                LIMIT 1
+            ) latest ON TRUE
+            WHERE s.status <> 'rejected'
+              AND e.publication_state <> 'withheld'
+              AND (
+                    (pb.id IS NOT NULL AND e.publication_state = 'opted_in')
+                 OR (pb.id IS NULL AND latest.signage_observed IS TRUE)
+              )
+              AND (NOT :has_term OR e.trading_name % :term)
+              AND (NOT :has_sector OR e.sector_code = :sector)
+              AND (NOT :has_lga OR lga.name = :lga)
+            SQL;
+    }
+
+    /**
+     * One row, at its own depth.
+     *
+     * Opening hours are the single field that appears only at `claimed`: an
+     * officer records them, but publishing what a shop told an officer at the
+     * door is different from a business choosing to publish its hours, and only
+     * the second has consent behind it.
+     *
+     * @return array<string, mixed>
+     */
+    private function project(object $row): array
+    {
+        $claimed = (bool) $row->is_claimed && (bool) $row->opted_in;
+
+        $tier = $this->tiers->forOrigin(
+            (string) $row->origin,
+            (string) $row->structure_status,
+        );
+
+        $verified = $tier !== 'listed';
+
+        return [
+            'id' => (int) $row->enterprise_id,
+            'depth' => $claimed ? ($verified ? 'verified' : 'claimed') : 'reduced',
+            'tradingName' => (string) $row->trading_name,
+            'sector' => $row->sector_name === null ? null : (string) $row->sector_name,
+            'sectorCode' => $row->sector_code === null ? null : (string) $row->sector_code,
+            'structureType' => (string) $row->structure_type,
+            'ward' => $row->ward === null ? null : (string) $row->ward,
+            'lga' => $row->lga === null ? null : (string) $row->lga,
+            'tier' => $tier,
+            'verified' => $verified,
+            'openingHours' => $claimed && $row->opening_hours !== null
+                ? (string) $row->opening_hours
+                : null,
+        ];
+    }
+}
