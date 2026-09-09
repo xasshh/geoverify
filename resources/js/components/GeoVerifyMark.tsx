@@ -33,10 +33,19 @@ export function GeoVerifyMark({
     size = 24,
     className,
     title,
+    ink = 'auto',
 }: {
     size?: number;
     className?: string;
     title?: string;
+    /**
+     * Which ink to use. 'auto' follows data-mode, which is right whenever the
+     * mark sits on the surface of its own mode. A dark band inside a daylight
+     * page is the case it gets wrong: the mode says daylight, the ground under
+     * the mark is not, and the deep teal artwork disappears into it. Those
+     * callers say 'light' and mean it.
+     */
+    ink?: 'auto' | 'light' | 'dark';
 }) {
     const shared = {
         width: size,
@@ -47,6 +56,16 @@ export function GeoVerifyMark({
         'aria-hidden': title === undefined ? true : undefined,
         draggable: false as const,
     };
+
+    if (ink !== 'auto') {
+        return (
+            <img
+                src={ink === 'light' ? markDuskUrl : markDaylightUrl}
+                {...shared}
+                className={cx('shrink-0 object-contain', className)}
+            />
+        );
+    }
 
     return (
         <>

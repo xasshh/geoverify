@@ -7,9 +7,16 @@ namespace App\Http\Controllers\Portal;
 use App\Domain\Claim\Enums\ClaimStatus;
 use App\Domain\Claim\Models\Claim;
 use App\Domain\Claim\Models\PartyBusiness;
+use App\Domain\Identity\Models\ConsentReceipt;
 use App\Domain\Party\Actions\NormalisePhone;
+use App\Domain\Party\Actions\ReadPartyActivity;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Registry\Actions\ResolveListingTier;
+use App\Domain\Registry\Actions\ResolveNextRung;
+use App\Domain\Registry\Models\Enterprise;
+use App\Domain\Verification\Enums\OrderStatus;
+use App\Domain\Verification\Models\VerificationOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -25,6 +32,12 @@ use Inertia\Response;
  */
 final class DashboardController
 {
+    public function __construct(
+        private readonly ResolveListingTier $tiers,
+        private readonly ResolveNextRung $nextRung,
+        private readonly ReadPartyActivity $activity,
+    ) {}
+
     public function __invoke(Request $request, NormalisePhone $phones): Response
     {
         /** @var PortalAccount $account */
@@ -56,7 +69,127 @@ final class DashboardController
                     ->where('status', PartyBusiness::STATUS_ACTIVE)
                     ->count(),
             ])->all(),
+
+            // The business the dashboard is actually about. A party with four
+            // shops still opens on one of them: a page that summarises
+            // everything equally is a page that answers nothing, and the list
+            // above is how they reach the others.
+            'focus' => $this->focusFor($memberships->pluck('party_id')->all()),
         ]);
+    }
+
+    /**
+     * Everything the dashboard says about one business.
+     *
+     * The most recently established listing, because that is the one somebody
+     * just did something about. Null when this account holds none, which is the
+     * empty case the page was designed around first.
+     *
+     * @param  list<int>  $partyIds
+     * @return array<string, mixed>|null
+     */
+    private function focusFor(array $partyIds): ?array
+    {
+        if ($partyIds === []) {
+            return null;
+        }
+
+        $control = PartyBusiness::query()
+            ->with(['enterprise.structure.ward', 'enterprise.structure.lga'])
+            ->whereIn('party_id', $partyIds)
+            ->where('status', PartyBusiness::STATUS_ACTIVE)
+            ->orderByDesc('established_at')
+            ->first();
+
+        if (! $control instanceof PartyBusiness) {
+            return null;
+        }
+
+        /** @var Enterprise $enterprise */
+        $enterprise = $control->enterprise;
+        $structure = $enterprise->structure;
+
+        return [
+            'id' => $enterprise->id,
+            'tradingName' => $enterprise->trading_name,
+            'ward' => $structure->ward?->name,
+            'lga' => $structure->lga?->name,
+            'structureType' => $structure->structure_type,
+            'enumeratedAt' => $enterprise->captured_at->toIso8601String(),
+            'selfRegistered' => $structure->isSelfRegistered(),
+
+            // Built server side from the record, so the ladder can never say
+            // something the register does not.
+            'rungs' => $this->tiers->rungs(
+                (string) $structure->origin,
+                (string) $structure->status,
+                $enterprise->captured_at,
+            ),
+            'nextRung' => ($this->nextRung)($enterprise),
+            'inFlight' => $this->inFlightFor($enterprise),
+            'activity' => $this->activity->forEnterprise($enterprise->id, $enterprise->getMorphClass()),
+            'receipts' => ConsentReceipt::query()
+                ->where('subject_type', $enterprise->getMorphClass())
+                ->where('subject_id', $enterprise->id)
+                ->orderByDesc('agreed_at')
+                ->limit(2)
+                ->get()
+                ->map(static fn (ConsentReceipt $r): array => [
+                    'token' => $r->token,
+                    'granted' => $r->granted,
+                    'agreedOn' => $r->agreed_at->toDateString(),
+                ])->values()->all(),
+            'publication' => [
+                'state' => $enterprise->publication_state->value,
+                'label' => $enterprise->publication_state->label(),
+            ],
+        ];
+    }
+
+    /**
+     * The order that has not finished, if there is one.
+     *
+     * Only one is shown. Two visits in flight on the same business is rare and
+     * the second one is not what somebody opened this page to find out about.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function inFlightFor(Enterprise $enterprise): ?array
+    {
+        $order = VerificationOrder::query()
+            ->where('enterprise_id', $enterprise->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->first(static fn (VerificationOrder $o): bool => ! $o->status->isSettled());
+
+        if (! $order instanceof VerificationOrder) {
+            return null;
+        }
+
+        // The tracker's four beats, each with the date it happened or nothing.
+        // Derived from the order's own timestamps rather than from its status
+        // string, so a step cannot claim a date the record does not hold.
+        return [
+            'id' => $order->id,
+            'reference' => $order->reference,
+            'tier' => str_replace('_', ' ', $order->tier),
+            'status' => $order->status->value,
+            'statusLabel' => $order->status->label(),
+            'feeNaira' => (int) round($order->amount_minor / 100),
+            'dueBy' => $order->due_by?->toDateString(),
+            'held' => $order->status !== OrderStatus::AwaitingPayment,
+            'steps' => [
+                ['label' => 'Ordered', 'at' => $order->created_at?->toDateString()],
+                ['label' => 'Paid', 'at' => $order->paid_at?->toDateString()],
+                // There is no assigned_at column: assignment is a state, and
+                // the date it happened lives in the audit log rather than on
+                // the order. The step reports reached or not reached, which is
+                // what the tracker needs, and does not invent a date for it.
+                ['label' => 'Officer assigned', 'at' => null,
+                    'reached' => $order->assignment_id !== null],
+                ['label' => 'Report accepted', 'at' => $order->completed_at?->toDateString()],
+            ],
+        ];
     }
 
     /**
