@@ -32,8 +32,8 @@ void createInertiaApp({
         createRoot(el).render(<App {...props} />);
     },
     progress: {
-        // Gold, matching the verification accent. Sync state is never a mystery.
-        color: '#D0AE63',
+        // The verification accent. Sync state is never a mystery.
+        color: '#4BB8B0',
     },
 });
 

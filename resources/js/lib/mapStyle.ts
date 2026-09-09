@@ -48,7 +48,7 @@ export function readPalette(element: HTMLElement): Palette {
         faint: read('--gv-text-faint', '#7e8c99'),
         rule: read('--gv-rule', '#25394b'),
         ruleStrong: read('--gv-rule-strong', '#385064'),
-        gold: read('--gv-gold', '#d0ae63'),
+        gold: read('--gv-gold', '#4bb8b0'),
         green: read('--gv-green', '#5cc0a4'),
         amber: read('--gv-amber', '#ee9c45'),
         graphite: read('--gv-graphite', '#a2b0bb'),

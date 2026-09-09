@@ -67,8 +67,17 @@
     --gv-rule: #d3cfc6;
     --gv-rule-strong: #b4aea2;
 
-    /* Gold is the only accent. It means verification, never decoration. */
-    --gv-gold: #7e642e;
+    /*
+    | One accent, and it means verification, never decoration.
+    |
+    | Teal since 2026-09-09, gold before that. The token is still named gold
+    | because renaming it touches a hundred and twenty class names in twenty
+    | five files, which is a separate change from picking a colour.
+    |
+    | 7.95:1 on the raised surface, measured. The gold it replaced was 4.70,
+    | so this is the first accent here that clears AAA in daylight.
+    */
+    --gv-gold: #134e4a;
     --gv-green: #2a6555;
     --gv-amber: #9a5913;
     --gv-alert: #8f2721;
@@ -109,7 +118,8 @@
     --gv-rule: #25394b;
     --gv-rule-strong: #385064;
 
-    --gv-gold: #d0ae63;
+    /* 7.06:1 on the primary surface, which is the AAA line exactly. */
+    --gv-gold: #4bb8b0;
     --gv-green: #5cc0a4;
     --gv-amber: #ee9c45;
     --gv-alert: #f2938c;
@@ -131,6 +141,26 @@
 | "inline" so the utilities resolve the custom property at use time rather than
 | baking the value in. That is what lets a single class work in both modes.
 */
+/*
+| The mark, one ink per mode.
+|
+| Selected in CSS rather than in the component, because data-mode is set on a
+| wrapper the mark cannot see and switching in JavaScript would flash the wrong
+| ink on hydration. Daylight is the default here exactly as it is in the palette
+| above, so the dusk copy is the one that has to ask.
+*/
+.gv-mark-dusk {
+    display: none;
+}
+
+[data-mode='dusk'] .gv-mark-dusk {
+    display: block;
+}
+
+[data-mode='dusk'] .gv-mark-daylight {
+    display: none;
+}
+
 @theme inline {
     --color-surface: var(--gv-surface);
     --color-raised: var(--gv-surface-raised);

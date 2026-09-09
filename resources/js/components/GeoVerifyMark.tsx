@@ -1,4 +1,5 @@
-import markUrl from '../../images/geoverify-mark.png';
+import markDaylightUrl from '../../images/geoverify-mark.png';
+import markDuskUrl from '../../images/geoverify-mark-dusk.png';
 import { cx } from '@/lib/cx';
 
 /**
@@ -15,8 +16,18 @@ import { cx } from '@/lib/cx';
  * backdrop video is the opposite case and lives in public/ for the same reason
  * inverted: it must never be precached.
  *
- * Not tinted. The gold and the white check are the mark, and both read on the
- * daylight and dusk surfaces this system uses, so there is nothing to recolour.
+ * Two inks, one per mode, because one ink cannot serve both. The accent teal
+ * is 2.0:1 on the daylight card and the deep teal is 1.2:1 on a dusk surface:
+ * either choice alone leaves the mark washed out on half the application. So
+ * the artwork ships twice, recoloured from the original gold, and CSS shows the
+ * one that belongs to the surface underneath it.
+ *
+ * Both are rendered rather than switched in JavaScript. The mode is a data
+ * attribute on a wrapper somewhere above this, not state this component can
+ * read, and a mark that flickered on hydration would be worse than 16 KB.
+ *
+ * The white check is untouched in both. A two ink logo with one ink recoloured
+ * is still the same mark.
  */
 export function GeoVerifyMark({
     size = 24,
@@ -27,18 +38,33 @@ export function GeoVerifyMark({
     className?: string;
     title?: string;
 }) {
+    const shared = {
+        width: size,
+        height: size,
+        alt: title ?? '',
+        // Decorative in the shells, where the name sits beside it in text.
+        // Given a title it becomes a labelled image instead.
+        'aria-hidden': title === undefined ? true : undefined,
+        draggable: false as const,
+    };
+
     return (
-        <img
-            src={markUrl}
-            width={size}
-            height={size}
-            alt={title ?? ''}
-            aria-hidden={title === undefined ? true : undefined}
-            // Decorative in the shells, where the name sits beside it in text.
-            // Given a title it becomes a labelled image instead.
-            className={cx('shrink-0 object-contain', className)}
-            draggable={false}
-        />
+        <>
+            <img
+                src={markDaylightUrl}
+                {...shared}
+                className={cx('gv-mark-daylight shrink-0 object-contain', className)}
+            />
+            <img
+                src={markDuskUrl}
+                {...shared}
+                // Hidden from assistive technology in both cases: the two
+                // images are one mark, and announcing it twice is noise.
+                alt=""
+                aria-hidden
+                className={cx('gv-mark-dusk shrink-0 object-contain', className)}
+            />
+        </>
     );
 }
 

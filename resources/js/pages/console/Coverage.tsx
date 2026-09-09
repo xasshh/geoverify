@@ -264,7 +264,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     id: 'mandate-line',
                     type: 'line',
                     source: 'mandate',
-                    paint: { 'line-color': '#D0AE63', 'line-width': 1.8 },
+                    paint: { 'line-color': '#4BB8B0', 'line-width': 1.8 },
                 });
 
                 setLoadedCells(cells.features.length);

@@ -92,7 +92,7 @@ interface Swatch {
 }
 
 const SWATCHES: readonly Swatch[] = [
-    { name: 'gold', daylight: '#7E642E', dusk: '#D0AE63', meaning: 'Verification, active, emphasis', ratio: '4.70 / 7.97' },
+    { name: 'gold', daylight: '#134E4A', dusk: '#4BB8B0', meaning: 'Verification, active, emphasis', ratio: '7.95 / 7.06' },
     { name: 'green', daylight: '#2A6555', dusk: '#5CC0A4', meaning: 'Confirmed, complete', ratio: '5.70 / 7.66' },
     { name: 'amber', daylight: '#9A5913', dusk: '#EE9C45', meaning: 'Needs review, low confidence', ratio: '4.62 / 7.62' },
     { name: 'alert', daylight: '#8F2721', dusk: '#F2938C', meaning: 'Rejected, conflict, failure', ratio: '7.11 / 7.50' },

@@ -191,7 +191,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                 source: 'traces',
                 layout: { 'line-cap': 'round', 'line-join': 'round' },
                 paint: {
-                    'line-color': ['case', ['get', 'active'], '#D0AE63', '#5A6B7A'],
+                    'line-color': ['case', ['get', 'active'], '#4BB8B0', '#5A6B7A'],
                     'line-width': 1.8,
                     'line-opacity': 0.85,
                 },
@@ -203,7 +203,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                 source: 'officers',
                 paint: {
                     'circle-radius': 12,
-                    'circle-color': ['case', ['get', 'active'], '#D0AE63', '#5A6B7A'],
+                    'circle-color': ['case', ['get', 'active'], '#4BB8B0', '#5A6B7A'],
                     'circle-opacity': 0.18,
                 },
             });
@@ -219,7 +219,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                         ['get', 'mock'],
                         '#C2564B',
                         ['get', 'active'],
-                        '#D0AE63',
+                        '#4BB8B0',
                         '#5A6B7A',
                     ],
                     'circle-stroke-color': '#0E1E2E',

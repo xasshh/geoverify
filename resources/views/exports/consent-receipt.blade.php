@@ -105,7 +105,7 @@
         .disclosure {
             margin: 0;
             padding: 4mm 5mm;
-            border-left: 1.5pt solid #D0AE63;
+            border-left: 1.5pt solid #134E4A;
             background: #F4F1EA;
             font-size: 11pt;
             line-height: 1.6;
