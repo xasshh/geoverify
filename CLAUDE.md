@@ -59,6 +59,16 @@ and buy physical verification of it. Under construction. Plan in `_plan/phase-2/
   claiming. Every directory surface offers removal without requiring a claim,
   which writes `withheld`.
 
+- **Every directory query goes through `DirectoryVisibility`.** One `FROM` and
+  one `WHERE`, shared by the rows, the sector counts and the ward breakdown. A
+  count computed from a slightly different predicate than the list is how a page
+  says "14 pharmacies" over a list of nine, or counts a business that asked not
+  to be here. Aggregates are counted over the directory-visible population only,
+  never the register: a count over everything would describe businesses that
+  chose not to appear. Wards below three fold into "elsewhere" (with the
+  unresolved ones), and businesses with no sector are reported as a total, so
+  every breakdown adds up to the number above it.
+
 - **The directory has three depths and `SearchDirectory` owns all of them.**
   `reduced` (unclaimed, signage observed), `claimed` (control proved and opted
   in) and `verified` (an officer attended). The listing page resolves through

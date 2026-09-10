@@ -1,6 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { GeoVerifyMark } from '@/components/GeoVerifyMark';
+import {
+    DirectoryChrome,
+    EntryCard,
+    type DirectoryEntry,
+} from '@/components/DirectoryChrome';
 
 interface Listing {
     id: number;
@@ -28,7 +32,13 @@ interface Listing {
  * There is no phone number here, no email, no photograph and no coordinate, at
  * any depth. Those are in the register and they stay there.
  */
-export default function DirectoryListing({ listing }: { listing: Listing }) {
+export default function DirectoryListing({
+    listing,
+    similar,
+}: {
+    listing: Listing;
+    similar: DirectoryEntry[];
+}) {
     const flash = usePage().props.flash.status;
     const [asking, setAsking] = useState(false);
     const [reason, setReason] = useState('');
@@ -36,21 +46,8 @@ export default function DirectoryListing({ listing }: { listing: Listing }) {
     const place = [listing.ward, listing.lga].filter(Boolean).join(', ');
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <DirectoryChrome width="narrow">
             <Head title={listing.tradingName} />
-
-            <header className="bg-ink text-inverse">
-                <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-4 px-5">
-                    <Link href="/directory" className="flex items-center gap-2.5">
-                        <GeoVerifyMark size={24} ink="light" />
-                        <span className="font-display text-display-s">GeoVerify</span>
-                    </Link>
-                    <Link href="/portal/sign-in" className="text-ui text-inverse/75 hover:text-inverse">
-                        Own this business?
-                    </Link>
-                </div>
-            </header>
-            <div aria-hidden="true" className="h-[3px] bg-gold" />
 
             <main className="mx-auto max-w-4xl px-5 py-8">
                 <Link href="/directory" className="text-table text-muted underline underline-offset-4 hover:text-ink">
@@ -202,14 +199,28 @@ export default function DirectoryListing({ listing }: { listing: Listing }) {
                         </form>
                     )}
                 </section>
+
+                {similar.length > 0 && (
+                    <section className="mt-10 border-t border-rule pt-7" aria-labelledby="similar">
+                        <h2 id="similar" className="font-display text-display-s text-ink">
+                            Others like this nearby
+                        </h2>
+                        <p className="mt-1 text-ui text-muted">
+                            {listing.sector ?? 'The same trade'} in{' '}
+                            {listing.lga ?? 'this area'}. Verified businesses are shown first.
+                        </p>
+                        <ul className="mt-4 grid list-none gap-4 sm:grid-cols-2">
+                            {similar.map((entry) => (
+                                <li key={entry.id}>
+                                    <EntryCard entry={entry} />
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
             </main>
 
-            <footer className="border-t border-rule">
-                <div className="mx-auto max-w-4xl px-5 py-6 text-table text-faint">
-                    A register of businesses, not a licence or an endorsement.
-                </div>
-            </footer>
-        </div>
+        </DirectoryChrome>
     );
 }
 

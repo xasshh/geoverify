@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Claim\Actions\GrantControl;
 use App\Domain\Media\Actions\PublishStorefrontPhoto;
 use App\Domain\Media\Models\Media;
+use App\Domain\Registry\Actions\ReadDirectorySectors;
 use App\Domain\Registry\Actions\SearchDirectory;
 use App\Domain\Registry\Actions\SetPublicationState;
 use App\Domain\Registry\Actions\WithholdOnRequest;
@@ -15,6 +16,7 @@ use App\Domain\Verification\Models\VerificationEvent;
 use App\Enums\Role;
 use Database\Seeders\VerificationPricingSeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -27,7 +29,44 @@ use Illuminate\Support\Str;
  */
 beforeEach(function () {
     $this->seed(VerificationPricingSeeder::class);
+    directoryTaxonomy();
 });
+
+/**
+ * The two taxonomy rows these tests need.
+ *
+ * The real taxonomy is 419 ISIC classes loaded by an artisan command rather
+ * than a seeder, so RefreshDatabase leaves the table empty and a sector page
+ * has no name to show. Loading all 419 per test would spend a minute proving
+ * nothing; these are the rows enumeratedShop's sector code actually points at.
+ */
+function directoryTaxonomy(): void
+{
+    DB::table('isic_classes')->updateOrInsert(
+        ['code' => '4711'],
+        [
+            'level' => 'class',
+            'parent_code' => '471',
+            'name' => 'Retail sale in non-specialized stores with food, beverages or tobacco predominating',
+            'description' => 'Provisions shops, kiosks and supermarkets.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    );
+
+    foreach (['Kiosk', 'Provisions store', 'Mini mart'] as $term) {
+        DB::table('trade_aliases')->updateOrInsert(
+            ['term' => $term],
+            [
+                'isic_code' => '4711',
+                'weight' => 1,
+                'language' => 'en',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        );
+    }
+}
 
 /**
  * Puts a shop in the directory's reduced depth: signage, and nobody's claim.
@@ -365,4 +404,126 @@ it('refuses a photograph from somebody who does not manage the business', functi
         ->assertForbidden();
 
     expect(PublishStorefrontPhoto::countFor($it['shop']))->toBe(0);
+});
+
+/*
+| Sector pages and suggestions.
+|
+| Both are new ways into the same population, which is the thing to hold: a
+| count that disagrees with the list, or a suggestion that carries a field the
+| list would have withheld, is the failure worth testing for.
+*/
+
+it('counts a sector over exactly the businesses the directory shows', function () {
+    $ground = sweptGround();
+
+    $shown = signpostedShop('Counted Provisions', $ground);
+    $hidden = enumeratedShop('Hidden Provisions', '0803 123 4567', $ground);
+
+    // Same sector, no signage, nobody's claim: on the register, out of the
+    // directory, and it must be out of the count too.
+    EnterpriseObservation::query()
+        ->where('enterprise_id', $hidden->id)
+        ->update(['signage_observed' => false]);
+
+    $sector = app(ReadDirectorySectors::class)->one((string) $shown->sector_code);
+
+    $rows = app(SearchDirectory::class)->run(sector: (string) $shown->sector_code);
+
+    expect($sector)->not->toBeNull()
+        ->and($sector['count'])->toBe($rows['total'])
+        ->and($sector['count'])->toBeGreaterThanOrEqual(1);
+
+    $names = array_column($rows['results'], 'tradingName');
+
+    expect($names)->toContain('Counted Provisions')
+        ->and($names)->not->toContain('Hidden Provisions');
+});
+
+it('accounts for every business the directory shows, sector or not', function () {
+    $ground = sweptGround();
+
+    signpostedShop('Classified Provisions', $ground);
+
+    // A business that registered itself and never picked a trade. It is in the
+    // directory and belongs under no sector heading.
+    $unclassified = signpostedShop('Trade Not Recorded', $ground);
+    $unclassified->update(['sector_code' => null]);
+
+    $reader = app(ReadDirectorySectors::class);
+
+    $bySector = array_sum(array_column($reader->all(), 'count'));
+    $total = app(SearchDirectory::class)->run()['total'];
+
+    // The sector page and the directory have to reconcile, and the difference
+    // is exactly the businesses with no trade on record.
+    expect($reader->unclassified())->toBeGreaterThanOrEqual(1)
+        ->and($bySector + $reader->unclassified())->toBe($total);
+});
+
+it('folds a thinly held ward into a total rather than naming it', function () {
+    $shop = signpostedShop('Lonely Ward Stores');
+
+    $sector = app(ReadDirectorySectors::class)->one((string) $shop->sector_code);
+
+    // One business in a ward is a name, not a place. It counts, and it is not
+    // listed under the ward that would identify it.
+    expect($sector['wards'])->toBe([])
+        ->and($sector['elsewhere'])->toBeGreaterThanOrEqual(1);
+
+    // And the breakdown adds up, which is the property a reader relies on:
+    // anything not listed by ward is in the elsewhere total, including a
+    // business whose ward never resolved.
+    $listed = array_sum(array_column($sector['wards'], 'count'));
+
+    expect($listed + $sector['elsewhere'])->toBe($sector['count']);
+});
+
+it('suggests other businesses of the same trade nearby', function () {
+    $ground = sweptGround();
+
+    $one = signpostedShop('First Of Its Kind', $ground);
+    $two = signpostedShop('Second Of Its Kind', $ground);
+
+    $similar = app(SearchDirectory::class)->similarTo(
+        $one->id,
+        (string) $one->sector_code,
+        $one->structure->lga?->name,
+    );
+
+    $names = array_column($similar, 'tradingName');
+
+    expect($names)->toContain('Second Of Its Kind')
+        // Never the business being looked at.
+        ->and($names)->not->toContain('First Of Its Kind');
+
+    // And a suggestion is a directory row, with nothing extra on it.
+    expect(array_keys($similar[0]))->toEqualCanonicalizing([
+        'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
+        'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
+    ]);
+});
+
+it('reads a colloquial search term back to a trade', function () {
+    // trade_aliases exists for this: "kiosk" is what somebody types and 4711
+    // is what the taxonomy calls it.
+    $meant = app(SearchDirectory::class)->sectorsMeaning('kiosk');
+
+    expect($meant)->not->toBeEmpty()
+        ->and(array_column($meant, 'code'))->toContain('4711');
+});
+
+it('serves a sector page to anybody, and lets it be indexed', function () {
+    $shop = signpostedShop('Sector Page Stores');
+
+    $this->get("/directory/sectors/{$shop->sector_code}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/Sector')
+            ->where('sector.code', $shop->sector_code))
+        // A sector page aggregates what is already public and names nobody who
+        // is not already listed, so it is findable.
+        ->assertDontSee('noindex', false);
+
+    $this->get('/directory/sectors')->assertOk();
 });

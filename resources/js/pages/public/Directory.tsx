@@ -1,21 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { GeoVerifyMark } from '@/components/GeoVerifyMark';
-
-interface Entry {
-    id: number;
-    depth: 'reduced' | 'claimed' | 'verified';
-    tradingName: string;
-    sector: string | null;
-    sectorCode: string | null;
-    structureType: string;
-    ward: string | null;
-    lga: string | null;
-    tier: string;
-    verified: boolean;
-    openingHours: string | null;
-    photos: { url: string }[];
-}
+import {
+    DirectoryChrome,
+    EntryCard,
+    type DirectoryEntry as Entry,
+} from '@/components/DirectoryChrome';
 
 interface Props {
     query: { q: string; sector: string | null; lga: string | null };
@@ -25,6 +14,7 @@ interface Props {
     pages: number;
     sectors: { code: string; name: string; count: number }[];
     lgas: string[];
+    meaning: { code: string; name: string }[];
 }
 
 /**
@@ -45,6 +35,7 @@ export default function Directory({
     pages,
     sectors,
     lgas,
+    meaning,
 }: Props) {
     const [term, setTerm] = useState(query.q);
 
@@ -58,25 +49,8 @@ export default function Directory({
     };
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
+        <DirectoryChrome>
             <Head title="Business directory" />
-
-            <header className="bg-ink text-inverse">
-                <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-5">
-                    <Link href="/directory" className="flex items-center gap-2.5">
-                        <GeoVerifyMark size={24} ink="light" />
-                        <span className="font-display text-display-s">GeoVerify</span>
-                        <span aria-hidden="true" className="mx-1 h-4 w-px bg-inverse/25" />
-                        <span className="hidden text-label font-semibold tracking-[0.12em] text-inverse/65 uppercase sm:inline">
-                            Business directory
-                        </span>
-                    </Link>
-                    <Link href="/portal/sign-in" className="text-ui text-inverse/75 hover:text-inverse">
-                        Own a business?
-                    </Link>
-                </div>
-            </header>
-            <div aria-hidden="true" className="h-[3px] bg-gold" />
 
             <div className="border-b border-rule bg-raised">
                 <div className="mx-auto max-w-6xl px-5 py-9">
@@ -202,36 +176,34 @@ export default function Directory({
                                 its owner published it. Plenty of real businesses are on the
                                 register without appearing in this directory.
                             </p>
+
+                            {meaning.length > 0 && (
+                                <div className="mt-4 border-t border-rule pt-4">
+                                    <p className="text-ui text-ink">
+                                        {meaning.length === 1
+                                            ? 'You might have meant this trade:'
+                                            : 'You might have meant one of these trades:'}
+                                    </p>
+                                    <ul className="mt-2 flex list-none flex-wrap gap-2">
+                                        {meaning.map((sector) => (
+                                            <li key={sector.code}>
+                                                <Link
+                                                    href={`/directory/sectors/${sector.code}`}
+                                                    className="inline-flex min-h-touch items-center rounded-sm border border-rule-strong px-3 text-ui text-ink hover:border-ink"
+                                                >
+                                                    {sector.name}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <ul className="mt-5 grid list-none gap-4 sm:grid-cols-2">
                             {results.map((entry) => (
                                 <li key={entry.id}>
-                                    <Link
-                                        href={`/directory/${String(entry.id)}`}
-                                        className="flex h-full flex-col overflow-hidden rounded-sm border border-rule bg-surface transition-colors hover:border-rule-strong"
-                                    >
-                                        {entry.photos.length > 0 && (
-                                            <img
-                                                src={entry.photos[0]?.url}
-                                                alt=""
-                                                className="aspect-3/2 w-full border-b border-rule object-cover"
-                                            />
-                                        )}
-                                        <span className="flex flex-grow flex-col p-5">
-                                        <DepthMark depth={entry.depth} />
-                                        <h3 className="mt-2.5 font-display text-display-s text-ink">
-                                            {entry.tradingName}
-                                        </h3>
-                                        <p className="mt-1 text-ui text-muted">
-                                            {entry.sector ?? entry.structureType}
-                                        </p>
-                                        <p className="mt-auto pt-3 text-ui text-faint">
-                                            {[entry.ward, entry.lga].filter(Boolean).join(', ') ||
-                                                'Location not resolved'}
-                                        </p>
-                                        </span>
-                                    </Link>
+                                    <EntryCard entry={entry} />
                                 </li>
                             ))}
                         </ul>
@@ -259,45 +231,7 @@ export default function Directory({
                 </div>
             </main>
 
-            <footer className="border-t border-rule">
-                <div className="mx-auto max-w-6xl px-5 py-6 text-table text-faint">
-                    A register of businesses, not a licence or an endorsement. Nothing here says a
-                    business is solvent, lawful or good, only what has been established about it and
-                    when.
-                </div>
-            </footer>
-        </div>
-    );
-}
-
-/** What has actually been established, in words, before any colour. */
-function DepthMark({ depth }: { depth: Entry['depth'] }) {
-    if (depth === 'verified') {
-        return (
-            <span className="flex items-center gap-2 text-label font-semibold tracking-[0.12em] text-green uppercase">
-                <span aria-hidden="true" className="size-2.5 rounded-full bg-green" />
-                Officer verified
-            </span>
-        );
-    }
-
-    if (depth === 'claimed') {
-        return (
-            <span className="flex items-center gap-2 text-label font-semibold tracking-[0.12em] text-gold uppercase">
-                <span aria-hidden="true" className="size-2.5 bg-gold" />
-                Owner published
-            </span>
-        );
-    }
-
-    return (
-        <span className="flex items-center gap-2 text-label font-semibold tracking-[0.12em] text-graphite uppercase">
-            <span
-                aria-hidden="true"
-                className="size-2.5 rounded-full border-[1.5px] border-graphite"
-            />
-            Not verified
-        </span>
+        </DirectoryChrome>
     );
 }
 

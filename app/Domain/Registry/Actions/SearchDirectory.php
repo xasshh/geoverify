@@ -106,7 +106,7 @@ final class SearchDirectory
      */
     private function baseQuery(): string
     {
-        return <<<'SQL'
+        return '
             SELECT
                 e.id                        AS enterprise_id,
                 e.trading_name              AS trading_name,
@@ -119,37 +119,99 @@ final class SearchDirectory
                 ward.name                   AS ward,
                 lga.name                    AS lga,
                 (pb.id IS NOT NULL)         AS is_claimed,
-                (e.publication_state = 'opted_in') AS opted_in,
+                (e.publication_state = \'opted_in\') AS opted_in,
                 CASE
-                    WHEN pb.id IS NOT NULL AND e.publication_state = 'opted_in' THEN 1
+                    WHEN pb.id IS NOT NULL AND e.publication_state = \'opted_in\' THEN 1
                     ELSE 2
                 END                         AS depth_rank,
                 latest.opening_hours        AS opening_hours,
                 latest.signage_observed     AS signage_observed
-            FROM enterprises e
-            JOIN structures s ON s.id = e.structure_id
-            LEFT JOIN admin_boundaries ward ON ward.id = s.ward_id
-            LEFT JOIN admin_boundaries lga  ON lga.id  = s.lga_id
-            LEFT JOIN isic_classes isic ON isic.code = e.sector_code
-            LEFT JOIN party_businesses pb
-                   ON pb.enterprise_id = e.id AND pb.status = 'active'
-            LEFT JOIN LATERAL (
-                SELECT o.opening_hours, o.signage_observed
-                FROM enterprise_observations o
-                WHERE o.enterprise_id = e.id
-                ORDER BY o.observed_at DESC
-                LIMIT 1
-            ) latest ON TRUE
-            WHERE s.status <> 'rejected'
-              AND e.publication_state <> 'withheld'
-              AND (
-                    (pb.id IS NOT NULL AND e.publication_state = 'opted_in')
-                 OR (pb.id IS NULL AND latest.signage_observed IS TRUE)
-              )
+            '.DirectoryVisibility::FROM.'
+            WHERE '.DirectoryVisibility::WHERE.'
               AND (NOT :has_term OR e.trading_name % :term)
               AND (NOT :has_sector OR e.sector_code = :sector)
               AND (NOT :has_lga OR lga.name = :lga)
-            SQL;
+        ';
+    }
+
+    /**
+     * Other businesses like this one.
+     *
+     * Same sector, same local government, and never the business being looked
+     * at. Ordered so a verified neighbour comes before an unverified one, which
+     * is the only ranking here that is about usefulness rather than accident:
+     * somebody reading a listing for a shop nobody has checked is well served
+     * by being shown one that has been.
+     *
+     * Runs through the same projection as the list, so a suggestion can never
+     * carry a field the directory would have withheld.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function similarTo(int $excludeId, ?string $sector, ?string $lga, int $limit = 4): array
+    {
+        if ($sector === null && $lga === null) {
+            return [];
+        }
+
+        DB::statement('SELECT set_limit(?)', [self::SIMILARITY_FLOOR]);
+
+        $rows = DB::select(
+            $this->baseQuery().'
+              AND e.id <> :exclude
+            ORDER BY depth_rank ASC, trading_name ASC
+            LIMIT :limit',
+            [
+                'term' => '',
+                'has_term' => false,
+                'sector' => $sector,
+                'has_sector' => $sector !== null,
+                'lga' => $lga,
+                'has_lga' => $lga !== null,
+                'exclude' => $excludeId,
+                'limit' => $limit,
+            ],
+        );
+
+        return array_map(fn (object $row): array => $this->project($row), $rows);
+    }
+
+    /**
+     * Sectors a search term might have meant.
+     *
+     * Reads trade_aliases, which exists for exactly this: "kiosk", "mini mart"
+     * and "provisions store" are what people call a shop, and 4711 is what the
+     * taxonomy calls it. Somebody searching for a chemist and finding nothing
+     * is better served by being pointed at pharmacies than by an empty page.
+     *
+     * @return list<array{code: string, name: string}>
+     */
+    public function sectorsMeaning(string $term, int $limit = 3): array
+    {
+        $term = trim($term);
+
+        if (mb_strlen($term) < 3) {
+            return [];
+        }
+
+        DB::statement('SELECT set_limit(?)', [self::SIMILARITY_FLOOR]);
+
+        return array_map(static fn (object $row): array => [
+            'code' => (string) $row->code,
+            'name' => (string) $row->name,
+        ], DB::select(<<<'SQL'
+            SELECT isic.code AS code, isic.name AS name,
+                   max(GREATEST(
+                       similarity(a.term, :term),
+                       similarity(isic.name, :term)
+                   )) AS score
+              FROM isic_classes isic
+              LEFT JOIN trade_aliases a ON a.isic_code = isic.code
+             WHERE a.term % :term OR isic.name % :term
+             GROUP BY isic.code, isic.name
+             ORDER BY score DESC
+             LIMIT :limit
+        SQL, ['term' => $term, 'limit' => $limit]));
     }
 
     /**

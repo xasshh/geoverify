@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Registry\Actions\ReadDirectorySectors;
 use App\Domain\Registry\Actions\SearchDirectory;
 use App\Domain\Registry\Actions\WithholdOnRequest;
 use App\Domain\Registry\Models\Enterprise;
@@ -28,6 +29,8 @@ use Inertia\Response;
  */
 final class DirectoryController extends Controller
 {
+    public function __construct(private readonly ReadDirectorySectors $sectors) {}
+
     public function index(Request $request, SearchDirectory $search): Response
     {
         $page = $search->run(
@@ -47,8 +50,15 @@ final class DirectoryController extends Controller
             'total' => $page['total'],
             'pageNumber' => $page['page'],
             'pages' => $page['pages'],
-            'sectors' => $this->sectors(),
+            'sectors' => array_slice($this->sectors->all(), 0, 12),
             'lgas' => $this->lgas(),
+
+            // Only when a search found nothing. A page with results does not
+            // need to guess at what somebody meant, and guessing over a good
+            // answer is how a directory starts arguing with its reader.
+            'meaning' => $page['results'] === [] && $request->query('q') !== null
+                ? $search->sectorsMeaning((string) $request->query('q'))
+                : [],
         ])->withViewData([
             // The index itself is indexable: it lists nothing a listing page
             // does not, and a directory nobody can find is not a directory.
@@ -73,9 +83,44 @@ final class DirectoryController extends Controller
 
         return Inertia::render('public/DirectoryListing', [
             'listing' => $match,
+            'similar' => $search->similarTo(
+                $enterprise->id,
+                is_string($match['sectorCode']) ? $match['sectorCode'] : null,
+                is_string($match['lga']) ? $match['lga'] : null,
+            ),
         ])->withViewData([
             'robots' => $match['depth'] === 'reduced' ? 'noindex, nofollow' : 'index, follow',
         ]);
+    }
+
+    /** Every sector the directory holds something in. */
+    public function sectors(): Response
+    {
+        return Inertia::render('public/Sectors', [
+            'sectors' => $this->sectors->all(),
+            'unclassified' => $this->sectors->unclassified(),
+        ])->withViewData(['robots' => 'index, follow']);
+    }
+
+    /**
+     * One sector: what is in it, and where.
+     *
+     * The businesses come from the same search the index uses, so a sector page
+     * is a filtered directory rather than a second way of reading the register.
+     */
+    public function sector(string $code, SearchDirectory $search): Response
+    {
+        $sector = $this->sectors->one($code);
+
+        abort_if($sector === null, 404);
+
+        $page = $search->run(sector: $code);
+
+        return Inertia::render('public/Sector', [
+            'sector' => $sector,
+            'results' => $page['results'],
+            'total' => $page['total'],
+        ])->withViewData(['robots' => 'index, follow']);
     }
 
     /** Asking for a listing to come down. No account, on purpose. */
@@ -99,41 +144,6 @@ final class DirectoryController extends Controller
     private function stringOrNull(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
-    }
-
-    /**
-     * The sectors that actually have something in them.
-     *
-     * Read from the directory's own population rather than from the taxonomy,
-     * because 419 ISIC classes as a filter list, most of them empty, is a wall
-     * rather than a way in.
-     *
-     * @return list<array{code: string, name: string, count: int}>
-     */
-    private function sectors(): array
-    {
-        return array_map(static fn (object $row): array => [
-            'code' => (string) $row->code,
-            'name' => (string) $row->name,
-            'count' => (int) $row->n,
-        ], DB::select(<<<'SQL'
-            SELECT e.sector_code AS code, isic.name AS name, count(*) AS n
-              FROM enterprises e
-              JOIN structures s ON s.id = e.structure_id
-              JOIN isic_classes isic ON isic.code = e.sector_code
-              LEFT JOIN party_businesses pb ON pb.enterprise_id = e.id AND pb.status = 'active'
-              LEFT JOIN LATERAL (
-                    SELECT o.signage_observed FROM enterprise_observations o
-                     WHERE o.enterprise_id = e.id ORDER BY o.observed_at DESC LIMIT 1
-                   ) latest ON TRUE
-             WHERE s.status <> 'rejected'
-               AND e.publication_state <> 'withheld'
-               AND ((pb.id IS NOT NULL AND e.publication_state = 'opted_in')
-                 OR (pb.id IS NULL AND latest.signage_observed IS TRUE))
-             GROUP BY e.sector_code, isic.name
-             ORDER BY n DESC, isic.name ASC
-             LIMIT 12
-        SQL));
     }
 
     /** @return list<string> */

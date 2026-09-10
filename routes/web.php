@@ -221,6 +221,13 @@ Route::prefix('directory')->name('directory.')->group(function (): void {
     Route::get('/', [DirectoryController::class, 'index'])
         ->middleware('throttle:60,1')->name('index');
 
+    // Before the numeric listing route, or "sectors" is read as an id.
+    Route::get('sectors', [DirectoryController::class, 'sectors'])
+        ->middleware('throttle:60,1')->name('sectors');
+
+    Route::get('sectors/{code}', [DirectoryController::class, 'sector'])
+        ->where('code', '[0-9]{2,6}')->middleware('throttle:60,1')->name('sector');
+
     Route::get('{enterprise}', [DirectoryController::class, 'show'])
         ->whereNumber('enterprise')->middleware('throttle:60,1')->name('show');
 
