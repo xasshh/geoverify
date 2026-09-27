@@ -121,15 +121,15 @@ export default function People({ people, devices, roles }: Props) {
             <Head title="People and devices" />
 
             <div className="mx-auto max-w-[1200px] px-6 pb-20">
-                <header className="mt-8 border-b-[1.5px] border-ink pb-3">
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <header className="mt-8 border-b border-rule pb-3">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                         In house
                     </p>
                     <h1 className="font-display text-display-m text-ink">People and devices</h1>
                 </header>
 
                 {flash !== null && (
-                    <p className="mt-4 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink">
+                    <p className="rounded-sm bg-green-soft mt-4 px-4 py-2.5 text-ui text-ink">
                         {flash}
                     </p>
                 )}
@@ -142,7 +142,7 @@ export default function People({ people, devices, roles }: Props) {
                         so it is never one you chose for them.
                     </p>
 
-                    <div className="flex flex-wrap items-end gap-3 rounded-sm border border-rule-strong p-4">
+                    <div className="flex flex-wrap items-end gap-3 rounded-card border border-rule p-4 bg-raised">
                         <TextField
                             label="Name"
                             value={add.data.name}
@@ -201,7 +201,7 @@ export default function People({ people, devices, roles }: Props) {
 
                 <section className="mt-10">
                     <h2 className="font-display text-display-s text-ink">Staff</h2>
-                    <ul className="mt-3 flex flex-col rounded-sm border border-rule-strong px-4">
+                    <ul className="mt-3 flex flex-col rounded-card border border-rule px-4 bg-raised">
                         {people.map((person) => (
                             <li
                                 key={person.id}
@@ -252,7 +252,7 @@ export default function People({ people, devices, roles }: Props) {
                         person's account and they can enrol another one straight away.
                     </p>
 
-                    <ul className="flex flex-col rounded-sm border border-rule-strong px-4">
+                    <ul className="flex flex-col rounded-card border border-rule px-4 bg-raised">
                         {devices.map((device) => (
                             <li
                                 key={device.id}

@@ -18,8 +18,10 @@ async function signIn(page: Page, email: string): Promise<void> {
     await page.waitForURL('**/field', { timeout: 15_000 });
 }
 
+/** From Today, into the capture map for the officer's next cell. */
 async function openFirstCell(page: Page): Promise<void> {
-    await page.getByText('Open this cell').first().click();
+    await page.getByRole('link', { name: /Start a capture/ }).first().click();
+    await page.waitForURL('**/capture', { timeout: 15_000 });
     await page.waitForTimeout(3_000);
 }
 
@@ -28,7 +30,7 @@ async function captureBuilding(page: Page, units: string): Promise<void> {
     await page.waitForTimeout(600);
     await page.getByLabel('Units in this building').fill(units);
     await page.getByLabel('I read this out and they agreed').check();
-    await page.getByRole('button', { name: 'Save capture' }).click();
+    await page.getByRole('button', { name: 'Next: photos and businesses' }).click();
     await page.waitForTimeout(1_200);
 }
 
@@ -149,7 +151,56 @@ test('the app opens with no network at all', async ({ page, context }) => {
     await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => undefined);
     await page.waitForTimeout(1_500);
 
-    // Something of ours rendered rather than the browser's offline page.
+    // Something of ours rendered rather than the browser's offline page: the
+    // officer's own Today, from the copy this handset last saw.
     const body = await page.locator('body').innerText();
     expect(body).not.toContain('ERR_INTERNET_DISCONNECTED');
+    await expect(page.getByText('Captures today').first()).toBeVisible();
+});
+
+test('the officer moves between screens with no signal', async ({ page, context }) => {
+    await signIn(page, 'bello@geoverify.test');
+
+    // Each screen visited once with signal, as a working day would.
+    for (const path of ['/field/inbox', '/field/records', '/field']) {
+        await page.goto(`${BASE}${path}`, { waitUntil: 'networkidle' });
+    }
+
+    await context.setOffline(true);
+
+    await page.getByRole('link', { name: 'Supervisor inbox' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Supervisor inbox' })).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('link', { name: 'My records' }).first().click();
+    await expect(page.getByRole('heading', { name: 'My records' })).toBeVisible({ timeout: 10_000 });
+});
+
+test('a reply written with no signal is kept, and arrives when it comes back', async ({ page, context }) => {
+    await signIn(page, 'bello@geoverify.test');
+    await page.goto(`${BASE}/field/inbox`, { waitUntil: 'networkidle' });
+
+    await context.setOffline(true);
+
+    const text = `Site closed, back at 3 (${String(Date.now())})`;
+    await page.getByLabel(/Reply to/).fill(text);
+    await page.getByRole('button', { name: 'Send' }).click();
+
+    // On the device, marked as waiting.
+    await expect(page.getByText(text)).toBeVisible();
+    await expect(page.getByText('Waiting for signal').last()).toBeVisible();
+
+    // Signal returns; nothing is asked of the officer.
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    await expect(page.getByText('Waiting for signal')).toHaveCount(0, { timeout: 30_000 });
+
+    // And the server has it, once.
+    const thread = await page.evaluate(async () => {
+        const response = await fetch('/api/field/messages', { headers: { Accept: 'application/json' } });
+
+        return ((await response.json()) as { messages: Array<{ body: string }> }).messages.map((m) => m.body);
+    });
+
+    expect(thread.filter((body) => body === text)).toHaveLength(1);
 });

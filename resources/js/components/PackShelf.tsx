@@ -38,7 +38,7 @@ function PackRow({ coverageAreaId, mandate }: { coverageAreaId: number; mandate:
 
     return (
         <div className="flex flex-col gap-2">
-            <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+            <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                 {mandate}
             </p>
             <PackDownload

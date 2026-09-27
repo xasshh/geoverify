@@ -301,7 +301,7 @@ export function BuildingSection({
     if (floors === null) {
         return (
             <div className={cx('flex flex-col gap-2', className)}>
-                <p className="border-l-2 border-amber bg-raised px-3 py-2 text-ui text-muted">
+                <p className="rounded-sm bg-amber-soft px-3 py-2 text-ui text-muted">
                     No storey count was recorded for this building, so it cannot be drawn in
                     section. The businesses below are everything found here.
                 </p>
@@ -316,7 +316,7 @@ export function BuildingSection({
 
     return (
         <div className={cx('flex flex-col', className)}>
-            <div className="rounded-sm border border-rule-strong px-3">
+            <div className="rounded-card border border-rule px-3 bg-raised">
                 {Array.from({ length: storeys }, (_, i) => storeys - 1 - i).map((floor) => (
                     <Storey
                         key={floor}
@@ -336,7 +336,7 @@ export function BuildingSection({
 
             <div className="mt-2 flex flex-col gap-1.5">
                 {above.length > 0 && (
-                    <div className="border-l-2 border-alert bg-raised px-3 py-2">
+                    <div className="rounded-sm bg-alert-soft px-3 py-2">
                         <p className="text-ui text-alert">
                             {above.length === 1 ? 'One business is' : `${String(above.length)} businesses are`}{' '}
                             recorded above the {String(storeys)} storeys counted here. Either the
@@ -351,7 +351,7 @@ export function BuildingSection({
                 )}
 
                 {unplaced.length > 0 && (
-                    <div className="border-l-2 border-rule-strong bg-raised px-3 py-2">
+                    <div className="rounded-sm bg-sunken px-3 py-2">
                         <p className="text-ui text-muted">
                             No storey was recorded for{' '}
                             {unplaced.length === 1 ? 'this business' : 'these businesses'}.

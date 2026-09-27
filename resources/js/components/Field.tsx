@@ -29,7 +29,7 @@ function FieldShell({ label, hint, error, machine = false, children }: FieldShel
         <div className={cx('flex flex-col gap-1.5', machine && 'font-mono')}>
             <label
                 htmlFor={id}
-                className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                className="text-label font-bold tracking-[0.05em] text-muted uppercase"
             >
                 {label}
             </label>
@@ -54,9 +54,9 @@ function FieldShell({ label, hint, error, machine = false, children }: FieldShel
 }
 
 const CONTROL = [
-    'w-full rounded-sm border bg-surface px-3 text-ink',
+    'w-full rounded-sm border bg-raised px-3.5 text-ink',
     'placeholder:text-faint',
-    'disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint',
+    'disabled:cursor-not-allowed disabled:bg-sunken disabled:text-faint',
     '[&[readonly]]:border-dashed [&[readonly]]:bg-raised [&[readonly]]:text-muted',
     'transition-colors duration-150',
 ].join(' ');
@@ -93,7 +93,7 @@ export function TextField({
                     {...rest}
                     className={cx(
                         CONTROL,
-                        size === 'field' ? 'min-h-touch-lg text-body' : 'h-9 text-ui',
+                        size === 'field' ? 'min-h-touch-lg text-body' : 'h-11 text-ui',
                         invalid ? 'border-alert' : 'border-rule-strong focus:border-gold',
                         machine && 'font-mono',
                     )}
@@ -134,7 +134,7 @@ export function SelectField({
                     {...rest}
                     className={cx(
                         CONTROL,
-                        size === 'field' ? 'min-h-touch-lg text-body' : 'h-9 text-ui',
+                        size === 'field' ? 'min-h-touch-lg text-body' : 'h-11 text-ui',
                         invalid ? 'border-alert' : 'border-rule-strong focus:border-gold',
                     )}
                 >

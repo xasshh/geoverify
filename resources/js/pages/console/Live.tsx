@@ -1,50 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { ConsoleShell } from '@/components/ConsoleShell';
-import {
-    Map as MapLibreMap,
-    NavigationControl,
-    ScaleControl,
-    type GeoJSONSource,
-} from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import '@/lib/maplibre';
+import { lastSeenLabel, useLiveMap, type Live } from '@/components/LiveMap';
 import { PresenceMark } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
-
-interface LiveOfficer {
-    officerId: number;
-    officer: string;
-    staffRef: string | null;
-    sessionId: number;
-    startedAt: string;
-    endedAt: string | null;
-    lastSeenAt: string | null;
-    active: boolean;
-    longitude: number | null;
-    latitude: number | null;
-    accuracyM: number | null;
-    isMock: boolean;
-    distanceM: number;
-    integrityVerdict: string;
-    h3: string | null;
-    captures: number;
-    awaiting: number;
-    meanConfidence: number | null;
-    trace: Array<[number, number]>;
-}
-
-interface Day {
-    captures: number;
-    officers: number;
-    meanConfidence: number | null;
-    contested: number;
-}
-
-interface Live {
-    officers: LiveOfficer[];
-    day: Day;
-}
 
 interface LiveProps {
     live: Live;
@@ -53,75 +11,10 @@ interface LiveProps {
     filters: { area: number | null };
 }
 
-/** How often the console asks again. Slow enough to be free, quick enough to matter. */
-const POLL_MS = 20_000;
-
-function minutesSince(iso: string | null): number | null {
-    if (iso === null) {
-        return null;
-    }
-
-    // The server sends ISO 8601 with an offset, so this is unambiguous wherever
-    // the console is open. A naive timestamp would be read as browser local and
-    // put "last seen" out by the server's offset.
-    const then = new Date(iso).getTime();
-
-    return Number.isNaN(then) ? null : Math.floor((Date.now() - then) / 60_000);
-}
-
-function lastSeenLabel(officer: LiveOfficer): string {
-    const minutes = minutesSince(officer.lastSeenAt);
-
-    if (minutes === null) {
-        return 'no fix yet';
-    }
-
-    if (minutes < 1) {
-        return 'just now';
-    }
-
-    return minutes < 60 ? `${String(minutes)} min ago` : `${String(Math.floor(minutes / 60))} h ago`;
-}
-
-function officersToGeoJSON(officers: LiveOfficer[]): GeoJSON.FeatureCollection {
-    return {
-        type: 'FeatureCollection',
-        features: officers
-            .filter((o) => o.longitude !== null && o.latitude !== null)
-            .map((o) => ({
-                type: 'Feature',
-                id: o.officerId,
-                geometry: {
-                    type: 'Point',
-                    coordinates: [o.longitude ?? 0, o.latitude ?? 0],
-                },
-                properties: {
-                    officer: o.officer,
-                    active: o.active,
-                    mock: o.isMock,
-                },
-            })),
-    };
-}
-
-function tracesToGeoJSON(officers: LiveOfficer[]): GeoJSON.FeatureCollection {
-    return {
-        type: 'FeatureCollection',
-        features: officers
-            .filter((o) => o.trace.length > 1)
-            .map((o) => ({
-                type: 'Feature',
-                id: o.officerId,
-                geometry: { type: 'LineString', coordinates: o.trace },
-                properties: { officer: o.officer, active: o.active },
-            })),
-    };
-}
-
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
     return (
         <div className="flex flex-col gap-0.5 border-l-2 border-rule-strong pl-3">
-            <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 {label}
             </span>
             <span className={cx('numeric-mono text-display-s', tone ?? 'text-ink')}>{value}</span>
@@ -142,153 +35,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
  * fabricated day is a straight line in the column before anyone reads a number.
  */
 export default function Live({ live, bounds, areas, filters }: LiveProps) {
-    const container = useRef<HTMLDivElement | null>(null);
-    const map = useRef<MapLibreMap | null>(null);
-    const [ready, setReady] = useState(false);
-    const [data, setData] = useState<Live>(live);
-    const [refreshedAt, setRefreshedAt] = useState<Date>(new Date());
-    const [selected, setSelected] = useState<number | null>(null);
-
-    // No effect syncs the prop into state, and none is needed: changing the
-    // mandate navigates with preserveState false, so the page remounts and the
-    // initial state is the new reading. An in flight poll from the old mandate
-    // is dropped by its own cleanup rather than landing on the new one.
-
-    useEffect(() => {
-        if (container.current === null || map.current !== null) {
-            return;
-        }
-
-        const instance = new MapLibreMap({
-            container: container.current,
-            // No basemap, like the coverage view: what is drawn is this system's
-            // own geometry, which is the thing worth looking at.
-            style: {
-                version: 8,
-                sources: {},
-                layers: [{ id: 'ground', type: 'background', paint: { 'background-color': '#0E1E2E' } }],
-            },
-            bounds,
-            fitBoundsOptions: { padding: 56 },
-            maxPitch: 0,
-            attributionControl: false,
-        });
-
-        map.current = instance;
-        instance.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-        instance.addControl(new ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
-
-        instance.on('load', () => {
-            instance.addSource('traces', { type: 'geojson', data: tracesToGeoJSON(live.officers) });
-            instance.addSource('officers', {
-                type: 'geojson',
-                data: officersToGeoJSON(live.officers),
-            });
-
-            instance.addLayer({
-                id: 'trace-line',
-                type: 'line',
-                source: 'traces',
-                layout: { 'line-cap': 'round', 'line-join': 'round' },
-                paint: {
-                    'line-color': ['case', ['get', 'active'], '#4BB8B0', '#5A6B7A'],
-                    'line-width': 1.8,
-                    'line-opacity': 0.85,
-                },
-            });
-
-            instance.addLayer({
-                id: 'officer-halo',
-                type: 'circle',
-                source: 'officers',
-                paint: {
-                    'circle-radius': 12,
-                    'circle-color': ['case', ['get', 'active'], '#4BB8B0', '#5A6B7A'],
-                    'circle-opacity': 0.18,
-                },
-            });
-
-            instance.addLayer({
-                id: 'officer-dot',
-                type: 'circle',
-                source: 'officers',
-                paint: {
-                    'circle-radius': 5,
-                    'circle-color': [
-                        'case',
-                        ['get', 'mock'],
-                        '#C2564B',
-                        ['get', 'active'],
-                        '#4BB8B0',
-                        '#5A6B7A',
-                    ],
-                    'circle-stroke-color': '#0E1E2E',
-                    'circle-stroke-width': 1.5,
-                },
-            });
-
-            instance.on('click', 'officer-dot', (event) => {
-                const id = event.features?.[0]?.id;
-                setSelected(typeof id === 'number' ? id : null);
-            });
-
-            setReady(true);
-        });
-
-        return () => {
-            instance.remove();
-            map.current = null;
-            setReady(false);
-        };
-    }, [bounds, live.officers]);
-
-    /** New readings go straight into the sources: no restyle, no flicker. */
-    useEffect(() => {
-        const instance = map.current;
-
-        if (instance === null || !ready) {
-            return;
-        }
-
-        const traces = instance.getSource<GeoJSONSource>('traces');
-        const officers = instance.getSource<GeoJSONSource>('officers');
-
-        if (traces !== undefined) {
-            void traces.setData(tracesToGeoJSON(data.officers));
-        }
-
-        if (officers !== undefined) {
-            void officers.setData(officersToGeoJSON(data.officers));
-        }
-    }, [ready, data]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const tick = () => {
-            const query = filters.area === null ? '' : `?area=${String(filters.area)}`;
-
-            fetch(`/console/live/feed.json${query}`, { headers: { Accept: 'application/json' } })
-                .then((response) => (response.ok ? (response.json() as Promise<Live>) : null))
-                .then((next) => {
-                    if (!cancelled && next !== null) {
-                        setData(next);
-                        setRefreshedAt(new Date());
-                    }
-                })
-                .catch(() => {
-                    // A console that has lost the server should keep showing the
-                    // last reading it trusted rather than emptying the map.
-                });
-        };
-
-        const timer = window.setInterval(tick, POLL_MS);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(timer);
-        };
-    }, [filters.area]);
+    const { container, map, data, refreshedAt, selected, setSelected } = useLiveMap({ live, bounds, filters });
 
     const quiet = data.officers.filter((o) => !o.active).length;
 
@@ -297,9 +44,9 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
             <Head title="Live operations" />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Supervision
                         </p>
                         <h1 className="font-display text-display-m text-ink">Live operations</h1>
@@ -314,7 +61,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                                     { preserveState: false, replace: true },
                                 );
                             }}
-                            className="rounded-sm border border-rule-strong bg-surface px-3 py-1.5 text-ui text-ink"
+                            className="rounded-sm border border-rule-strong bg-raised px-3 py-1.5 text-ui text-ink"
                         >
                             <option value="">Every mandate</option>
                             {areas.map((area) => (
@@ -344,7 +91,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                 </div>
 
                 <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_380px]">
-                    <div className="relative h-[560px] overflow-hidden rounded-sm border border-rule-strong">
+                    <div className="relative h-[560px] overflow-hidden rounded-card border border-rule bg-raised">
                         <div ref={container} className="h-full w-full" data-testid="live-map" />
                         {data.officers.length === 0 && (
                             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-ui text-faint">
@@ -355,7 +102,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
 
                     <aside className="flex max-h-[560px] flex-col gap-2 overflow-y-auto">
                         {quiet > 0 && (
-                            <p className="rounded-sm border-l-2 border-amber bg-raised px-3 py-2 text-ui text-muted">
+                            <p className="rounded-sm bg-amber-soft px-3 py-2 text-ui text-muted">
                                 {quiet === 1
                                     ? '1 officer has gone quiet.'
                                     : `${String(quiet)} officers have gone quiet.`}
@@ -400,7 +147,7 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                                         <span
                                             className={cx(
                                                 'numeric-mono shrink-0 text-label',
-                                                officer.active ? 'text-green' : 'text-amber',
+                                                officer.active ? 'text-green' : 'text-amber-ink',
                                             )}
                                         >
                                             {lastSeenLabel(officer)}

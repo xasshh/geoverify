@@ -302,7 +302,7 @@ function CoverageMap({
      * typefaces as web fonts rather than as rendered glyph ranges. Building that
      * pipeline to put thirty street names on one map would be a second
      * typographic system to keep in step with the first. Projecting a handful of
-     * points and letting the browser set them in IBM Plex costs nothing and
+     * points and letting the browser set them in the interface face costs nothing and
      * matches every other number on the page.
      */
     useEffect(() => {
@@ -391,7 +391,7 @@ function CoverageMap({
 
     return (
         <div className="relative">
-            <div ref={container} className="h-[420px] w-full rounded-sm border border-rule" />
+            <div ref={container} className="h-[420px] w-full rounded-card border border-rule bg-raised" />
 
             {/* ODbL requires it wherever the network is shown, the same way the
                 boundary licences do on a published export. */}
@@ -430,9 +430,9 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
         <ClientShell current="campaigns" organisation={{ name: campaign.client.name }}>
             <Head title={campaign.name} />
 
-            <header className="mt-8 flex flex-wrap items-start justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+            <header className="mt-8 flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-3">
                 <div>
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                         <Link href="/client/campaigns" className="underline underline-offset-2">
                             All campaigns
                         </Link>
@@ -522,7 +522,7 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
             >
                 <CoverageMap areas={coverage.areas} roadsUrl={roadsUrl} />
 
-                <ul className="mt-4 flex flex-col rounded-sm border border-rule-strong px-4">
+                <ul className="mt-4 flex flex-col rounded-card border border-rule px-4 bg-raised">
                     {coverage.areas.map((area) => (
                         <li
                             key={area.id}
@@ -555,7 +555,7 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                             {['Field', 'Type', 'Required', 'Notes'].map((heading) => (
                                 <th
                                     key={heading}
-                                    className="pb-2 text-label font-semibold tracking-[0.12em] text-faint uppercase"
+                                    className="pb-2 text-label font-semibold tracking-[0.05em] text-faint uppercase"
                                 >
                                     {heading}
                                 </th>
@@ -585,10 +585,10 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                 <div className="flex flex-col gap-5">
                     {stakeholders.byCategory.map((group) => (
                         <div key={group.category}>
-                            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 {group.label} &middot; {group.count}
                             </p>
-                            <ul className="mt-1.5 flex flex-col rounded-sm border border-rule px-4">
+                            <ul className="mt-1.5 flex flex-col rounded-card border border-rule px-4 bg-raised">
                                 {group.people.map((person) => (
                                     <li
                                         key={person.id}
@@ -621,7 +621,7 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                 title="Agent roster"
                 caption={`${String(deployment.activeCount)} currently deployed`}
             >
-                <ul className="flex flex-col rounded-sm border border-rule-strong px-4">
+                <ul className="flex flex-col rounded-card border border-rule px-4 bg-raised">
                     {deployment.roster.map((agent) => (
                         <li
                             key={agent.id}

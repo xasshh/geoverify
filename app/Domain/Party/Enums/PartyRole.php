@@ -48,6 +48,21 @@ enum PartyRole: string
         return $this !== self::Viewer;
     }
 
+    /** Marking an order sent tells a buyer their goods are on the way. */
+    public function fulfils(): bool
+    {
+        return $this !== self::Viewer;
+    }
+
+    /**
+     * Taking money out, or changing the account it goes to. An owner only: a
+     * manager who could redirect payouts could empty the business.
+     */
+    public function withdraws(): bool
+    {
+        return $this === self::Owner;
+    }
+
     /** Proposing a correction changes what the register says. */
     public function proposesChanges(): bool
     {

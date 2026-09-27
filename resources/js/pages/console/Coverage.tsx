@@ -171,7 +171,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     {
                         id: 'ground',
                         type: 'background',
-                        paint: { 'background-color': '#0E1E2E' },
+                        paint: { 'background-color': '#0F1A17' },
                     },
                 ],
             },
@@ -218,10 +218,10 @@ export default function Coverage({ area, summary }: CoverageProps) {
                             'match',
                             ['get', 'highway'],
                             ['motorway', 'trunk'],
-                            '#8A7340',
+                            '#B7791F',
                             ['primary'],
-                            '#4C5C68',
-                            '#31404D',
+                            '#34483F',
+                            '#23332D',
                         ],
                         'line-width': [
                             'interpolate',
@@ -253,7 +253,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     type: 'line',
                     source: 'cells',
                     paint: {
-                        'line-color': '#A2B0BB',
+                        'line-color': '#A9B7B1',
                         'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.15, 15, 0.6],
                         'line-opacity': 0.35,
                     },
@@ -264,7 +264,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     id: 'mandate-line',
                     type: 'line',
                     source: 'mandate',
-                    paint: { 'line-color': '#4BB8B0', 'line-width': 1.8 },
+                    paint: { 'line-color': '#4DB8B0', 'line-width': 1.8 },
                 });
 
                 setLoadedCells(cells.features.length);
@@ -333,7 +333,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
             <header className="shrink-0 border-b border-rule px-6 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-4">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Coverage
                         </p>
                         <h1 className="font-display text-display-m text-ink">{area.name}</h1>
@@ -341,7 +341,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     <dl className="flex flex-wrap gap-x-8 gap-y-2">
                         {stats.map(([label, value]) => (
                             <div key={label}>
-                                <dt className="text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                <dt className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                     {label}
                                 </dt>
                                 <dd className="numeric-mono text-body text-ink">{value}</dd>
@@ -363,8 +363,8 @@ export default function Coverage({ area, summary }: CoverageProps) {
                     to zero height depending on stylesheet order. */}
                 <div ref={container} className="h-full w-full" />
 
-                <div className="pointer-events-none absolute top-4 left-4 max-w-xs rounded-sm border border-rule-strong bg-surface/95 p-3">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <div className="pointer-events-none absolute top-4 left-4 max-w-xs rounded-card border border-rule bg-raised/95 shadow-float p-3">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         {SHADINGS[shading].legend}
                     </p>
                     <div className="mt-2 flex items-center gap-2">
@@ -410,7 +410,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
                 </div>
 
                 {hovered !== null && (
-                    <div className="pointer-events-none absolute right-4 bottom-4 rounded-sm border border-rule-strong bg-surface/95 p-3">
+                    <div className="pointer-events-none absolute right-4 bottom-4 rounded-card border border-rule bg-raised/95 shadow-float p-3">
                         <p className="numeric-mono text-mono text-ink">{hovered.h3}</p>
                         <p className="mt-1 numeric-mono text-label text-muted">
                             {hovered.footprints.toLocaleString()} detected /{' '}

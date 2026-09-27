@@ -200,7 +200,7 @@ function ClaimRow({ claim }: { claim: QueueClaim }) {
 
             {open && (
                 <form
-                    className="mt-5 flex max-w-prose flex-col gap-3 border-l-2 border-gold bg-raised py-4 pr-4 pl-5"
+                    className="rounded-sm bg-gold-soft mt-5 flex max-w-prose flex-col gap-3 py-4 pr-4 pl-5"
                     onSubmit={(e) => {
                         e.preventDefault();
                         form.post(`/console/claims/${String(claim.id)}`);
@@ -226,7 +226,7 @@ function ClaimRow({ claim }: { claim: QueueClaim }) {
                     </div>
 
                     <label className="flex flex-col gap-1.5">
-                        <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             Why
                         </span>
                         <textarea
@@ -235,7 +235,7 @@ function ClaimRow({ claim }: { claim: QueueClaim }) {
                                 form.setData("note", e.target.value);
                             }}
                             rows={3}
-                            className="rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                            className="rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                         />
                     </label>
                     {/* Required on both paths. It is the approvals that get
@@ -271,7 +271,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
     const form = useForm({ resolution: "upheld_incumbent", note: "" });
 
     return (
-        <li className="rounded-sm border border-rule-strong p-5">
+        <li className="rounded-card border border-rule p-5 bg-raised">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h3 className="font-display text-display-s text-ink">
                     {dispute.tradingName}
@@ -284,7 +284,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
 
             <div className="mt-4 grid gap-5 sm:grid-cols-2">
                 <div className="border-l-2 border-held pl-4">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Holds it now
                     </p>
                     <p className="mt-1 text-ui text-ink">
@@ -300,7 +300,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
                 </div>
 
                 <div className="border-l-2 border-gold pl-4">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Challenging
                     </p>
                     <p className="mt-1 text-ui text-ink">
@@ -326,7 +326,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
                 }}
             >
                 <label className="flex flex-col gap-1.5">
-                    <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Resolution
                     </span>
                     <select
@@ -334,7 +334,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
                         onChange={(e) => {
                             form.setData("resolution", e.target.value);
                         }}
-                        className="h-9 rounded-sm border border-rule-strong bg-surface px-3 text-ui text-ink"
+                        className="h-9 rounded-sm border border-rule-strong bg-raised px-3 text-ui text-ink"
                     >
                         <option value="upheld_incumbent">
                             Leave it with {dispute.incumbent.name}
@@ -349,7 +349,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
                 </label>
 
                 <label className="flex flex-col gap-1.5">
-                    <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Why
                     </span>
                     <textarea
@@ -358,7 +358,7 @@ function DisputeRow({ dispute }: { dispute: Dispute }) {
                             form.setData("note", e.target.value);
                         }}
                         rows={3}
-                        className="rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                        className="rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                     />
                 </label>
 

@@ -55,7 +55,7 @@ export default function ClaimSearch({
             <Head title="Find your business" />
 
             <div className="mt-10 mb-8">
-                <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                     Claim a business
                 </p>
                 <h1 className="mt-1 font-display text-display-l text-ink">
@@ -230,7 +230,7 @@ function ClaimForm({
 
     return (
         <form
-            className="mt-5 flex max-w-prose flex-col gap-4 border-l-2 border-gold bg-raised py-4 pr-4 pl-5"
+            className="rounded-sm bg-gold-soft mt-5 flex max-w-prose flex-col gap-4 py-4 pr-4 pl-5"
             onSubmit={(e) => {
                 e.preventDefault();
                 form.post("/portal/claim");

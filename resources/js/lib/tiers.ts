@@ -92,7 +92,7 @@ export const STATE_GLYPH: Record<RungState, string> = {
 export const STATE_COLOR: Record<RungState, string> = {
     current: "text-green",
     ageing: "text-green",
-    stale: "text-amber",
+    stale: "text-amber-ink",
     pending: "text-gold",
     not_established: "text-graphite",
 };

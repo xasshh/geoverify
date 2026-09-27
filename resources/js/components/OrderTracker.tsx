@@ -88,7 +88,7 @@ export function OrderTracker({ steps }: { steps: TrackerStep[] }) {
 
                         <span
                             className={`text-table font-medium ${
-                                isCurrent ? 'text-amber' : done ? 'text-ink' : 'text-muted'
+                                isCurrent ? 'text-amber-ink' : done ? 'text-ink' : 'text-muted'
                             }`}
                         >
                             {step.label}

@@ -41,9 +41,9 @@ export default function Escalations({ escalations }: { escalations: Escalation[]
             <Head title="Escalations" />
 
             <div className="mx-auto max-w-[1100px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             In house
                         </p>
                         <h1 className="font-display text-display-m text-ink">Escalations</h1>
@@ -61,7 +61,7 @@ export default function Escalations({ escalations }: { escalations: Escalation[]
                 </p>
 
                 {escalations.length === 0 ? (
-                    <p className="mt-8 border-l-2 border-rule-strong bg-raised px-4 py-3 text-ui text-muted">
+                    <p className="rounded-sm bg-sunken mt-8 px-4 py-3 text-ui text-muted">
                         Nothing is escalated. Captures reach this queue only when a supervisor
                         presses Escalate rather than accepting or returning.
                     </p>
@@ -73,7 +73,7 @@ export default function Escalations({ escalations }: { escalations: Escalation[]
                             return (
                                 <li
                                     key={item.id}
-                                    className="rounded-sm border border-rule-strong p-4"
+                                    className="rounded-card border border-rule p-4 bg-raised"
                                 >
                                     <div className="flex flex-wrap items-baseline justify-between gap-3">
                                         <div>
@@ -96,7 +96,7 @@ export default function Escalations({ escalations }: { escalations: Escalation[]
                                     </div>
 
                                     {item.reason !== null && (
-                                        <blockquote className="mt-3 border-l-2 border-amber bg-raised px-3 py-2 text-ui text-ink">
+                                        <blockquote className="rounded-sm bg-amber-soft mt-3 px-3 py-2 text-ui text-ink">
                                             {item.reason}
                                         </blockquote>
                                     )}

@@ -66,4 +66,41 @@ return [
         'stale_months' => (int) env('GEOVERIFY_TIER_STALE_MONTHS', 24),
     ],
 
+    /*
+    | Single sign-on for investor organisations, by email domain: the URL that
+    | starts the firm's own identity provider flow. Empty until a firm asks.
+    */
+    'investor_sso' => [],
+
+    /*
+    | The officer's Today screen. Nothing in the register says how many captures
+    | a day is reasonable on a given ground, so the target is stated here.
+    */
+    'field' => [
+        'daily_capture_target' => (int) env('GEOVERIFY_DAILY_CAPTURE_TARGET', 25),
+    ],
+
+    /*
+    | The merchant hub's money (M2). Kobo throughout.
+    |
+    | The mockups leave the inspection fee, the visit fee and the commission as
+    | placeholders, and so does this file: a price nobody has decided is null,
+    | and a service with no price cannot be bought. Commission is in basis
+    | points of the goods only, never of delivery or of a fee the buyer paid us.
+    |
+    | release_after_days is how long after dispatch a buyer who has neither
+    | confirmed nor raised an issue has to do one or the other, before the
+    | merchant is paid anyway. Without it a buyer who forgets holds a stranger's
+    | money for ever.
+    */
+    'commerce' => [
+        'delivery_fee_minor' => (int) env('GEOVERIFY_DELIVERY_FEE_MINOR', 350_000),
+        // Only a number is a price. An empty `KEY=` in .env reads as '', which
+        // cast to int would make an undecided fee a free one.
+        'inspection_fee_minor' => is_numeric(env('GEOVERIFY_INSPECTION_FEE_MINOR')) ? (int) env('GEOVERIFY_INSPECTION_FEE_MINOR') : null,
+        'visit_fee_minor' => is_numeric(env('GEOVERIFY_VISIT_FEE_MINOR')) ? (int) env('GEOVERIFY_VISIT_FEE_MINOR') : null,
+        'commission_basis_points' => (int) env('GEOVERIFY_COMMISSION_BASIS_POINTS', 0),
+        'release_after_days' => (int) env('GEOVERIFY_RELEASE_AFTER_DAYS', 7),
+        'minimum_payout_minor' => (int) env('GEOVERIFY_MINIMUM_PAYOUT_MINOR', 100_000),
+    ],
 ];

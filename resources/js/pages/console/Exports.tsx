@@ -51,7 +51,7 @@ function bytes(value: number | null): string {
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
     return (
         <div className="flex flex-col gap-0.5 border-l-2 border-rule-strong pl-3">
-            <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 {label}
             </span>
             <span className="numeric-mono text-display-s text-ink">{value}</span>
@@ -109,9 +109,9 @@ export default function Exports({
             <Head title="Exports" />
 
             <div className="mx-auto max-w-5xl px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Evidence output
                         </p>
                         <h1 className="font-display text-display-m text-ink">Exports</h1>
@@ -132,7 +132,7 @@ export default function Exports({
                                 { preserveState: false, replace: true },
                             );
                         }}
-                        className="rounded-sm border border-rule-strong bg-surface px-3 py-1.5 text-ui text-ink"
+                        className="rounded-sm border border-rule-strong bg-raised px-3 py-1.5 text-ui text-ink"
                     >
                         {areas.map((option) => (
                             <option key={option.id} value={option.id}>
@@ -163,12 +163,12 @@ export default function Exports({
                             />
                         </div>
 
-                        <section className="mt-8 rounded-sm border border-rule-strong p-4">
+                        <section className="mt-8 rounded-card border border-rule p-4 bg-raised">
                             <h2 className="font-display text-display-s text-ink">What the file covers</h2>
 
                             <div className="mt-3 flex flex-col gap-3">
                                 <label className="flex flex-col gap-1">
-                                    <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                    <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                         Ground
                                     </span>
                                     <select
@@ -180,7 +180,7 @@ export default function Exports({
                                                     : Number(event.target.value),
                                             );
                                         }}
-                                        className="max-w-md rounded-sm border border-rule-strong bg-surface px-3 py-1.5 text-ui text-ink"
+                                        className="max-w-md rounded-sm border border-rule-strong bg-raised px-3 py-1.5 text-ui text-ink"
                                     >
                                         <option value="">The whole mandate</option>
                                         {cells.map((cell) => (
@@ -217,7 +217,7 @@ export default function Exports({
                             <p
                                 className={cx(
                                     'mt-4 border-l-2 pl-3 text-ui',
-                                    includeAll ? 'border-amber text-amber' : 'border-green text-muted',
+                                    includeAll ? 'border-amber text-amber-ink' : 'border-green text-muted',
                                 )}
                             >
                                 {records.toLocaleString()} structures and {businesses.toLocaleString()}{' '}
@@ -263,7 +263,7 @@ export default function Exports({
                             )}
 
                             {chosen !== null && ! packAvailable && (
-                                <p className="mt-3 border-l-2 border-amber pl-3 text-label text-amber">
+                                <p className="mt-3 border-l-2 border-amber pl-3 text-label text-amber-ink">
                                     No headless browser is installed on this server, so the evidence
                                     pack cannot be printed here. Install Chromium, or set
                                     CHROMIUM_BINARY.
@@ -289,7 +289,7 @@ export default function Exports({
                                     {recent.map((taken) => (
                                         <li
                                             key={taken.id}
-                                            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-sm border border-rule p-3"
+                                            className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-card border border-rule p-3 bg-raised"
                                         >
                                             <span className="flex flex-col gap-0.5">
                                                 <span className="text-ui text-ink">

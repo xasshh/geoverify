@@ -26,6 +26,8 @@ final class PostTransaction
 {
     /**
      * @param  array<string, int>  $legs  Account code to signed minor units.
+     * @param  int|null  $purchaseOrderId  A product order this movement is about, instead of a verification order.
+     * @param  int|null  $payoutId  A merchant withdrawal this movement is about.
      */
     public function __invoke(
         array $legs,
@@ -33,6 +35,8 @@ final class PostTransaction
         ?int $orderId = null,
         ?string $narrative = null,
         ?Carbon $occurredAt = null,
+        ?int $purchaseOrderId = null,
+        ?int $payoutId = null,
     ): string {
         if (count($legs) < 2) {
             throw new RuntimeException('A movement has at least two sides.');
@@ -54,7 +58,7 @@ final class PostTransaction
         $uuid = (string) Str::uuid7();
         $when = $occurredAt ?? Carbon::now(config('app.timezone'));
 
-        return DB::transaction(function () use ($legs, $reason, $orderId, $narrative, $uuid, $when): string {
+        return DB::transaction(function () use ($legs, $reason, $orderId, $narrative, $uuid, $when, $purchaseOrderId, $payoutId): string {
             foreach ($legs as $code => $amount) {
                 $account = LedgerAccount::query()->where('code', $code)->first();
 
@@ -68,6 +72,8 @@ final class PostTransaction
                     'amount_minor' => $amount,
                     'currency' => $account->currency,
                     'verification_order_id' => $orderId,
+                    'purchase_order_id' => $purchaseOrderId,
+                    'payout_id' => $payoutId,
                     'reason' => $reason,
                     'narrative' => $narrative,
                     'occurred_at' => $when,

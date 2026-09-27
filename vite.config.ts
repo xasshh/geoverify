@@ -103,6 +103,27 @@ export default defineConfig({
 
                 runtimeCaching: [
                     {
+                        // The field screens themselves: Today, the inbox, records
+                        // and the capture map. Network first so an officer with
+                        // signal always sees the latest, falling back to the last
+                        // copy this handset saw, so reloading or moving between
+                        // screens with no signal still works. Both the HTML and
+                        // Inertia's JSON are kept; the server sends Vary:
+                        // X-Inertia, so the two never answer for each other.
+                        // Cleared on sign out, because it holds this officer's work.
+                        urlPattern: ({ url, request }) =>
+                            request.method === 'GET' &&
+                            url.origin === self.location.origin &&
+                            (url.pathname === '/field' || url.pathname.startsWith('/field/')),
+                        handler: 'NetworkFirst',
+                        options: {
+                            cacheName: 'geoverify-field-pages',
+                            networkTimeoutSeconds: 4,
+                            expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 7 },
+                            cacheableResponse: { statuses: [200] },
+                        },
+                    },
+                    {
                         // Map tiles and boundary geometry: expensive to fetch, and
                         // unchanged for the life of a mandate.
                         urlPattern: /\/console\/coverage\/\d+\/(cells|boundary)\.geojson/,

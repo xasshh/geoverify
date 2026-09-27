@@ -28,7 +28,7 @@ export function SyncIndicator({
     const hasBacklog = queued > 0;
 
     const tone = hasBacklog
-        ? 'text-amber'
+        ? 'text-amber-ink'
         : connectivity === 'offline'
           ? 'text-graphite'
           : 'text-green';
@@ -90,7 +90,7 @@ export function SyncIndicator({
                 /
             </span>
 
-            <span className={cx('numeric-mono', hasBacklog ? 'text-amber' : 'text-muted')}>
+            <span className={cx('numeric-mono', hasBacklog ? 'text-amber-ink' : 'text-muted')}>
                 {queueLabel}
             </span>
 

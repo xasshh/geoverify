@@ -33,7 +33,7 @@ function lastLoggedCode(pattern: RegExp): string {
  * somebody demonstrably holds rather than one they typed.
  */
 async function registerParty(page: Page, phone: string, name: string) {
-    await page.goto('/portal/sign-in');
+    await page.goto('/portal/sign-in?mode=code');
     await page.getByLabel('Phone number').fill(phone);
     await page.getByRole('button', { name: 'Send me a code' }).click();
 
@@ -179,7 +179,7 @@ test('a second claimant is told what happens next, and the supervisor sees both 
     await desk.getByLabel(/email/i).fill('supervisor@geoverify.test');
     await desk.getByLabel(/password/i).fill('password');
     await desk.getByRole('button', { name: 'Sign in' }).click();
-    await expect(desk).toHaveURL(/\/console\//);
+    await expect(desk).toHaveURL(/\/console(\/|$)/);
 
     await desk.goto('/console/claims');
 

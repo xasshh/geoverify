@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Domain\Registry\Actions\ReadDirectorySectors;
+use App\Domain\Registry\Actions\ReadRoadsInBox;
 use App\Domain\Registry\Actions\SearchDirectory;
 use App\Domain\Registry\Actions\WithholdOnRequest;
 use App\Domain\Registry\Models\Enterprise;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,19 +35,42 @@ final class DirectoryController extends Controller
 
     public function index(Request $request, SearchDirectory $search): Response
     {
+        $filters = [
+            'term' => (string) $request->query('q', ''),
+            'sector' => $this->stringOrNull($request->query('sector')),
+            'lga' => $this->stringOrNull($request->query('lga')),
+            'ward' => $this->stringOrNull($request->query('where')),
+            'verifiedOnly' => $request->boolean('verified'),
+            'withPhotos' => $request->boolean('photos'),
+            'withProducts' => $request->boolean('products'),
+        ];
+        $sort = $this->stringOrNull($request->query('sort')) ?? 'relevance';
+
         $page = $search->run(
-            term: (string) $request->query('q', ''),
-            sector: $this->stringOrNull($request->query('sector')),
-            lga: $this->stringOrNull($request->query('lga')),
+            term: $filters['term'],
+            sector: $filters['sector'],
+            lga: $filters['lga'],
             page: (int) $request->query('page', 1),
+            ward: $filters['ward'],
+            verifiedOnly: $filters['verifiedOnly'],
+            withPhotos: $filters['withPhotos'],
+            withProducts: $filters['withProducts'],
+            sort: $sort,
         );
 
         return Inertia::render('public/Directory', [
             'query' => [
-                'q' => (string) $request->query('q', ''),
-                'sector' => $this->stringOrNull($request->query('sector')),
-                'lga' => $this->stringOrNull($request->query('lga')),
+                'q' => $filters['term'],
+                'sector' => $filters['sector'],
+                'lga' => $filters['lga'],
+                'where' => $filters['ward'],
+                'verified' => $filters['verifiedOnly'],
+                'photos' => $filters['withPhotos'],
+                'products' => $filters['withProducts'],
+                'sort' => $sort,
             ],
+            'map' => $search->mapFor($filters),
+            'places' => $search->places(),
             'results' => $page['results'],
             'total' => $page['total'],
             'pageNumber' => $page['page'],
@@ -76,13 +101,13 @@ final class DirectoryController extends Controller
      */
     public function show(Enterprise $enterprise, SearchDirectory $search): Response
     {
-        $match = collect($search->run(term: $enterprise->trading_name)['results'])
-            ->firstWhere('id', $enterprise->id);
+        $match = $search->listing($enterprise);
 
         abort_if($match === null, 404);
 
         return Inertia::render('public/DirectoryListing', [
             'listing' => $match,
+            'products' => $search->productsFor($match),
             'similar' => $search->similarTo(
                 $enterprise->id,
                 is_string($match['sectorCode']) ? $match['sectorCode'] : null,
@@ -91,6 +116,22 @@ final class DirectoryController extends Controller
         ])->withViewData([
             'robots' => $match['depth'] === 'reduced' ? 'noindex, nofollow' : 'index, follow',
         ]);
+    }
+
+    /**
+     * How verification works: the tiers, how long a check stays current, and
+     * what the directory will and will not show at each depth.
+     *
+     * The freshness thresholds are read from the same configuration the
+     * listing pages and the public certificate check use, so this page cannot
+     * describe a rule the rest of the directory does not follow.
+     */
+    public function howItWorks(): Response
+    {
+        return Inertia::render('public/HowItWorks', [
+            'currentMonths' => (int) config('geoverify.tier_freshness.current_months'),
+            'staleMonths' => (int) config('geoverify.tier_freshness.stale_months'),
+        ])->withViewData(['robots' => 'index, follow']);
     }
 
     /** Every sector the directory holds something in. */
@@ -121,6 +162,30 @@ final class DirectoryController extends Controller
             'results' => $page['results'],
             'total' => $page['total'],
         ])->withViewData(['robots' => 'index, follow']);
+    }
+
+    /**
+     * Streets under the directory map, for the box the reader is looking at.
+     *
+     * Public OpenStreetMap geometry and nothing about a business, which is why
+     * it answers without a session. A box that is not four finite numbers gets
+     * an empty collection rather than an error.
+     */
+    public function roads(Request $request, ReadRoadsInBox $roads): JsonResponse
+    {
+        $box = array_map(
+            static fn (string $key): mixed => filter_var($request->query($key), FILTER_VALIDATE_FLOAT),
+            ['w', 's', 'e', 'n'],
+        );
+
+        if (in_array(false, $box, true)) {
+            return new JsonResponse(['type' => 'FeatureCollection', 'features' => []]);
+        }
+
+        /** @var array{float, float, float, float} $box */
+        return (new JsonResponse($roads(...$box)))
+            ->setPublic()
+            ->setMaxAge(3600);
     }
 
     /** Asking for a listing to come down. No account, on purpose. */

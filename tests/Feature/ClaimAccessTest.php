@@ -178,6 +178,50 @@ it('exposes no portal route that could write to an observation', function () {
          * is an assertion about yourself, not a claim about what an officer saw.
          */
         'portal.photos.store', 'portal.photos.withdraw',
+        /*
+         * I1. What a business tells investors, and its data room.
+         *
+         * These write opportunities, data_room_documents and data_room_grants,
+         * all authored by the controlling party and none of them an
+         * observation. Publishing is the business's own consent to be read by
+         * a verified investor; withdrawing keeps the row. Documents live on the
+         * private disk and leave only through the investor guard's grant check.
+         */
+        'portal.investors', 'portal.investors.save', 'portal.investors.withdraw',
+        'portal.investors.documents.store', 'portal.investors.documents.withdraw',
+        'portal.investors.requests.decide',
+        /*
+         * The login mockups. A second way in (business ID or email with a
+         * password), a code resend, a password reset proved by SMS, and the
+         * account's own settings. They write portal_accounts and sign-in
+         * codes, never an observation.
+         */
+        'portal.sign-in.password', 'portal.verify.resend', 'portal.forgot-password',
+        'portal.reset-password', 'portal.reset-password.submit',
+        'portal.settings', 'portal.settings.email', 'portal.settings.password',
+        /*
+         * M1, the merchant hub. Listings write products and party-authored
+         * product photographs (media kind product, under media_one_author);
+         * Team writes party_users; Verification and Orders only read. None
+         * of them can reach an observation.
+         */
+        'portal.listings', 'portal.listings.store', 'portal.listings.update', 'portal.listings.withdraw',
+        'portal.listings.photos.store', 'portal.listings.photos.withdraw',
+        'portal.verification', 'portal.orders.index',
+        'portal.team', 'portal.team.invite', 'portal.team.role', 'portal.team.revoke', 'portal.team.accept',
+        /*
+         * M2, buying. Checkout and the buyer's order write purchase_orders and
+         * their lines, priced from products; dispatch, confirm, issue and
+         * cancel move an order's status and post its ledger movement. The
+         * wallet writes payout_accounts and payouts. None of them is a
+         * payment: money is recorded as received only by the webhook, which
+         * is not on this guard. None can reach an observation.
+         */
+        'portal.checkout', 'portal.checkout.store',
+        'portal.purchases.index', 'portal.purchases.show', 'portal.purchases.pay', 'portal.purchases.return',
+        'portal.purchases.confirm', 'portal.purchases.issue', 'portal.purchases.cancel',
+        'portal.sales.show', 'portal.sales.dispatch',
+        'portal.wallet', 'portal.wallet.account', 'portal.wallet.withdraw',
     ];
 
     $actual = collect(Route::getRoutes()->getRoutes())

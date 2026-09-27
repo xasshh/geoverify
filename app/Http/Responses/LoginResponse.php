@@ -22,7 +22,7 @@ final class LoginResponse implements LoginResponseContract
     {
         $user = $request->user();
         $home = $user instanceof User && $user->supervises()
-            ? route('console.coverage.index')
+            ? route('console.team')
             : route('field.index');
 
         if ($request->wantsJson()) {

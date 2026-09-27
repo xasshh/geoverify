@@ -33,7 +33,7 @@ void createInertiaApp({
     },
     progress: {
         // The verification accent. Sync state is never a mystery.
-        color: '#4BB8B0',
+        color: '#0E7C72',
     },
 });
 

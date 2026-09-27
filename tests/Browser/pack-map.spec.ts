@@ -58,6 +58,9 @@ test('an officer downloads the pack and the map draws from it', async ({ page })
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL('**/field', { timeout: 20_000 });
 
+    // The offline maps live on Sync & device since the enumeration redesign.
+    await page.goto('/field/device', { waitUntil: 'domcontentloaded' });
+
     // The size is stated before anything is spent.
     const offer = page.getByRole('button', { name: 'Download the map' });
     await expect(offer).toBeVisible({ timeout: 20_000 });
@@ -76,7 +79,9 @@ test('an officer downloads the pack and the map draws from it', async ({ page })
         timeout: 180_000,
     });
 
-    await page.getByText('Open this cell').first().click();
+    await page.goto('/field', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: /Start a capture/ }).first().click();
+    await page.waitForURL('**/capture', { timeout: 20_000 });
     await page.waitForTimeout(8_000);
 
     const canvas = page.locator('[data-testid="field-map"] canvas');

@@ -16,7 +16,7 @@
  * with a 419 the officer cannot do anything about. Laravel refreshes the
  * XSRF-TOKEN cookie on every response, so that is the one to trust.
  */
-function csrfToken(): string {
+export function csrfToken(): string {
     const cookie = document.cookie
         .split('; ')
         .find((c) => c.startsWith('XSRF-TOKEN='));

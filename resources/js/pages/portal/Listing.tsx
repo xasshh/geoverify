@@ -139,8 +139,8 @@ function CorrectionPanel({
     });
 
     return (
-        <section className="rounded-sm border border-rule p-5">
-            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+        <section className="rounded-card border border-rule p-5 bg-raised">
+            <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 Changing what this says
             </h2>
 
@@ -194,7 +194,7 @@ function CorrectionPanel({
                     />
 
                     <label className="flex flex-col gap-1">
-                        <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             Why
                         </span>
                         <textarea
@@ -203,7 +203,7 @@ function CorrectionPanel({
                             onChange={(event) => {
                                 form.setData("reason", event.target.value);
                             }}
-                            className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                            className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                         />
                     </label>
 
@@ -316,8 +316,8 @@ function PublicationPanel({
     };
 
     return (
-        <section className="rounded-sm border border-rule p-5">
-            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+        <section className="rounded-card border border-rule p-5 bg-raised">
+            <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 Showing this publicly
             </h2>
 
@@ -360,7 +360,7 @@ function PublicationPanel({
 
             {publication.receipts.length > 0 && (
                 <div className="mt-5 border-t border-rule pt-4">
-                    <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <h3 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         What you agreed to
                     </h3>
                     <ul className="mt-2 flex flex-col">
@@ -418,7 +418,7 @@ export default function Listing({
             <Head title={business.tradingName} />
 
             <div className="mt-10 mb-8">
-                <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                     Your business
                 </p>
                 <h1 className="mt-1 font-display text-display-l text-ink">
@@ -435,7 +435,7 @@ export default function Listing({
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-                <section className="rounded-sm border border-rule-strong p-5">
+                <section className="rounded-card border border-rule p-5 bg-raised">
                     <h2 className="mb-4 font-display text-display-s text-ink">
                         What is established
                     </h2>
@@ -446,7 +446,7 @@ export default function Listing({
                         at what is not established yet and the next line tells
                         them what establishing it costs. */}
                     {nextRung !== null && (
-                        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-sm border border-rule-strong bg-sunken px-4 py-3.5">
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-card border border-rule bg-sunken px-4 py-3.5">
                             <div>
                                 <p className="text-ui text-ink">
                                     Establish {nextRung.label.toLowerCase()}
@@ -470,7 +470,7 @@ export default function Listing({
 
                     {orders.length > 0 && (
                         <div className="mt-6">
-                            <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <h3 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Verifications you have bought
                             </h3>
                             <ul className="mt-2 flex flex-col">
@@ -501,8 +501,8 @@ export default function Listing({
                 </section>
 
                 <aside className="flex flex-col gap-4">
-                    <section className="rounded-sm border border-rule p-5">
-                        <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <section className="rounded-card border border-rule p-5 bg-raised">
+                        <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             {business.selfRegistered
                                 ? "What you told us"
                                 : "What an officer recorded"}

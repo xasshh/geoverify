@@ -102,7 +102,7 @@ function VerdictMark({ verdict }: { verdict: Reading['verdict'] }) {
     const mark = { ok: 'ok', warn: '?', fail: '!', unknown: '--' }[verdict];
     const tone = {
         ok: 'text-green',
-        warn: 'text-amber',
+        warn: 'text-amber-ink',
         fail: 'text-alert',
         unknown: 'text-faint',
     }[verdict];
@@ -131,7 +131,7 @@ function Question({
     children?: React.ReactNode;
 }) {
     return (
-        <section className="flex flex-col gap-3 rounded-sm border border-rule-strong p-4">
+        <section className="flex flex-col gap-3 rounded-card border border-rule p-4 bg-raised">
             <header>
                 <h2 className="font-display text-display-s text-ink">{title}</h2>
                 <p className="mt-0.5 text-label text-faint">{caption}</p>
@@ -150,7 +150,7 @@ function Question({
                                     reading.verdict === 'fail'
                                         ? 'text-alert'
                                         : reading.verdict === 'warn'
-                                          ? 'text-amber'
+                                          ? 'text-amber-ink'
                                           : 'text-muted',
                                 )}
                             >
@@ -175,7 +175,7 @@ function Question({
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
     return (
         <div className="flex items-baseline justify-between gap-3 border-b border-rule py-1.5 last:border-b-0">
-            <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 {label}
             </span>
             <span className="numeric-mono text-mono text-ink">{value}</span>
@@ -212,9 +212,9 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
             <Head title={`Review: ${record.structureType}`} />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-32">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             <Link href="/console/review" className="underline underline-offset-2">
                                 Review queue
                             </Link>
@@ -231,7 +231,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                 </header>
 
                 {form.errors.decision !== undefined && (
-                    <p className="mt-4 border-l-2 border-alert bg-raised px-4 py-2.5 text-ui text-alert">
+                    <p className="rounded-sm bg-alert-soft mt-4 px-4 py-2.5 text-ui text-alert-ink">
                         {form.errors.decision}
                     </p>
                 )}
@@ -242,7 +242,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                     it, and a supervisor who cannot picture the building is
                     reading the presence trace and the photographs blind.
                 */}
-                <section className="mt-6 rounded-sm border border-rule-strong p-4">
+                <section className="mt-6 rounded-card border border-rule p-4 bg-raised">
                     <header className="mb-3">
                         <h2 className="font-display text-display-s text-ink">The building</h2>
                         <p className="mt-0.5 text-label text-faint">
@@ -340,7 +340,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                                             href={photo.url}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="block overflow-hidden rounded-sm border border-rule"
+                                            className="block overflow-hidden rounded-card border border-rule bg-raised"
                                         >
                                             <img
                                                 src={photo.url}
@@ -386,7 +386,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                             {record.enterprises.map((enterprise) => (
                                 <div
                                     key={enterprise.id}
-                                    className="rounded-sm border border-rule p-3"
+                                    className="rounded-card border border-rule p-3 bg-raised"
                                 >
                                     <p className="text-ui font-semibold text-ink">
                                         {enterprise.tradingName}
@@ -419,7 +419,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                         </div>
 
                         <div className="flex flex-col border-t border-rule pt-3">
-                            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Officer history
                             </p>
                             <Fact label="Captures" value={record.officer.captures} />
@@ -440,7 +440,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                 </div>
 
                 {canDecide ? (
-                    <div className="mt-6 flex flex-col gap-4 rounded-sm border border-rule-strong p-4">
+                    <div className="mt-6 flex flex-col gap-4 rounded-card border border-rule p-4 bg-raised">
                         {/* The score sits with the decision because that is
                             where it is weighed. Its flags are not repeated
                             here: they are pinned to the evidence that produced
@@ -457,7 +457,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                         <div>
                             <label
                                 htmlFor="reason"
-                                className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                                className="text-label font-semibold tracking-[0.05em] text-muted uppercase"
                             >
                                 Reason (required to return or escalate)
                             </label>
@@ -486,7 +486,7 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                                     form.setData('reason', event.target.value);
                                 }}
                                 rows={2}
-                                className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                                className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                             />
                             {form.errors.reason !== undefined && (
                                 <p className="mt-1 text-label text-alert">{form.errors.reason}</p>
@@ -530,11 +530,11 @@ export default function ReviewRecord({ record, canDecide }: ReviewRecordProps) {
                 ) : (
                     <div className="mt-6 flex flex-col gap-4">
                         {record.score !== null && (
-                            <div className="rounded-sm border border-rule-strong p-4">
+                            <div className="rounded-card border border-rule p-4 bg-raised">
                                 <ConfidenceMeter score={record.score} />
                             </div>
                         )}
-                        <p className="border-l-2 border-rule-strong bg-raised px-4 py-2.5 text-ui text-muted">
+                        <p className="rounded-sm bg-sunken px-4 py-2.5 text-ui text-muted">
                             This capture has already been decided, or it is yours. Re-enumeration
                             creates a new observation; nothing here is overwritten.
                         </p>

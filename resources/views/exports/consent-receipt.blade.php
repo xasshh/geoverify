@@ -19,7 +19,7 @@
         html, body { background: #FBFAF7; color: #16202B; }
 
         body {
-            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             font-size: 9.5pt;
             line-height: 1.5;
             font-variant-numeric: tabular-nums;
@@ -39,14 +39,14 @@
         }
 
         .wordmark {
-            font-family: 'Newsreader', Georgia, serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 16pt;
             letter-spacing: -0.01em;
             margin: 0;
         }
 
         .doctype {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -55,7 +55,7 @@
         }
 
         .reference {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 8pt;
             text-align: right;
             color: #6B7A88;
@@ -71,7 +71,7 @@
         .standing.lapsed { border-color: #8A6A1F; }
 
         .standing-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -79,16 +79,16 @@
             margin: 0 0 1.5mm;
         }
         .standing-value {
-            font-family: 'Newsreader', Georgia, serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 19pt;
             line-height: 1.1;
             margin: 0;
         }
         .standing.lapsed .standing-value { color: #8A6A1F; }
-        .subject { font-family: 'Newsreader', Georgia, serif; font-size: 13pt; margin: 2mm 0 0; }
+        .subject { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13pt; margin: 2mm 0 0; }
 
         .section-head {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -125,7 +125,7 @@
             margin: 4mm 0 0;
         }
         .cell .k {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6.5pt;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -133,7 +133,7 @@
             margin: 0 0 0.8mm;
         }
         .cell .v { margin: 0; font-size: 9.5pt; }
-        .cell .v.mono { font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; }
+        .cell .v.mono { font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; }
 
         .note { font-size: 8pt; line-height: 1.55; color: #43535F; margin: 2mm 0 0; }
         .note strong { color: #16202B; font-weight: 600; }
@@ -142,7 +142,7 @@
             margin-top: 6mm;
             padding-top: 2.5mm;
             border-top: 0.5pt solid #D8D3C8;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6.5pt;
             letter-spacing: 0.06em;
             color: #97A3AE;

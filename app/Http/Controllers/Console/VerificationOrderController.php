@@ -40,7 +40,7 @@ final class VerificationOrderController
     public function index(Request $request): Response
     {
         $orders = VerificationOrder::query()
-            ->with(['enterprise:id,trading_name', 'structure:id,ward_id', 'structure.ward:id,name', 'party:id,code,display_name'])
+            ->with(['enterprise:id,trading_name', 'structure:id,ward_id', 'structure.ward:id,name', 'party:id,code,display_name', 'investorOrganisation:id,name'])
             ->whereIn('status', [
                 OrderStatus::Paid->value,
                 OrderStatus::Assigned->value,
@@ -63,7 +63,11 @@ final class VerificationOrderController
                 'id' => $o->id,
                 'reference' => $o->reference,
                 'business' => $o->enterprise->trading_name,
-                'party' => $o->party->display_name ?? $o->party->code,
+                // Whoever paid: the business, or an investor that commissioned
+                // the visit. Exactly one is set, by check constraint.
+                'party' => $o->party !== null
+                    ? ($o->party->display_name ?? $o->party->code)
+                    : 'Investor: '.($o->investorOrganisation->name ?? 'unknown'),
                 'ward' => $o->structure?->ward?->name,
                 'tier' => $o->tier,
                 'urgency' => $o->urgency->value,

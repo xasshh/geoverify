@@ -68,7 +68,7 @@ export function MapChrome({
     actions,
 }: MapChromeProps) {
     return (
-        <div className="flex h-full flex-col overflow-hidden rounded-sm border border-rule-strong bg-surface">
+        <div className="flex h-full flex-col overflow-hidden rounded-card border border-rule bg-raised">
             <header className="shrink-0 border-b border-rule px-4 py-2.5">
                 <div className="flex items-center justify-between gap-3">
                     <span className="flex items-center gap-2 numeric-mono text-mono text-ink">
@@ -76,7 +76,7 @@ export function MapChrome({
                         {cellId}
                     </span>
                     {openFlags > 0 && (
-                        <span className="flex items-center gap-1.5 text-ui font-semibold text-amber">
+                        <span className="flex items-center gap-1.5 text-ui font-semibold text-amber-ink">
                             <svg width="10" height="9" viewBox="0 0 11 10" aria-hidden="true">
                                 <path d="M5.5 0 11 10H0z" fill="currentColor" />
                             </svg>

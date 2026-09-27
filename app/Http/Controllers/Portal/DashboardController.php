@@ -70,6 +70,20 @@ final class DashboardController
                     ->count(),
             ])->all(),
 
+            // Businesses that have added this person and are waiting for a yes.
+            'invitations' => PartyUser::query()
+                ->with(['party:id,display_name,code'])
+                ->where('portal_account_id', $account->id)
+                ->whereNull('accepted_at')
+                ->whereNull('revoked_at')
+                ->get()
+                ->map(static fn (PartyUser $m): array => [
+                    'id' => $m->id,
+                    'business' => $m->party?->display_name,
+                    'role' => $m->role->label(),
+                ])
+                ->all(),
+
             // The business the dashboard is actually about. A party with four
             // shops still opens on one of them: a page that summarises
             // everything equally is a page that answers nothing, and the list
@@ -127,6 +141,7 @@ final class DashboardController
             ),
             'nextRung' => ($this->nextRung)($enterprise),
             'inFlight' => $this->inFlightFor($enterprise),
+            'orders' => $this->ordersFor($enterprise),
             'activity' => $this->activity->forEnterprise($enterprise->id, $enterprise->getMorphClass()),
             'receipts' => ConsentReceipt::query()
                 ->where('subject_type', $enterprise->getMorphClass())
@@ -147,6 +162,39 @@ final class DashboardController
     }
 
     /**
+     * Every verification order on this business, newest first, for the table
+     * under the cards. The certificate link is only offered on a completed
+     * order, which is the only kind that has one.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function ordersFor(Enterprise $enterprise): array
+    {
+        return VerificationOrder::query()
+            ->where('enterprise_id', $enterprise->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(static fn (VerificationOrder $order): array => [
+                'id' => $order->id,
+                'reference' => $order->reference,
+                'tier' => str_replace('_', ' ', $order->tier),
+                'status' => $order->status->value,
+                'statusLabel' => $order->status->label(),
+                'feeNaira' => (int) round($order->amount_minor / 100),
+                'orderedAt' => $order->created_at?->toIso8601String(),
+                'completedAt' => $order->completed_at?->toDateString(),
+                'hasCertificate' => $order->status === OrderStatus::Completed,
+                // A visit an investor paid for. The business sees it, because an
+                // officer at the door should never be a surprise, but not who
+                // asked: that is the investor's to disclose.
+                'byInvestor' => $order->isCommissionedByInvestor(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * The order that has not finished, if there is one.
      *
      * Only one is shown. Two visits in flight on the same business is rare and
@@ -156,8 +204,11 @@ final class DashboardController
      */
     private function inFlightFor(Enterprise $enterprise): ?array
     {
+        // The business's own orders only. One an investor commissioned is
+        // listed in the table below but is not the business's to follow or pay.
         $order = VerificationOrder::query()
             ->where('enterprise_id', $enterprise->id)
+            ->whereNotNull('party_id')
             ->orderByDesc('created_at')
             ->get()
             ->first(static fn (VerificationOrder $o): bool => ! $o->status->isSettled());

@@ -24,7 +24,7 @@ it('keeps an officer out of the console and sends them to their own work', funct
 it('sends a supervisor who opens the field client to the console', function () {
     $this->actingAs(person(Role::Supervisor))
         ->get('/field')
-        ->assertRedirect('/console/coverage');
+        ->assertRedirect('/console');
 });
 
 it('lets a supervisor and an admin into the console', function (string $role) {
@@ -53,7 +53,7 @@ it('shows an officer only their own assignments', function () {
     $assigner->assign(array_slice($cells, 2, 2), $theirs, $supervisor);
 
     $this->actingAs($mine)
-        ->get('/field')
+        ->get('/field/cells')
         ->assertOk()
         ->assertInertia(
             fn (AssertableInertia $page) => $page

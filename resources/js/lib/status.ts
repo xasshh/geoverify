@@ -31,7 +31,7 @@ export const STATUS_SHAPE: Record<StatusTone, StatusShape> = {
 /** Tailwind text colour class per tone. Backgrounds derive from these. */
 export const STATUS_COLOR: Record<StatusTone, string> = {
     accepted: "text-green",
-    review: "text-amber",
+    review: "text-amber-ink",
     rejected: "text-alert",
     progress: "text-gold",
     idle: "text-graphite",
@@ -133,4 +133,28 @@ const ORDER_TONE: Record<OrderStatus, StatusTone> = {
 
 export function orderTone(status: OrderStatus): StatusTone {
     return ORDER_TONE[status];
+}
+
+/** A product order, from checkout to release. See PurchaseStatus.php. */
+export type PurchaseStatus =
+    | "awaiting_payment"
+    | "held"
+    | "dispatched"
+    | "released"
+    | "disputed"
+    | "refunded"
+    | "cancelled";
+
+const PURCHASE_TONE: Record<PurchaseStatus, StatusTone> = {
+    awaiting_payment: "idle",
+    held: "held",
+    dispatched: "progress",
+    released: "accepted",
+    disputed: "rejected",
+    refunded: "idle",
+    cancelled: "idle",
+};
+
+export function purchaseTone(status: PurchaseStatus): StatusTone {
+    return PURCHASE_TONE[status];
 }

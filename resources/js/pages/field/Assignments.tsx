@@ -58,14 +58,14 @@ export default function FieldAssignments({ officer, assignments }: Props) {
     );
 
     return (
-        <div data-mode="dusk" className="min-h-dvh bg-surface text-ink">
+        <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
             <Head title="My work" />
             <AppBar />
 
             <header className="sticky top-0 z-10 border-b border-rule bg-surface px-4 pt-4 pb-3">
                 <div className="flex items-baseline justify-between gap-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             My work
                         </p>
                         <h1 className="font-display text-display-s text-ink">{officer.name}</h1>
@@ -88,7 +88,7 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                 </p>
 
                 {assignments.length === 0 ? (
-                    <div className="mt-8 rounded-sm border border-rule px-4 py-12 text-center">
+                    <div className="mt-8 rounded-card border border-rule px-4 py-12 text-center bg-raised">
                         <p className="text-body text-ink">No work assigned yet.</p>
                         <p className="mt-1 text-ui text-muted">
                             Your supervisor will send cells to this device.
@@ -125,7 +125,7 @@ export default function FieldAssignments({ officer, assignments }: Props) {
                                         <span
                                             className={cx(
                                                 'numeric-mono text-ui',
-                                                a.overdue ? 'text-amber' : 'text-faint',
+                                                a.overdue ? 'text-amber-ink' : 'text-faint',
                                             )}
                                         >
                                             {a.overdue ? 'Overdue ' : 'Due '}
@@ -152,7 +152,7 @@ export default function FieldAssignments({ officer, assignments }: Props) {
 
                                 {a.returnReason !== null && (
                                     <p className="mt-3 border-l-2 border-amber pl-3 text-ui text-muted">
-                                        <span className="block text-label font-semibold tracking-[0.12em] text-amber uppercase">
+                                        <span className="block text-label font-semibold tracking-[0.05em] text-amber-ink uppercase">
                                             Sent back
                                         </span>
                                         {a.returnReason}
@@ -161,7 +161,7 @@ export default function FieldAssignments({ officer, assignments }: Props) {
 
                                 {a.returnedCaptures.length > 0 && (
                                     <div className="mt-3 border-l-2 border-amber pl-3">
-                                        <p className="text-label font-semibold tracking-[0.12em] text-amber uppercase">
+                                        <p className="text-label font-semibold tracking-[0.05em] text-amber-ink uppercase">
                                             {a.returnedCaptures.length === 1
                                                 ? '1 capture to do again'
                                                 : `${String(a.returnedCaptures.length)} captures to do again`}

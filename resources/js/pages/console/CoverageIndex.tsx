@@ -53,8 +53,8 @@ export default function CoverageIndex({ areas }: { areas: Area[] }) {
         <ConsoleShell current="coverage">
             <Head title="Coverage" />
             <div className="mx-auto max-w-6xl px-6 pb-20">
-                <header className="mt-8 border-b-[1.5px] border-ink pb-3">
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">Console</p>
+                <header className="mt-8 border-b border-rule pb-3">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">Console</p>
                     <h1 className="font-display text-display-m text-ink">Coverage</h1>
                 </header>
                 <div className="mt-8">

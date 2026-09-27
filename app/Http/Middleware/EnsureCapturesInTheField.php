@@ -21,7 +21,7 @@ final class EnsureCapturesInTheField
         }
 
         if (! $user->capturesInTheField()) {
-            return redirect()->route('console.coverage.index');
+            return redirect()->route('console.team');
         }
 
         return $next($request);

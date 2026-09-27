@@ -1,40 +1,54 @@
 /*
 | Type, self-hosted
 |
+| The portal design system of September 2026: Plus Jakarta Sans for everything
+| a person reads, JetBrains Mono for what a machine wrote (coordinates, cells,
+| references), Montserrat 700 for the wordmark and nothing else.
+|
 | Subsets matter here more than usual. Nigerian trading and person names carry
 | Yoruba, Igbo and Hausa orthography, and those characters are NOT in the "latin"
 | subset:
 |
-|   latin-ext   s-dot, n-dot, and the Hausa hooked letters b, d, k
+|   latin-ext   s-dot, n-acute, and the Hausa hooked letters b, d, k
 |   vietnamese  the Yoruba and Igbo sub-dot vowels e, o, i, u
 |
-| Dropping either subset renders a business name in a fallback face, which in a
-| register sold on accuracy is a defect, not a cosmetic issue. Each face is
-| unicode-range gated, so a page of plain ASCII downloads none of the extras.
+| Measured against the font files, not assumed from the unicode ranges: Plus
+| Jakarta Sans has every sub-dot letter and the naira sign but not the Hausa
+| hooked letters, and neither did IBM Plex before it. Montserrat has all three,
+| so its latin-ext face sits second in the sans stack and the browser borrows
+| those glyphs from it. JetBrains Mono has neither s-dot nor the naira sign, so
+| the mono stack falls back to the sans for them rather than to a system face.
 |
-| Newsreader uses the weight-only axis rather than optical size: the opsz build
-| costs 272 KB on latin alone against 120 KB, and the display face is rationed in
-| the field app anyway. That is 152 KB an officer on 2G does not pay for.
+| Each face is unicode-range gated, so a page of plain ASCII downloads none of
+| the extras, and the Montserrat fallback only when a hooked letter appears.
 */
-@import '@fontsource/ibm-plex-sans/latin-400.css';
-@import '@fontsource/ibm-plex-sans/latin-500.css';
-@import '@fontsource/ibm-plex-sans/latin-600.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-400.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-500.css';
-@import '@fontsource/ibm-plex-sans/latin-ext-600.css';
-@import '@fontsource/ibm-plex-sans/vietnamese-400.css';
-@import '@fontsource/ibm-plex-sans/vietnamese-500.css';
-@import '@fontsource/ibm-plex-sans/vietnamese-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-400.css';
+@import '@fontsource/plus-jakarta-sans/latin-500.css';
+@import '@fontsource/plus-jakarta-sans/latin-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-800.css';
+@import '@fontsource/plus-jakarta-sans/latin-ext-400.css';
+@import '@fontsource/plus-jakarta-sans/latin-ext-500.css';
+@import '@fontsource/plus-jakarta-sans/latin-ext-600.css';
+@import '@fontsource/plus-jakarta-sans/latin-ext-700.css';
+@import '@fontsource/plus-jakarta-sans/latin-ext-800.css';
+@import '@fontsource/plus-jakarta-sans/vietnamese-400.css';
+@import '@fontsource/plus-jakarta-sans/vietnamese-500.css';
+@import '@fontsource/plus-jakarta-sans/vietnamese-600.css';
+@import '@fontsource/plus-jakarta-sans/vietnamese-700.css';
+@import '@fontsource/plus-jakarta-sans/vietnamese-800.css';
 
-@import '@fontsource/ibm-plex-mono/latin-400.css';
-@import '@fontsource/ibm-plex-mono/latin-500.css';
-@import '@fontsource/ibm-plex-mono/latin-ext-400.css';
-@import '@fontsource/ibm-plex-mono/latin-ext-500.css';
-@import '@fontsource/ibm-plex-mono/vietnamese-400.css';
-@import '@fontsource/ibm-plex-mono/vietnamese-500.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-500.css';
+@import '@fontsource/jetbrains-mono/latin-ext-400.css';
+@import '@fontsource/jetbrains-mono/latin-ext-500.css';
+@import '@fontsource/jetbrains-mono/vietnamese-400.css';
+@import '@fontsource/jetbrains-mono/vietnamese-500.css';
 
-@import '@fontsource-variable/newsreader/wght.css';
-@import '@fontsource-variable/newsreader/wght-italic.css';
+/* The wordmark, and the Hausa fallback described above. */
+@import '@fontsource/montserrat/latin-700.css';
+@import '@fontsource/montserrat/latin-ext-400.css';
+@import '@fontsource/montserrat/latin-ext-700.css';
 
 @import 'tailwindcss';
 
@@ -43,104 +57,115 @@
 |
 | Two modes, both designed rather than inverted:
 |
-|   daylight  the console's register room, and the field app in direct sun, where
-|             a bright screen on a light ground beats a dark one because a phone
-|             cannot out-emit the sun.
-|   dusk      the field app in low light and on battery, where a dark ground on
-|             OLED costs less power.
+|   daylight  every portal, the console, and the field app by default. White
+|             cards on a pale canvas: a phone cannot out-emit the sun, so a
+|             bright screen on a light ground is also the field choice outdoors.
+|   dusk      the console's map screens, read against dark ground so the
+|             geometry carries the contrast, and anything else that asks.
 |
-| Every status colour exists in both, same hue and same meaning, tuned so it stays
-| legible on the surface behind it. Values are measured, not guessed: dusk hits
-| WCAG AAA on the primary surface, daylight hits AA on the raised surface.
+| The palette is the UI/UX guide's (v1, September 2026). One accent teal, and
+| it means verification and action, never decoration. Every status has a hue
+| for marks and fills, and a soft tint with a darker ink for pills, so a pill
+| is readable without being loud.
 */
 :root,
 [data-mode='daylight'] {
-    --gv-surface: #f7f6f3;
-    --gv-surface-raised: #edebe6;
-    --gv-surface-sunken: #e2dfd8;
+    --gv-surface: #f5f6f4; /* canvas */
+    --gv-surface-raised: #ffffff; /* cards, sidebar */
+    --gv-surface-sunken: #eef0ee;
 
-    --gv-text: #0e1e2e;
-    --gv-text-muted: #43535f;
-    --gv-text-faint: #6b7a85;
-    --gv-text-inverse: #f7f6f3;
+    --gv-text: #0f1a17; /* ink */
+    --gv-text-muted: #4a5752; /* body */
+    --gv-text-faint: #5f6b66; /* captions, 4.5:1 on canvas */
+    --gv-text-inverse: #ffffff;
 
-    --gv-rule: #d3cfc6;
-    --gv-rule-strong: #b4aea2;
+    --gv-rule: #e6e9e6;
+    --gv-rule-strong: #d5dbd7;
 
     /*
-    | One accent, and it means verification, never decoration.
-    |
-    | Teal since 2026-09-09, gold before that. The token is still named gold
-    | because renaming it touches a hundred and twenty class names in twenty
-    | five files, which is a separate change from picking a colour.
-    |
-    | 7.95:1 on the raised surface, measured. The gold it replaced was 4.70,
-    | so this is the first accent here that clears AAA in daylight.
+    | The accent. Still named gold because renaming it touches a hundred and
+    | twenty class names in twenty five files, which is a separate change from
+    | picking a colour. It has been teal since 2026-09-09.
     */
-    --gv-gold: #134e4a;
-    --gv-green: #2a6555;
-    --gv-amber: #9a5913;
-    --gv-alert: #8f2721;
-    --gv-graphite: #54646f;
+    --gv-gold: #0e7c72; /* primary */
+    --gv-gold-dark: #0a5e57; /* hover, text on soft */
+    --gv-gold-soft: #e0f3f1; /* active nav, chips */
+    --gv-logo: #4db8b0; /* logo and wordmark only */
 
-    /* Text that sits on a filled status block. */
-    --gv-on-accent: #f7f6f3;
+    --gv-green: #0a5e57;
+    --gv-green-soft: #e0f3f1;
+    --gv-amber: #b7791f;
+    --gv-amber-ink: #7a4f0a;
+    --gv-amber-soft: #fbf1e0;
+    --gv-alert: #c2410c;
+    --gv-alert-ink: #a3360a;
+    --gv-alert-soft: #fdede5;
+    --gv-graphite: #5f6b66;
+    --gv-graphite-soft: #eef0ee;
 
     /*
-    | Two tokens the portal needs and the field app does not.
-    |
-    | paper-edge: one step darker than the rule, for the boundary of a document
-    | shown on screen. The rule token is correct for dividing a table and too
-    | light to read as the edge of a page at 360px.
-    |
     | held: money that is neither settled nor wrong. Funds held pending delivery
     | are not green, because nothing has settled, and not amber, because nothing
-    | is waiting on the customer. Reusing either would teach a false meaning in
-    | the one place where the meaning is the product. Kept clear of graphite so
-    | "not established" and "held" never read alike.
+    | is waiting on the customer. The guide's info blue, kept clear of graphite
+    | so "not established" and "held" never read alike.
     */
-    --gv-paper-edge: #ded9cf;
-    --gv-held: #4a5f7a;
+    --gv-held: #2f5bea;
+    --gv-held-ink: #2445b8;
+    --gv-held-soft: #e8eefd;
 
-    --gv-shadow-sheet: 0 -2px 24px rgb(14 30 46 / 0.12);
+    /* Text that sits on a filled status block. */
+    --gv-on-accent: #ffffff;
+
+    /* The edge of a document shown on screen. */
+    --gv-paper-edge: #d5dbd7;
+
+    --gv-shadow-sheet: 0 -2px 24px rgb(15 26 23 / 0.12);
+    --gv-shadow-card: 0 1px 2px rgb(15 26 23 / 0.04);
+    --gv-shadow-float: 0 8px 28px rgb(15 26 23 / 0.14);
 }
 
 [data-mode='dusk'] {
-    --gv-surface: #0e1e2e;
-    --gv-surface-raised: #16293b;
-    --gv-surface-sunken: #091624;
+    --gv-surface: #0f1a17;
+    --gv-surface-raised: #16241f;
+    --gv-surface-sunken: #0a1310;
 
-    --gv-text: #f2f1ed;
-    --gv-text-muted: #a2b0bb;
-    --gv-text-faint: #7e8c99;
-    --gv-text-inverse: #0e1e2e;
+    --gv-text: #eef2f0;
+    --gv-text-muted: #a9b7b1;
+    --gv-text-faint: #8a9993;
+    --gv-text-inverse: #0f1a17;
 
-    --gv-rule: #25394b;
-    --gv-rule-strong: #385064;
+    --gv-rule: #23332d;
+    --gv-rule-strong: #34483f;
 
-    /* 7.06:1 on the primary surface, which is the AAA line exactly. */
-    --gv-gold: #4bb8b0;
+    --gv-gold: #4db8b0;
+    --gv-gold-dark: #7fd0c9;
+    --gv-gold-soft: #173b36;
+    --gv-logo: #4db8b0;
+
     --gv-green: #5cc0a4;
-    --gv-amber: #ee9c45;
-    --gv-alert: #f2938c;
-    --gv-graphite: #a2b0bb;
+    --gv-green-soft: #173b36;
+    --gv-amber: #e3a042;
+    --gv-amber-ink: #f0bb6c;
+    --gv-amber-soft: #3a2c14;
+    --gv-alert: #f08a66;
+    --gv-alert-ink: #f5a78b;
+    --gv-alert-soft: #3d2016;
+    --gv-graphite: #a9b7b1;
+    --gv-graphite-soft: #1d2c27;
 
-    --gv-on-accent: #0e1e2e;
+    --gv-held: #8aa6f5;
+    --gv-held-ink: #a9bdf7;
+    --gv-held-soft: #1c2748;
 
-    /* The portal runs daylight. These exist in dusk so a component that uses
-       them can never render an unresolved custom property on a dark surface. */
-    --gv-paper-edge: #25394b;
-    --gv-held: #8aa4c0;
+    --gv-on-accent: #0f1a17;
+
+    --gv-paper-edge: #23332d;
 
     --gv-shadow-sheet: 0 -2px 24px rgb(0 0 0 / 0.5);
+    --gv-shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+    --gv-shadow-float: 0 8px 28px rgb(0 0 0 / 0.5);
 }
 
-/*
-| Tokens
-|
-| "inline" so the utilities resolve the custom property at use time rather than
-| baking the value in. That is what lets a single class work in both modes.
-*/
 /*
 | The mark, one ink per mode.
 |
@@ -161,6 +186,12 @@
     display: none;
 }
 
+/*
+| Tokens
+|
+| "inline" so the utilities resolve the custom property at use time rather than
+| baking the value in. That is what lets a single class work in both modes.
+*/
 @theme inline {
     --color-surface: var(--gv-surface);
     --color-raised: var(--gv-surface-raised);
@@ -175,35 +206,62 @@
     --color-rule-strong: var(--gv-rule-strong);
 
     --color-gold: var(--gv-gold);
+    --color-gold-dark: var(--gv-gold-dark);
+    --color-gold-soft: var(--gv-gold-soft);
+    --color-logo: var(--gv-logo);
     --color-green: var(--gv-green);
+    --color-green-soft: var(--gv-green-soft);
     --color-amber: var(--gv-amber);
+    --color-amber-ink: var(--gv-amber-ink);
+    --color-amber-soft: var(--gv-amber-soft);
     --color-alert: var(--gv-alert);
+    --color-alert-ink: var(--gv-alert-ink);
+    --color-alert-soft: var(--gv-alert-soft);
     --color-graphite: var(--gv-graphite);
+    --color-graphite-soft: var(--gv-graphite-soft);
     --color-on-accent: var(--gv-on-accent);
     --color-paper-edge: var(--gv-paper-edge);
     --color-held: var(--gv-held);
+    --color-held-ink: var(--gv-held-ink);
+    --color-held-soft: var(--gv-held-soft);
 
-    --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
-    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --shadow-card: var(--gv-shadow-card);
+    --shadow-float: var(--gv-shadow-float);
 
-    /* Display sizes carry the optical size axis, so they are set per step. */
+    /*
+    | One family for reading, set heavy for headings. "display" is kept as a
+    | name so the ninety headings that ask for it follow without a sweep.
+    */
+    --font-display: 'Plus Jakarta Sans', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Plus Jakarta Sans', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-wordmark: 'Montserrat', 'Plus Jakarta Sans', sans-serif;
 
-    /* The one number or name a portal screen is about: the fee, the business
-       name. Not used in the field app or the console, where nothing is ever
-       the single subject of a screen. */
+    /*
+    | Display sizes, from the guide: display 40/800, page title 32/800, section
+    | heading 20/800. The weight lives on the size so a heading cannot be set in
+    | the display step and forget to be heavy.
+    |
+    | display-xl is the one number or name a portal screen is about: the fee,
+    | the business name.
+    */
     --text-display-xl: 2.5rem;
-    --text-display-xl--line-height: 1.05;
-    --text-display-xl--letter-spacing: -0.02em;
+    --text-display-xl--line-height: 1.08;
+    --text-display-xl--letter-spacing: -0.025em;
+    --text-display-xl--font-weight: 800;
 
-    --text-display-l: 2.125rem;
-    --text-display-l--line-height: 1.05;
-    --text-display-l--letter-spacing: -0.015em;
-    --text-display-m: 1.625rem;
-    --text-display-m--line-height: 1.15;
-    --text-display-m--letter-spacing: -0.01em;
+    --text-display-l: 2rem;
+    --text-display-l--line-height: 1.12;
+    --text-display-l--letter-spacing: -0.02em;
+    --text-display-l--font-weight: 800;
+    --text-display-m: 1.5rem;
+    --text-display-m--line-height: 1.2;
+    --text-display-m--letter-spacing: -0.015em;
+    --text-display-m--font-weight: 800;
     --text-display-s: 1.25rem;
-    --text-display-s--line-height: 1.25;
+    --text-display-s--line-height: 1.3;
+    --text-display-s--letter-spacing: -0.01em;
+    --text-display-s--font-weight: 800;
 
     --text-body: 0.9375rem;
     --text-body--line-height: 1.6;
@@ -211,9 +269,9 @@
     --text-ui--line-height: 1.45;
     --text-table: 0.8125rem;
     --text-table--line-height: 1.4;
-    --text-label: 0.6875rem;
+    --text-label: 0.75rem;
     --text-label--line-height: 1.3;
-    --text-label--letter-spacing: 0.12em;
+    --text-label--letter-spacing: 0.05em;
     --text-mono: 0.8125rem;
     --text-mono--line-height: 1.5;
 
@@ -222,7 +280,16 @@
     --spacing-touch-lg: 3rem; /* 48px, anything destructive */
     --spacing-touch-xl: 3.25rem; /* 52px, primary field action */
 
-    --radius-sheet: 0.75rem;
+    /*
+    | Radius, from the guide: cards 20, controls 12, pills full. rounded-sm is
+    | what a hundred and sixty controls already ask for, so it becomes the
+    | control radius; rounded-card is new and is what a panel asks for.
+    */
+    --radius-xs: 0.375rem;
+    --radius-sm: 0.75rem;
+    --radius-md: 0.75rem;
+    --radius-card: 1.25rem;
+    --radius-sheet: 1.25rem;
 }
 
 @layer base {

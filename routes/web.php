@@ -6,7 +6,9 @@ use App\Domain\Coverage\Actions\CheckSpatialStack;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CampaignBuildController;
 use App\Http\Controllers\Admin\CampaignController;
+use App\Http\Controllers\Admin\DisputeController;
 use App\Http\Controllers\Admin\EscalationController;
+use App\Http\Controllers\Admin\InvestorController as AdminInvestorController;
 use App\Http\Controllers\Admin\MandateController;
 use App\Http\Controllers\Admin\PeopleController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
@@ -18,25 +20,42 @@ use App\Http\Controllers\Console\CorrectionReviewController;
 use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\LiveOperationsController;
+use App\Http\Controllers\Console\MessageController as ConsoleMessageController;
 use App\Http\Controllers\Console\ReviewController;
+use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
+use App\Http\Controllers\Field\FieldHomeController;
+use App\Http\Controllers\Field\FieldMessageController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
+use App\Http\Controllers\Invest\CommissionController as InvestCommissionController;
+use App\Http\Controllers\Invest\InvestorController as InvestorPortalController;
+use App\Http\Controllers\Invest\SignInController as InvestSignInController;
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\Payments\PaystackWebhookController;
+use App\Http\Controllers\Portal\AccountSettingsController;
+use App\Http\Controllers\Portal\CatalogueController;
 use App\Http\Controllers\Portal\CertificateController;
+use App\Http\Controllers\Portal\CheckoutController;
 use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\CorrectionController as PortalCorrectionController;
 use App\Http\Controllers\Portal\DashboardController;
+use App\Http\Controllers\Portal\InvestorProfileController;
 use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\OrderController;
+use App\Http\Controllers\Portal\OrdersIndexController;
+use App\Http\Controllers\Portal\PurchaseController;
 use App\Http\Controllers\Portal\RegisterBusinessController;
+use App\Http\Controllers\Portal\SaleController;
 use App\Http\Controllers\Portal\SignInController;
 use App\Http\Controllers\Portal\StorefrontPhotoController;
+use App\Http\Controllers\Portal\TeamController;
+use App\Http\Controllers\Portal\VerificationController as PortalVerificationController;
+use App\Http\Controllers\Portal\WalletController;
 use App\Http\Controllers\PublicVerificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,6 +73,15 @@ if (app()->isLocal()) {
 | The supervisor console. Assigning ground, and seeing who holds what.
 */
 Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->group(function (): void {
+    // Team today, the supervisor's home, and the field inbox from this side.
+    Route::get('/', TeamTodayController::class)->name('team');
+    Route::get('brief', [TeamTodayController::class, 'brief'])->name('brief');
+    Route::get('messages/{officer?}', [ConsoleMessageController::class, 'index'])->name('messages');
+    Route::post('messages/{officer}', [ConsoleMessageController::class, 'send'])
+        ->whereNumber('officer')->middleware('throttle:60,1')->name('messages.send');
+    Route::post('broadcasts', [ConsoleMessageController::class, 'broadcast'])
+        ->middleware('throttle:20,1')->name('broadcasts');
+    Route::post('field-messages/{message}/pin', [ConsoleMessageController::class, 'pin'])->name('messages.pin');
     Route::get('coverage', [CoverageController::class, 'index'])->name('coverage.index');
     Route::get('coverage/{coverageArea}', [CoverageController::class, 'show'])->name('coverage');
     Route::get('coverage/{coverageArea}/cells.geojson', [CoverageController::class, 'cells'])->name('coverage.cells');
@@ -123,6 +151,13 @@ Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->gro
     Route::post('people', [PeopleController::class, 'store'])->name('people.store');
     Route::post('people/{person}/status', [PeopleController::class, 'status'])->name('people.status');
     Route::post('devices/{device}/revoke', [PeopleController::class, 'revokeDevice'])->name('devices.revoke');
+
+    Route::get('investors', [AdminInvestorController::class, 'index'])->name('investors');
+    Route::post('investors/{organisation}/decide', [AdminInvestorController::class, 'decide'])->name('investors.decide');
+
+    // A buyer's issue with an order, and the ruling that moves the money.
+    Route::get('disputes', [DisputeController::class, 'index'])->name('disputes');
+    Route::post('disputes/{order}', [DisputeController::class, 'rule'])->name('disputes.rule');
 
     Route::get('mandates', [MandateController::class, 'index'])->name('mandates');
     Route::post('mandates', [MandateController::class, 'store'])->name('mandates.store');
@@ -222,6 +257,9 @@ Route::prefix('directory')->name('directory.')->group(function (): void {
         ->middleware('throttle:60,1')->name('index');
 
     // Before the numeric listing route, or "sectors" is read as an id.
+    Route::get('roads.json', [DirectoryController::class, 'roads'])
+        ->middleware('throttle:120,1')->name('roads');
+    Route::get('how-verification-works', [DirectoryController::class, 'howItWorks'])->name('how');
     Route::get('sectors', [DirectoryController::class, 'sectors'])
         ->middleware('throttle:60,1')->name('sectors');
 
@@ -302,8 +340,24 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
 
     Route::post('sign-out', [SignInController::class, 'signOut'])->name('sign-out');
 
+    // The second way in, and getting it back. A password is only ever set from
+    // a session that proved the phone, so none of these opens an account.
+    Route::post('sign-in/password', [SignInController::class, 'signInWithPassword'])
+        ->middleware('throttle:10,1')->name('sign-in.password');
+    Route::post('verify/resend', [SignInController::class, 'resend'])
+        ->middleware('throttle:3,1')->name('verify.resend');
+    Route::get('forgot-password', [SignInController::class, 'forgotForm'])->name('forgot-password');
+    Route::get('reset-password', [SignInController::class, 'resetForm'])->name('reset-password');
+    Route::post('reset-password', [SignInController::class, 'reset'])
+        ->middleware('throttle:10,1')->name('reset-password.submit');
+
     Route::middleware('portal')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::get('settings', [AccountSettingsController::class, 'show'])->name('settings');
+        Route::post('settings/email', [AccountSettingsController::class, 'email'])->name('settings.email');
+        Route::post('settings/password', [AccountSettingsController::class, 'password'])
+            ->middleware('throttle:10,1')->name('settings.password');
 
         // Claiming. Search is the only place a field-captured record is visible
         // to somebody who has proved nothing, so its projection is thin by
@@ -337,6 +391,46 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
         Route::post('businesses/{enterprise}/photos/{media}/withdraw', [StorefrontPhotoController::class, 'withdraw'])
             ->name('photos.withdraw');
 
+        // The merchant hub. Listings is the business's own catalogue; Team is
+        // who may act for it; Verification and Orders read what exists.
+        Route::get('businesses/{enterprise}/listings', [CatalogueController::class, 'index'])->name('listings');
+        Route::post('businesses/{enterprise}/listings', [CatalogueController::class, 'store'])->name('listings.store');
+        Route::post('businesses/{enterprise}/listings/{product}', [CatalogueController::class, 'update'])->name('listings.update');
+        Route::post('businesses/{enterprise}/listings/{product}/withdraw', [CatalogueController::class, 'withdraw'])->name('listings.withdraw');
+        Route::post('businesses/{enterprise}/listings/{product}/photos', [CatalogueController::class, 'addPhoto'])
+            ->middleware('throttle:30,1')->name('listings.photos.store');
+        Route::post('businesses/{enterprise}/listings/{product}/photos/{media}/withdraw', [CatalogueController::class, 'withdrawPhoto'])
+            ->name('listings.photos.withdraw');
+        Route::get('businesses/{enterprise}/verification', [PortalVerificationController::class, 'show'])->name('verification');
+        Route::get('orders', OrdersIndexController::class)->name('orders.index');
+        Route::get('sales/{order}', [SaleController::class, 'show'])->name('sales.show');
+        Route::post('sales/{order}/dispatch', [SaleController::class, 'dispatch'])->name('sales.dispatch');
+
+        // The wallet. Balances are read from the ledger; a withdrawal is only
+        // reserved here and is settled by the provider's transfer webhook.
+        Route::get('wallet', [WalletController::class, 'show'])->name('wallet');
+        Route::post('wallet/account', [WalletController::class, 'saveAccount'])
+            ->middleware('throttle:6,1')->name('wallet.account');
+        Route::post('wallet/withdraw', [WalletController::class, 'withdraw'])
+            ->middleware('throttle:6,1')->name('wallet.withdraw');
+        Route::get('team', [TeamController::class, 'index'])->name('team');
+        Route::post('team', [TeamController::class, 'invite'])->middleware('throttle:20,1')->name('team.invite');
+        Route::post('team/{member}/role', [TeamController::class, 'role'])->name('team.role');
+        Route::post('team/{member}/revoke', [TeamController::class, 'revoke'])->name('team.revoke');
+        Route::post('team/{member}/accept', [TeamController::class, 'accept'])->name('team.accept');
+
+        // What a business tells investors, and who may read its data room.
+        // Nothing reaches the investor portal except through these.
+        Route::get('businesses/{enterprise}/investors', [InvestorProfileController::class, 'show'])->name('investors');
+        Route::post('businesses/{enterprise}/investors', [InvestorProfileController::class, 'save'])->name('investors.save');
+        Route::post('businesses/{enterprise}/investors/withdraw', [InvestorProfileController::class, 'withdraw'])->name('investors.withdraw');
+        Route::post('businesses/{enterprise}/investors/documents', [InvestorProfileController::class, 'upload'])
+            ->middleware('throttle:20,1')->name('investors.documents.store');
+        Route::post('businesses/{enterprise}/investors/documents/{document}/withdraw', [InvestorProfileController::class, 'withdrawDocument'])
+            ->name('investors.documents.withdraw');
+        Route::post('businesses/{enterprise}/investors/requests/{grant}', [InvestorProfileController::class, 'decide'])
+            ->name('investors.requests.decide');
+
         // Self-registration. The other way onto the register, for a business no
         // officer has reached. Every step is an ordinary form post so the whole
         // thing survives a connection that comes and goes.
@@ -345,6 +439,20 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
         Route::post('register-business/place', [RegisterBusinessController::class, 'savePlace'])->name('register-business.place');
         Route::post('register-business/back', [RegisterBusinessController::class, 'back'])->name('register-business.back');
         Route::post('register-business', [RegisterBusinessController::class, 'submit'])->name('register-business.submit');
+
+        // Buying from a business (M2). The same rule as buying verification
+        // below: the order is placed here and marked paid only by the webhook.
+        Route::get('checkout/{enterprise}', [CheckoutController::class, 'show'])->name('checkout');
+        Route::post('checkout/{enterprise}', [CheckoutController::class, 'store'])
+            ->middleware('throttle:20,1')->name('checkout.store');
+        Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+        Route::get('purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
+        Route::post('purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+        Route::get('purchases/{order}/return', [PurchaseController::class, 'return'])->name('purchases.return');
+        Route::post('purchases/{order}/confirm', [PurchaseController::class, 'confirm'])->name('purchases.confirm');
+        Route::post('purchases/{order}/issue', [PurchaseController::class, 'issue'])
+            ->middleware('throttle:10,1')->name('purchases.issue');
+        Route::post('purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
 
         // Buying verification. The order is placed here, but it is only ever
         // paid by the provider's signed webhook: nothing on this guard, and
@@ -368,7 +476,14 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
 | The field client. An officer sees their own work and nothing else.
 */
 Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(function (): void {
-    Route::get('/', [AssignmentBoardController::class, 'index'])->name('index');
+    Route::get('/', [FieldHomeController::class, 'today'])->name('index');
+    Route::get('map', [FieldHomeController::class, 'map'])->name('map');
+    Route::get('records', [FieldHomeController::class, 'records'])->name('records');
+    Route::get('inbox', [FieldHomeController::class, 'inbox'])->name('inbox');
+    Route::get('brief', [FieldHomeController::class, 'brief'])->name('brief');
+    Route::get('device', [FieldHomeController::class, 'device'])->name('device');
+    // The previous board, kept for the cells list it shows.
+    Route::get('cells', [AssignmentBoardController::class, 'index'])->name('cells');
     Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
 });
 
@@ -394,6 +509,13 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
 
     // Where a handset that has been offline tells the server what happened.
     Route::post('sync', SyncController::class)->name('sync');
+
+    // The supervisor inbox. A channel of its own beside the sync contract,
+    // idempotent on the handset's uuid like everything else sent from here.
+    Route::get('messages', [FieldMessageController::class, 'index'])->name('messages.index');
+    Route::post('messages', [FieldMessageController::class, 'store'])
+        ->middleware('throttle:60,1')->name('messages.store');
+    Route::post('messages/read', [FieldMessageController::class, 'read'])->name('messages.read');
 });
 
 /*
@@ -408,3 +530,60 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
 */
 Route::post('webhooks/paystack', PaystackWebhookController::class)
     ->name('webhooks.paystack');
+
+/*
+| The Global Investor and Discovery Portal, on its own guard.
+|
+| The overview and the explore map read aggregates over the directory-visible
+| population and are open as soon as somebody has an account. Everything that
+| names a business (opportunities, dossiers, data rooms, reports) waits for
+| the organisation to pass KYC, which `investor:verified` enforces.
+*/
+Route::prefix('invest')->name('invest.')->group(function (): void {
+    Route::get('sign-in', [InvestSignInController::class, 'show'])->name('sign-in');
+    Route::post('sign-in', [InvestSignInController::class, 'signIn'])
+        ->middleware('throttle:10,1')->name('sign-in.submit');
+    Route::get('request-access', [InvestSignInController::class, 'requestForm'])->name('request-access');
+    Route::post('request-access', [InvestSignInController::class, 'request'])
+        ->middleware('throttle:5,1')->name('request-access.submit');
+    Route::post('sign-out', [InvestSignInController::class, 'signOut'])->name('sign-out');
+    Route::get('forgot-password', [InvestSignInController::class, 'forgotForm'])->name('forgot-password');
+    Route::post('forgot-password', [InvestSignInController::class, 'sendResetLink'])
+        ->middleware('throttle:5,1')->name('forgot-password.submit');
+    Route::get('reset-password/{token}', [InvestSignInController::class, 'resetForm'])->name('reset-password');
+    Route::post('reset-password', [InvestSignInController::class, 'reset'])
+        ->middleware('throttle:10,1')->name('reset-password.submit');
+    Route::get('sso', [InvestSignInController::class, 'ssoForm'])->name('sso');
+    Route::post('sso', [InvestSignInController::class, 'sso'])->middleware('throttle:10,1')->name('sso.submit');
+
+    Route::middleware('investor')->group(function (): void {
+        Route::get('/', [InvestorPortalController::class, 'overview'])->name('overview');
+        Route::get('explore', [InvestorPortalController::class, 'explore'])->name('explore');
+        Route::get('settings', [InvestorPortalController::class, 'settings'])->name('settings');
+        Route::post('settings/profile', [InvestorPortalController::class, 'updateProfile'])->name('settings.profile');
+    });
+
+    Route::middleware('investor:verified')->group(function (): void {
+        Route::get('opportunities', [InvestorPortalController::class, 'opportunities'])->name('opportunities');
+        Route::get('opportunities/{opportunity}', [InvestorPortalController::class, 'show'])->name('opportunities.show');
+        Route::post('opportunities/{opportunity}/watch', [InvestorPortalController::class, 'watch'])->name('opportunities.watch');
+        Route::post('opportunities/{opportunity}/interest', [InvestorPortalController::class, 'interest'])->name('opportunities.interest');
+        Route::post('opportunities/{opportunity}/note', [InvestorPortalController::class, 'note'])->name('opportunities.note');
+        Route::post('opportunities/{opportunity}/data-room', [InvestorPortalController::class, 'requestRoom'])->name('opportunities.data-room');
+        Route::get('opportunities/{opportunity}/documents/{document}', [InvestorPortalController::class, 'document'])->name('opportunities.document');
+        Route::get('opportunities/{opportunity}/certificates/{order}.pdf', [InvestorPortalController::class, 'certificate'])->name('opportunities.certificate');
+        Route::get('watchlist', [InvestorPortalController::class, 'watchlist'])->name('watchlist');
+        Route::get('data-rooms', [InvestorPortalController::class, 'dataRooms'])->name('data-rooms');
+        Route::get('reports', [InvestorPortalController::class, 'reports'])->name('reports');
+
+        // Commissioned visits. Paid only by the provider's signed webhook, like
+        // every other order: pay asks for a checkout page, return is inert.
+        Route::get('verifications', [InvestCommissionController::class, 'index'])->name('verifications');
+        Route::get('opportunities/{opportunity}/commission', [InvestCommissionController::class, 'create'])->name('commission.create');
+        Route::post('opportunities/{opportunity}/commission', [InvestCommissionController::class, 'store'])->name('commission.store');
+        Route::get('verifications/{order}', [InvestCommissionController::class, 'show'])->name('verifications.show');
+        Route::post('verifications/{order}/pay', [InvestCommissionController::class, 'pay'])->name('verifications.pay');
+        Route::get('verifications/{order}/return', [InvestCommissionController::class, 'return'])->name('verifications.return');
+        Route::get('verifications/{order}/certificate.pdf', [InvestCommissionController::class, 'certificate'])->name('verifications.certificate');
+    });
+});

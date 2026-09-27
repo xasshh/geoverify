@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Button } from '@/components/Button';
+import { CaptureStepHeader, GpsCard, SupervisorNote } from '@/components/CaptureChrome';
 import { CoverageBar, FootprintLegend, MapChrome } from '@/components/MapChrome';
 import { PresenceMark } from '@/components/PresenceMark';
 import { SectorPicker } from '@/components/SectorPicker';
@@ -211,7 +212,7 @@ export default function Capture({
     const poorAccuracy = accuracy !== null && accuracy > 15;
 
     return (
-        <div data-mode="dusk" className="h-dvh bg-surface text-ink">
+        <div data-mode="daylight" className="h-dvh bg-surface text-ink">
             <Head title={`Capture ${cell.h3}`} />
 
             {stage === 'map' && (
@@ -299,7 +300,7 @@ export default function Capture({
                                     <span
                                         className={cx(
                                             'rounded-sm bg-surface/85 px-2 py-1 numeric-mono text-mono backdrop-blur-sm',
-                                            poorAccuracy ? 'text-amber' : 'text-faint',
+                                            poorAccuracy ? 'text-amber-ink' : 'text-faint',
                                         )}
                                     >
                                         +/- {accuracy.toFixed(0)} m
@@ -309,7 +310,7 @@ export default function Capture({
 
                             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-2.5">
                                 {poorAccuracy && (
-                                    <p className="max-w-[36ch] rounded-sm bg-surface/85 px-2 py-1 text-ui text-amber backdrop-blur-sm">
+                                    <p className="max-w-[36ch] rounded-sm bg-surface/85 px-2 py-1 text-ui text-amber-ink backdrop-blur-sm">
                                         Accuracy is poor here. Move into the open before capturing.
                                     </p>
                                 )}
@@ -356,7 +357,7 @@ export default function Capture({
                                 <p
                                     className={cx(
                                         'numeric-mono text-mono',
-                                        poorAccuracy ? 'text-amber' : 'text-faint',
+                                        poorAccuracy ? 'text-amber-ink' : 'text-faint',
                                     )}
                                 >
                                     {trace.current?.latitude.toFixed(5) ?? ''},{' '}
@@ -367,7 +368,7 @@ export default function Capture({
                             )}
 
                             {trace.wakeLock === 'denied' && (
-                                <p className="max-w-[36ch] text-center text-ui text-amber">
+                                <p className="max-w-[36ch] text-center text-ui text-amber-ink">
                                     The screen may switch itself off. If it does, your trace stops
                                     recording, so keep the app open.
                                 </p>
@@ -393,6 +394,7 @@ export default function Capture({
                     externalFootprintId={selectedFootprint}
                     consentScript={consentScript}
                     cellId={cell.id}
+                    cellH3={cell.h3}
                     sessionId={sessionId}
                     record={queue.record}
                     onClose={() => {
@@ -441,6 +443,8 @@ export default function Capture({
 interface StructureSheetProps {
     assignmentId: number;
     cellId: number;
+    /** For the GPS card: which cell the officer is standing in. */
+    cellH3: string;
     sessionId: number | null;
     record: (entity: 'structure' | 'enterprise', payload: Record<string, unknown>) => Promise<string>;
     structureTypes: Option[];
@@ -465,6 +469,7 @@ interface StructureSheetProps {
 function StructureSheet({
     assignmentId,
     cellId,
+    cellH3,
     sessionId,
     record,
     structureTypes,
@@ -589,24 +594,16 @@ function StructureSheet({
 
     return (
         <div className="flex h-full flex-col">
-            <div className="shrink-0 border-b border-rule px-4 py-2">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="min-h-touch text-ui text-muted underline underline-offset-2"
-                >
-                    Back to the map
-                </button>
-            </div>
+            <CaptureStepHeader
+                step={existing === null ? 2 : 3}
+                title={existing === null ? 'New capture' : 'Photos and businesses'}
+                subtitle={existing === null ? 'The building: what it is and who agreed' : 'Take the required photos, then add each business'}
+                onClose={onClose}
+            />
 
             <div className="min-h-0 flex-1">
                 <Sheet
-                    title={existing === null ? 'New structure' : 'Structure'}
-                    meta={
-                        position === null
-                            ? 'No position yet'
-                            : `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}   +/- ${(position.accuracy_m ?? 0).toFixed(1)} m`
-                    }
+                    title={existing === null ? 'Building' : 'Building saved'}
                     footer={
                         <div className="flex flex-col gap-2">
                             {error !== null && <p className="text-ui text-alert">{error}</p>}
@@ -620,7 +617,7 @@ function StructureSheet({
                                     void save();
                                 }}
                             >
-                                {existing === null ? 'Save capture' : 'Save changes'}
+                                {existing === null ? 'Next: photos and businesses' : 'Save changes'}
                             </Button>
                         </div>
                     }
@@ -630,6 +627,11 @@ function StructureSheet({
                             : `Recorded in ${resolvedWard} ward.`
                     }
                 >
+                    <div className="flex flex-col gap-3 px-4 pt-4">
+                        <GpsCard position={position} cellH3={cellH3} />
+                        <SupervisorNote />
+                    </div>
+
                     <SheetSection label="What is it">
                         <div className="flex flex-col gap-4">
                             <SelectField
@@ -714,7 +716,7 @@ function StructureSheet({
                                         return (
                                             <li
                                                 key={label}
-                                                className="flex items-center justify-between gap-3 rounded-sm border border-rule px-3 py-2"
+                                                className="flex items-center justify-between gap-3 rounded-card border border-rule px-3 py-2 bg-raised"
                                             >
                                                 <span className="min-w-0">
                                                     <span className="block truncate text-ui text-ink">
@@ -775,7 +777,7 @@ function StructureSheet({
                                 </button>
 
                                 {showScript && (
-                                    <p className="rounded-sm border border-rule bg-raised p-3 text-body text-ink">
+                                    <p className="rounded-card border border-rule bg-raised p-3 text-body text-ink">
                                         {consentScript.text}
                                     </p>
                                 )}
@@ -911,15 +913,12 @@ function EnterpriseSheet({
 
     return (
         <div className="flex h-full flex-col">
-            <div className="shrink-0 border-b border-rule px-4 py-2">
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="min-h-touch text-ui text-muted underline underline-offset-2"
-                >
-                    Back to the building
-                </button>
-            </div>
+            <CaptureStepHeader
+                step={4}
+                title="Business details"
+                subtitle={`${unitLabel} of ${String(structure.unitCount ?? 1)} in this building`}
+                onClose={onClose}
+            />
 
             <div className="min-h-0 flex-1">
                 <Sheet

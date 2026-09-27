@@ -69,7 +69,7 @@ export default function OrderStatus({
             <Head title={order.reference} />
 
             {errors.payment !== undefined && (
-                <p className="mb-6 border-l-2 border-alert bg-raised px-4 py-2.5 text-ui text-alert">
+                <p className="rounded-sm bg-alert-soft mb-6 px-4 py-2.5 text-ui text-alert-ink">
                     {errors.payment}
                 </p>
             )}
@@ -106,7 +106,7 @@ export default function OrderStatus({
                             key={label}
                             className="flex items-baseline justify-between gap-4 border-b border-rule py-2.5 last:border-b-0"
                         >
-                            <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 {label}
                             </dt>
                             <dd className="numeric-mono text-mono text-ink">
@@ -117,8 +117,8 @@ export default function OrderStatus({
                 </dl>
 
                 {order.cancellationReason !== null && (
-                    <div className="flex flex-col gap-2 border-l-2 border-gold bg-raised px-4 py-3">
-                        <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <div className="rounded-sm bg-gold-soft flex flex-col gap-2 px-4 py-3">
+                        <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             Refunded
                         </h2>
                         <p className="text-body text-ink">
@@ -158,8 +158,8 @@ export default function OrderStatus({
                 )}
 
                 {certificate && (
-                    <div className="flex flex-col gap-3 border-l-2 border-gold bg-raised px-4 py-3">
-                        <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <div className="rounded-sm bg-gold-soft flex flex-col gap-3 px-4 py-3">
+                        <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             Your certificate
                         </h2>
                         <p className="text-ui text-muted">

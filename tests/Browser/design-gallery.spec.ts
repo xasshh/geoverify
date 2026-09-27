@@ -29,7 +29,7 @@ for (const mode of ['daylight', 'dusk'] as const) {
         const bodyBg = await page.evaluate(
             () => getComputedStyle(document.body).backgroundColor,
         );
-        expect(bodyBg).toBe(mode === 'dusk' ? 'rgb(14, 30, 46)' : 'rgb(247, 246, 243)');
+        expect(bodyBg).toBe(mode === 'dusk' ? 'rgb(15, 26, 23)' : 'rgb(245, 246, 244)');
 
         // Tabular figures are a stated requirement, not a preference.
         const numeric = await page.evaluate(

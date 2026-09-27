@@ -54,7 +54,7 @@ const FRESHNESS_NOTE: Record<Freshness, string> = {
 function Fact({ term, children, mono }: { term: string; children: React.ReactNode; mono?: boolean }) {
     return (
         <div className="flex flex-col gap-1 border-b border-rule py-2.5 last:border-b-0 sm:border-b-0">
-            <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 {term}
             </dt>
             <dd className={mono ? "numeric-mono text-mono text-ink" : "text-ui text-ink"}>
@@ -86,14 +86,14 @@ export default function Verify({ result }: Props) {
                     <GeoVerifyMark size={32} title="GeoVerify" />
                     <div className="flex flex-col">
                         <span className="font-display text-display-s text-ink">GeoVerify</span>
-                        <span className="text-label tracking-[0.12em] text-faint uppercase">
+                        <span className="text-label tracking-[0.05em] text-faint uppercase">
                             Certificate check
                         </span>
                     </div>
                 </header>
 
                 {result.state === "unknown" && (
-                    <section className="flex flex-col gap-3 border-l-2 border-alert bg-raised px-5 py-4">
+                    <section className="rounded-sm bg-alert-soft flex flex-col gap-3 px-5 py-4">
                         <h1 className="font-display text-display-m text-alert">
                             We have no record of this certificate
                         </h1>
@@ -106,7 +106,7 @@ export default function Verify({ result }: Props) {
                 )}
 
                 {result.state === "revoked" && (
-                    <section className="flex flex-col gap-3 border-l-2 border-alert bg-raised px-5 py-4">
+                    <section className="rounded-sm bg-alert-soft flex flex-col gap-3 px-5 py-4">
                         <h1 className="font-display text-display-m text-alert">
                             This certificate has been withdrawn
                         </h1>
@@ -125,7 +125,7 @@ export default function Verify({ result }: Props) {
                                 result.state === "expired" ? "border-amber" : "border-green"
                             }`}
                         >
-                            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 This certificate is genuine. It says:
                             </p>
                             <h1 className="font-display text-display-l text-ink">
@@ -153,7 +153,7 @@ export default function Verify({ result }: Props) {
                         </dl>
 
                         <section className="flex flex-col gap-3 border-t border-rule pt-5">
-                            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 What this does and does not tell you
                             </h2>
                             <p className="text-ui text-muted">

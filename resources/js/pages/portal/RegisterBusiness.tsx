@@ -58,7 +58,7 @@ export default function RegisterBusiness({
             <Head title="Add your business" />
 
             <div className="mt-10 mb-8">
-                <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                     {step === "name"
                         ? "Step one of three"
                         : step === "place"
@@ -126,7 +126,7 @@ function NameStep({
             />
 
             <fieldset className="flex flex-col gap-2">
-                <legend className="mb-2 text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <legend className="mb-2 text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     Where do you trade from?
                 </legend>
                 {structureTypes.map((type) => (
@@ -237,7 +237,7 @@ function PlaceStep({
                 </p>
 
                 {denied !== null && (
-                    <p className="border-l-2 border-alert bg-raised px-4 py-3 text-body text-ink">
+                    <p className="rounded-sm bg-alert-soft px-4 py-3 text-body text-ink">
                         {denied}
                     </p>
                 )}
@@ -263,14 +263,14 @@ function PlaceStep({
     return (
         <div className="flex flex-col gap-6">
             {!place.covered && (
-                <p className="border-l-2 border-alert bg-raised px-4 py-3 text-body text-ink">
+                <p className="rounded-sm bg-alert-soft px-4 py-3 text-body text-ink">
                     That location is outside the areas we cover, so we cannot
                     list it yet.
                 </p>
             )}
 
             <div>
-                <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     We placed you in
                 </p>
                 <p className="mt-1 text-body text-ink">
@@ -355,7 +355,7 @@ function ConfirmStep({
                 about to create a second listing for a business already on the
                 register should be offered the first one instead. */}
             {duplicates.length > 0 && (
-                <section className="border-l-2 border-gold bg-raised py-4 pr-4 pl-5">
+                <section className="rounded-sm bg-gold-soft py-4 pr-4 pl-5">
                     <h2 className="font-display text-display-s text-ink">
                         This may already be on the register
                     </h2>
@@ -410,7 +410,7 @@ function ConfirmStep({
                         key={label}
                         className="flex items-baseline justify-between gap-4 border-b border-rule py-2.5 last:border-b-0"
                     >
-                        <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             {label}
                         </dt>
                         <dd className="text-ui text-ink">{value}</dd>

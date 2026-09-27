@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { GeoVerifyMark } from '@/components/GeoVerifyMark';
+import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 
 /**
  * Who is signed in, and the way out.
@@ -17,16 +17,15 @@ export function AppBar() {
     };
 
     return (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-rule px-4 py-2">
-            <Link href="/field" className="flex items-center gap-2 font-display text-display-s text-ink">
-                <GeoVerifyMark size={22} />
-                GeoVerify
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-rule bg-raised px-4 py-3">
+            <Link href="/field">
+                <GeoVerifyLockup size={34} caption="Field enumeration" />
             </Link>
 
             <div className="ml-auto flex items-center gap-4">
                 {user !== null && (
                     <span className="text-right">
-                        <span className="block text-ui text-ink">{user.name}</span>
+                        <span className="block text-ui font-bold text-ink">{user.name}</span>
                         <span className="block numeric-mono text-label text-faint">
                             {user.staffRef ?? user.roleLabel}
                         </span>
@@ -35,7 +34,7 @@ export function AppBar() {
                 <button
                     type="button"
                     onClick={signOut}
-                    className="min-h-touch rounded-sm border border-rule-strong px-3 text-ui text-muted hover:bg-raised hover:text-ink"
+                    className="min-h-touch rounded-sm border border-rule-strong bg-raised px-4 text-ui font-bold text-ink hover:bg-sunken"
                 >
                     Sign out
                 </button>

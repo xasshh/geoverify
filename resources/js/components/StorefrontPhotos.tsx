@@ -39,11 +39,11 @@ export function StorefrontPhotos({
     const full = photos.length >= limit;
 
     return (
-        <section className="rounded-sm border border-rule" aria-labelledby="photos">
+        <section className="rounded-card border border-rule bg-raised" aria-labelledby="photos">
             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-rule px-5 py-4">
                 <h2
                     id="photos"
-                    className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                    className="text-label font-semibold tracking-[0.05em] text-muted uppercase"
                 >
                     Photographs of your business
                 </h2>
@@ -60,7 +60,7 @@ export function StorefrontPhotos({
                 </p>
 
                 {error !== undefined && (
-                    <p className="mt-3 border-l-2 border-alert bg-raised px-3 py-2 text-ui text-alert">
+                    <p className="rounded-sm bg-alert-soft mt-3 px-3 py-2 text-ui text-alert-ink">
                         {error}
                     </p>
                 )}

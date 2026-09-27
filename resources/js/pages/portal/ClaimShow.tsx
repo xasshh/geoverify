@@ -59,7 +59,7 @@ export default function ClaimShow({
             <Head title={`Claim: ${business.tradingName}`} />
 
             <div className="mt-10 mb-6">
-                <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                     Your claim
                 </p>
                 <h1 className="mt-1 font-display text-display-l text-ink">

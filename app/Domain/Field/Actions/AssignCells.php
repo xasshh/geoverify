@@ -21,6 +21,8 @@ use RuntimeException;
  */
 final class AssignCells
 {
+    public function __construct(private readonly FieldMessaging $messages) {}
+
     /**
      * @param  list<int>  $gridCellIds
      * @return array{assigned: int, reassigned: int, skipped: int}
@@ -65,6 +67,7 @@ final class AssignCells
                 ->keyBy('grid_cell_id');
 
             $assigned = 0;
+            $given = [];
             $reassigned = 0;
             $skipped = 0;
             $now = now();
@@ -111,7 +114,12 @@ final class AssignCells
                 $cell->update(['status' => GridCell::STATUS_ASSIGNED]);
 
                 $assigned++;
+                $given[] = $cell->h3();
             }
+
+            // One message for the batch, so assigning nine cells is one line
+            // in the officer's inbox rather than nine.
+            $this->messages->cellsAssigned($officer, $assignedBy, $given);
 
             return ['assigned' => $assigned, 'reassigned' => $reassigned, 'skipped' => $skipped];
         });

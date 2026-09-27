@@ -40,6 +40,12 @@ final class VerificationPricingSeeder extends Seeder
             [LedgerAccount::CUSTOMER_FUNDS_HELD, 'Customer funds held for work not yet done', AccountType::Liability],
             [LedgerAccount::VERIFICATION_INCOME, 'Verification fees', AccountType::Income],
             [LedgerAccount::REFUNDS, 'Refunds', AccountType::Expense],
+            // The merchant hub's money, M2. Seeded here because this is where
+            // the ledger's chart of accounts is kept, whatever the file is called.
+            [LedgerAccount::BUYER_FUNDS_HELD, 'Buyer funds held until delivery is confirmed', AccountType::Liability],
+            [LedgerAccount::MERCHANT_BALANCES, 'Merchant balances available to withdraw', AccountType::Liability],
+            [LedgerAccount::PAYOUTS_IN_TRANSIT, 'Merchant withdrawals in transit', AccountType::Liability],
+            [LedgerAccount::COMMERCE_INCOME, 'Commission and service fees', AccountType::Income],
         ];
 
         foreach ($accounts as [$code, $name, $type]) {

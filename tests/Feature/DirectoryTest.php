@@ -527,3 +527,85 @@ it('serves a sector page to anybody, and lets it be indexed', function () {
 
     $this->get('/directory/sectors')->assertOk();
 });
+
+it('gives an unclaimed business no pin, and a lone one no shading either', function () {
+    $shop = signpostedShop('Lonely Kiosk');
+
+    $map = app(SearchDirectory::class)->mapFor([]);
+
+    // Listed in the rows, but a reduced listing has no position of any kind.
+    expect(collect(app(SearchDirectory::class)->run()['results'])->pluck('id'))->toContain($shop->id)
+        ->and($map['pins'])->toBeEmpty()
+        // One business in a cell is below the floor, so the cell is not drawn:
+        // shading that outlines one shop is a pin by another name.
+        ->and($map['density']['features'])->toBeEmpty();
+});
+
+it('shades a cell once three businesses share it, and says only how many', function () {
+    $ground = sweptGround();
+
+    foreach (['Row Stores', 'Row Provisions', 'Row Mini Mart'] as $name) {
+        signpostedShop($name, $ground);
+    }
+
+    $features = app(SearchDirectory::class)->mapFor([])['density']['features'];
+
+    expect($features)->toHaveCount(1)
+        ->and($features[0]['properties'])->toBe(['count' => 3]);
+});
+
+it('pins a published business to its cell, never to where it stands', function () {
+    $it = buyerWithShop();
+    $shop = $it['shop'];
+
+    EnterpriseObservation::query()->where('enterprise_id', $shop->id)->update(['signage_observed' => true]);
+    app(SetPublicationState::class)($it['party'], $it['account'], $shop->refresh(), PublicationState::OptedIn);
+
+    // The fixture stands its first shop on the exact centre of its cell, where
+    // the two answers coincide. Forty metres off it, inside the same cell, they
+    // do not, and only then does this test tell them apart.
+    DB::update('
+        UPDATE structures SET centroid = ST_Project(centroid, 40, radians(45))
+        WHERE id = ?
+    ', [$shop->structure_id]);
+
+    $pins = app(SearchDirectory::class)->mapFor([])['pins'];
+
+    expect($pins)->toHaveCount(1);
+
+    $pin = $pins[0];
+
+    // The whole pin, named, as the rows are.
+    expect(array_keys($pin))->toEqualCanonicalizing(['id', 'name', 'sector', 'ward', 'cell', 'lng', 'lat', 'state'])
+        ->and($pin['id'])->toBe($shop->id);
+
+    $where = DB::selectOne('
+        SELECT ST_X(s.centroid::geometry) AS lng, ST_Y(s.centroid::geometry) AS lat,
+               ST_X(h3_cell_to_geometry(h3_cell_to_parent(s.h3_index::h3index, ?))) AS cell_lng,
+               ST_Y(h3_cell_to_geometry(h3_cell_to_parent(s.h3_index::h3index, ?))) AS cell_lat
+        FROM enterprises e JOIN structures s ON s.id = e.structure_id
+        WHERE e.id = ?
+    ', [SearchDirectory::MAP_RESOLUTION, SearchDirectory::MAP_RESOLUTION, $shop->id]);
+
+    expect($pin['lng'])->toBe(round((float) $where->cell_lng, 5))
+        ->and($pin['lat'])->toBe(round((float) $where->cell_lat, 5))
+        ->and([$pin['lng'], $pin['lat']])->not->toBe([round((float) $where->lng, 5), round((float) $where->lat, 5)]);
+});
+
+it('serves streets for the map with no account, and nothing for a box it cannot read', function () {
+    $this->getJson(route('directory.roads', ['w' => 7.45, 's' => 9.0, 'e' => 7.5, 'n' => 9.05]))
+        ->assertOk()
+        ->assertJsonPath('type', 'FeatureCollection');
+
+    $this->getJson(route('directory.roads', ['w' => 'x', 's' => 9.0, 'e' => 7.5, 'n' => 9.05]))
+        ->assertOk()
+        ->assertExactJson(['type' => 'FeatureCollection', 'features' => []]);
+});
+
+it('explains verification to anybody, with the freshness the listings use', function () {
+    $this->get('/directory/how-verification-works')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('public/HowItWorks')
+            ->where('currentMonths', config('geoverify.tier_freshness.current_months'))
+            ->where('staleMonths', config('geoverify.tier_freshness.stale_months')));
+});

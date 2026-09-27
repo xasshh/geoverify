@@ -63,7 +63,7 @@ export function CityBackdrop() {
                 happens to be, so this is heavier behind the card and lighter at
                 the edges rather than a flat wash over everything.
             */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#0E1E2E]/70 via-[#0E1E2E]/55 to-[#0E1E2E]/80" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0F1A17]/70 via-[#0F1A17]/55 to-[#0F1A17]/80" />
         </div>
     );
 }

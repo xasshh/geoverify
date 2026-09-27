@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Campaign\Models\ClientUser;
+use App\Domain\Investment\Models\InvestorUser;
 use App\Domain\Party\Models\PortalAccount;
 use App\Models\User;
 
@@ -74,6 +75,16 @@ return [
             'driver' => 'session',
             'provider' => 'client_users',
         ],
+
+        /*
+         * Investors, fourth of four and for the same reason again. They act for
+         * an organisation that is vetted before it reads a dossier, and a
+         * session here can never satisfy the portal, the client or the console.
+         */
+        'investor' => [
+            'driver' => 'session',
+            'provider' => 'investor_users',
+        ],
     ],
 
     /*
@@ -109,6 +120,11 @@ return [
             'model' => ClientUser::class,
         ],
 
+        'investor_users' => [
+            'driver' => 'eloquent',
+            'model' => InvestorUser::class,
+        ],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -138,6 +154,16 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // Investors reset by email, on their own token table: a token issued
+        // for an investor must never be redeemable against a staff account
+        // that happens to share the address.
+        'investor_users' => [
+            'provider' => 'investor_users',
+            'table' => 'investor_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Actions;
 
+use App\Domain\Commerce\Actions\ManagePayouts;
+use App\Domain\Commerce\Actions\RecordPurchasePayment;
+use App\Domain\Commerce\Models\Payout;
+use App\Domain\Commerce\Models\PurchaseOrder;
 use App\Domain\Verification\Models\PaymentWebhookEvent;
 use App\Domain\Verification\Models\VerificationOrder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,18 +32,31 @@ use RuntimeException;
  * twice. And RecordPayment refuses a second payment on its own account, so even
  * a provider that changes its event ids cannot double post.
  *
+ * Three kinds of thing arrive here and each goes to its own recorder, found by
+ * the reference: a verification order (GV-2026-000123) to RecordPayment, a
+ * product order (GV-10482) to RecordPurchasePayment, and a merchant withdrawal
+ * (gvpo-...) to ManagePayouts::settle on transfer.success, transfer.failed or
+ * transfer.reversed. One door, so the signature and the replay defence cannot
+ * be forgotten on a second one.
+ *
  * Unrecognised events are stored and ignored rather than rejected. A provider
  * adding a new event type must not start collecting 400s from us, and the row
  * is worth having when somebody asks in six months what we were sent.
  */
 final class HandlePaymentWebhook
 {
-    public function __construct(private readonly RecordPayment $payments) {}
+    private const TRANSFER_EVENTS = ['transfer.success', 'transfer.failed', 'transfer.reversed'];
+
+    public function __construct(
+        private readonly RecordPayment $payments,
+        private readonly RecordPurchasePayment $purchases,
+        private readonly ManagePayouts $payouts,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload  The decoded body, believed only once the signature holds.
      */
-    public function __invoke(array $payload, string $rawBody, string $signature): ?VerificationOrder
+    public function __invoke(array $payload, string $rawBody, string $signature): ?Model
     {
         if (! $this->signatureIsValid($rawBody, $signature)) {
             // Recorded as an unverified delivery and refused. Somebody probing
@@ -60,6 +78,10 @@ final class HandlePaymentWebhook
 
         $type = (string) ($payload['event'] ?? '');
 
+        if (in_array($type, self::TRANSFER_EVENTS, true)) {
+            return $this->transfer($event, $type, $payload);
+        }
+
         if ($type !== 'charge.success') {
             $event->update([
                 'processed_at' => now(),
@@ -71,6 +93,22 @@ final class HandlePaymentWebhook
 
         $reference = $this->reference($payload);
         $order = VerificationOrder::query()->where('reference', $reference)->first();
+        $purchase = $order === null && $reference !== null
+            ? PurchaseOrder::query()->where('reference', $reference)->first()
+            : null;
+
+        if ($purchase instanceof PurchaseOrder) {
+            $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+            $paid = ($this->purchases)($purchase, $reference, (int) ($data['amount'] ?? 0), $this->paidAt($payload));
+
+            $event->update([
+                'processed_at' => now(),
+                'payment_reference' => $reference,
+                'processing_note' => "Applied to product order {$purchase->reference}.",
+            ]);
+
+            return $paid;
+        }
 
         if (! $order instanceof VerificationOrder) {
             // Money arrived against something we cannot find. Never dropped:
@@ -97,6 +135,41 @@ final class HandlePaymentWebhook
         ]);
 
         return $paid;
+    }
+
+    /**
+     * The provider's word on a merchant withdrawal.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function transfer(PaymentWebhookEvent $event, string $type, array $payload): ?Payout
+    {
+        $reference = $this->reference($payload);
+        $exists = $reference !== null && Payout::query()->where('reference', $reference)->exists();
+
+        if (! $exists) {
+            Log::error('A transfer event arrived for a withdrawal we do not have.', [
+                'reference' => $reference,
+                'event' => $type,
+            ]);
+
+            $event->update(['processed_at' => now(), 'processing_note' => 'No withdrawal called '.($reference ?? 'nothing').'.']);
+
+            return null;
+        }
+
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $reason = is_string($data['reason'] ?? null) ? $data['reason'] : $type;
+
+        $payout = $this->payouts->settle($reference, $type === 'transfer.success', $reason, $this->paidAt($payload));
+
+        $event->update([
+            'processed_at' => now(),
+            'payment_reference' => $reference,
+            'processing_note' => "{$type} applied to withdrawal {$reference}.",
+        ]);
+
+        return $payout;
     }
 
     /**
@@ -201,7 +274,7 @@ final class HandlePaymentWebhook
     private function paidAt(array $payload): ?Carbon
     {
         $data = $payload['data'] ?? [];
-        $at = is_array($data) ? ($data['paid_at'] ?? null) : null;
+        $at = is_array($data) ? ($data['paid_at'] ?? $data['transferred_at'] ?? null) : null;
 
         if (! is_string($at) || $at === '') {
             return null;

@@ -75,7 +75,7 @@ function Spec({ n, title, note, children }: SpecProps) {
 function Row({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex flex-wrap items-center gap-4 border-b border-rule py-3 last:border-b-0">
-            <span className="w-40 shrink-0 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+            <span className="w-40 shrink-0 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                 {label}
             </span>
             <div className="flex flex-wrap items-center gap-3">{children}</div>
@@ -92,11 +92,13 @@ interface Swatch {
 }
 
 const SWATCHES: readonly Swatch[] = [
-    { name: 'gold', daylight: '#134E4A', dusk: '#4BB8B0', meaning: 'Verification, active, emphasis', ratio: '7.95 / 7.06' },
-    { name: 'green', daylight: '#2A6555', dusk: '#5CC0A4', meaning: 'Confirmed, complete', ratio: '5.70 / 7.66' },
-    { name: 'amber', daylight: '#9A5913', dusk: '#EE9C45', meaning: 'Needs review, low confidence', ratio: '4.62 / 7.62' },
-    { name: 'alert', daylight: '#8F2721', dusk: '#F2938C', meaning: 'Rejected, conflict, failure', ratio: '7.11 / 7.50' },
-    { name: 'graphite', daylight: '#54646F', dusk: '#A2B0BB', meaning: 'Secondary text, chrome, hairlines', ratio: '5.14 / 7.61' },
+    { name: 'gold', daylight: '#0E7C72', dusk: '#4DB8B0', meaning: 'Primary: verification, action, active', ratio: '5.07 / 7.45' },
+    { name: 'green', daylight: '#0A5E57', dusk: '#5CC0A4', meaning: 'Confirmed, complete, text on soft', ratio: '7.63 / 8.07' },
+    { name: 'amber', daylight: '#B7791F', dusk: '#E3A042', meaning: 'Pending, due. Marks and fills only', ratio: '3.64 / 7.94' },
+    { name: 'amber-ink', daylight: '#7A4F0A', dusk: '#F0BB6C', meaning: 'Amber as text', ratio: '7.12 / 10.19' },
+    { name: 'alert', daylight: '#C2410C', dusk: '#F08A66', meaning: 'Rejected, disputed, failure', ratio: '5.18 / 7.23' },
+    { name: 'held', daylight: '#2F5BEA', dusk: '#8AA6F5', meaning: 'Money held, not yet settled', ratio: '5.52 / 7.50' },
+    { name: 'graphite', daylight: '#5F6B66', dusk: '#A9B7B1', meaning: 'Captions, idle, not established', ratio: '5.55 / 8.55' },
 ];
 
 interface QueueRow {
@@ -213,7 +215,7 @@ export default function Design() {
                 {/* Drawing title block, the vernacular of a survey document. */}
                 <header className="mt-9 border-[1.5px] border-ink">
                     <div className="border-b border-ink px-6 pt-6 pb-5">
-                        <p className="mb-3 text-label font-semibold tracking-[0.16em] text-gold uppercase">
+                        <p className="mb-3 text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             M1 / design system
                         </p>
                         <h1 className="font-display text-display-l text-ink">GeoVerify</h1>
@@ -225,12 +227,12 @@ export default function Design() {
                     <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3">
                         <dl className="flex flex-wrap gap-x-10 gap-y-2">
                             {[
-                                ['Display', 'Newsreader'],
-                                ['UI', 'IBM Plex Sans'],
-                                ['Machine', 'IBM Plex Mono'],
+                                ['Wordmark', 'Montserrat 700'],
+                                ['UI and headings', 'Plus Jakarta Sans'],
+                                ['Machine', 'JetBrains Mono'],
                             ].map(([k, v]) => (
                                 <div key={k}>
-                                    <dt className="text-label font-semibold tracking-[0.13em] text-faint uppercase">
+                                    <dt className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                         {k}
                                     </dt>
                                     <dd className="numeric-mono text-mono text-ink">{v}</dd>
@@ -239,7 +241,7 @@ export default function Design() {
                         </dl>
 
                         <div
-                            className="flex items-center gap-1 rounded-sm border border-rule-strong p-1"
+                            className="flex items-center gap-1 rounded-card border border-rule p-1 bg-raised"
                             role="group"
                             aria-label="Surface mode"
                         >
@@ -271,14 +273,14 @@ export default function Design() {
                         tuned to stay legible on the surface behind it. Ratios are quoted daylight
                         first, against the raised surface in each case, which is the stricter test.
                     </p>
-                    <div className="overflow-x-auto rounded-sm border border-rule-strong">
+                    <div className="overflow-x-auto rounded-card border border-rule bg-raised">
                         <table className="w-full border-collapse text-table">
                             <thead>
                                 <tr>
                                     {['Token', 'Daylight', 'Dusk', 'Means', 'Contrast'].map((h) => (
                                         <th
                                             key={h}
-                                            className="border-b border-ink px-3 py-2 text-left text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                                            className="border-b border-ink px-3 py-2 text-left text-label font-semibold tracking-[0.05em] text-muted uppercase"
                                         >
                                             {h}
                                         </th>
@@ -319,7 +321,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="02" title="Typography" note="three faces">
-                    <div className="rounded-sm border border-rule-strong">
+                    <div className="rounded-card border border-rule bg-raised">
                         {[
                             ['display-l', 'font-display text-display-l', '381 of 412 structures'],
                             ['display-m', 'font-display text-display-m', 'Review queue'],
@@ -327,7 +329,7 @@ export default function Design() {
                             ['body', 'text-body', 'Officer walked 2.4 km in this cell'],
                             ['ui', 'text-ui', 'Save capture'],
                             ['table', 'text-table', 'Mama Ngozi Provisions'],
-                            ['label', 'text-label font-semibold uppercase tracking-[0.12em]', 'Occupancy status'],
+                            ['label', 'text-label font-semibold uppercase tracking-[0.05em]', 'Occupancy status'],
                             ['mono', 'numeric-mono text-mono', '9.05785, 7.49508  +/- 4.2 m'],
                         ].map(([name, klass, sample]) => (
                             <div
@@ -349,7 +351,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="03" title="Status" note="hue plus shape plus word">
-                    <div className="rounded-sm border border-rule-strong px-4">
+                    <div className="rounded-card border border-rule px-4 bg-raised">
                         <Row label="Outline">
                             {(['unassigned', 'in_progress', 'submitted', 'accepted', 'returned'] as const).map(
                                 (s) => {
@@ -383,7 +385,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="04" title="Buttons" note="console 32px, field 48 to 52px">
-                    <div className="rounded-sm border border-rule-strong px-4">
+                    <div className="rounded-card border border-rule px-4 bg-raised">
                         <Row label="Console">
                             <Button variant="primary">Accept capture</Button>
                             <Button variant="secondary">Return with reason</Button>
@@ -418,7 +420,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="05" title="Fields" note="every message state">
-                    <div className="grid gap-6 rounded-sm border border-rule-strong p-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 rounded-card border border-rule p-4 sm:grid-cols-2 lg:grid-cols-3 bg-raised">
                         <TextField label="Trading name" defaultValue="Mama Ngozi Provisions" />
                         <TextField
                             label="Years at location"
@@ -451,7 +453,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="06" title="Sync state" note="the question answered before it is asked">
-                    <div className="rounded-sm border border-rule-strong px-4">
+                    <div className="rounded-card border border-rule px-4 bg-raised">
                         <Row label="Online, clear">
                             <SyncIndicator connectivity="online" queued={0} lastSync="14:02" />
                         </Row>
@@ -476,7 +478,7 @@ export default function Design() {
                 </Spec>
 
                 <Spec n="07" title="The Presence Mark" note="the signature">
-                    <div className="rounded-sm border border-rule-strong bg-raised p-6">
+                    <div className="rounded-card border border-rule bg-raised p-6">
                         <div className="flex flex-wrap items-end justify-center gap-10">
                             {[16, 40, 92, 184].map((size) => (
                                 <div key={size} className="text-center">
@@ -494,7 +496,7 @@ export default function Design() {
                         </div>
                     </div>
 
-                    <div className="mt-4 grid gap-0 rounded-sm border border-rule-strong sm:grid-cols-2">
+                    <div className="mt-4 grid gap-0 rounded-card border border-rule sm:grid-cols-2 bg-raised">
                         <div className="border-b border-rule-strong p-5 sm:border-r sm:border-b-0">
                             <div className="mb-3 flex items-center gap-2 text-label font-semibold tracking-[0.1em] text-green uppercase">
                                 <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
@@ -537,10 +539,10 @@ export default function Design() {
 
                 <Spec n="08" title="Confidence" note="surfaces suspicion, never adjudicates">
                     <div className="grid gap-5 sm:grid-cols-3">
-                        <div className="rounded-sm border border-rule-strong p-4">
+                        <div className="rounded-card border border-rule p-4 bg-raised">
                             <ConfidenceMeter score={94} />
                         </div>
-                        <div className="rounded-sm border border-rule-strong p-4">
+                        <div className="rounded-card border border-rule p-4 bg-raised">
                             <ConfidenceMeter
                                 score={72}
                                 flags={[
@@ -549,7 +551,7 @@ export default function Design() {
                                 ]}
                             />
                         </div>
-                        <div className="rounded-sm border border-rule-strong p-4">
+                        <div className="rounded-card border border-rule p-4 bg-raised">
                             <ConfidenceMeter
                                 score={21}
                                 flags={[
@@ -590,7 +592,7 @@ export default function Design() {
                 <Spec n="10" title="Field surfaces" note="map chrome and detail sheet">
                     <div className="grid gap-6 lg:grid-cols-2">
                         <div className="mx-auto w-full max-w-[380px]">
-                            <div className="mb-2 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <div className="mb-2 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Capture screen
                             </div>
                             <div className="h-[560px]">
@@ -634,7 +636,7 @@ export default function Design() {
                         </div>
 
                         <div className="mx-auto w-full max-w-[380px]">
-                            <div className="mb-2 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <div className="mb-2 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Structure detail sheet
                             </div>
                             <div className="h-[560px]">
@@ -657,7 +659,7 @@ export default function Design() {
                                             ].map(([unit, name, sector, done]) => (
                                                 <li
                                                     key={String(unit)}
-                                                    className="flex items-center justify-between gap-3 rounded-sm border border-rule px-3 py-2"
+                                                    className="flex items-center justify-between gap-3 rounded-card border border-rule px-3 py-2 bg-raised"
                                                 >
                                                     <span className="min-w-0">
                                                         <span className="block truncate text-ui text-ink">
@@ -699,7 +701,7 @@ export default function Design() {
 
                     <Row label="Added tokens">
                         <span className="flex items-center gap-2">
-                            <span className="h-6 w-6 rounded-sm border border-rule bg-held" />
+                            <span className="h-6 w-6 rounded-card border border-rule bg-held" />
                             <span className="text-ui text-muted">held</span>
                         </span>
                         <span className="flex items-center gap-2">
@@ -729,29 +731,29 @@ export default function Design() {
 
                     <div className="mt-8 grid gap-8 lg:grid-cols-2">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 The ladder &middot; full
                             </p>
-                            <div className="rounded-sm border border-rule-strong bg-raised p-5">
+                            <div className="rounded-card border border-rule bg-raised p-5">
                                 <VerificationLadder rungs={LADDER_MIXED} />
                             </div>
                         </div>
 
                         <div className="flex flex-col gap-8">
                             <div>
-                                <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                     The ladder &middot; compact
                                 </p>
-                                <div className="max-w-xs rounded-sm border border-rule-strong bg-raised p-4">
+                                <div className="max-w-xs rounded-card border border-rule bg-raised p-4">
                                     <VerificationLadder rungs={LADDER_MIXED} density="compact" />
                                 </div>
                             </div>
 
                             <div>
-                                <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                     Every rung state
                                 </p>
-                                <div className="max-w-xs rounded-sm border border-rule-strong bg-raised p-4">
+                                <div className="max-w-xs rounded-card border border-rule bg-raised p-4">
                                     <VerificationLadder rungs={LADDER_STATES} density="compact" />
                                 </div>
                                 <p className="mt-2 max-w-[42ch] text-label text-faint">
@@ -765,7 +767,7 @@ export default function Design() {
 
                     <div className="mt-10 grid gap-8 lg:grid-cols-[380px_1fr]">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Money, at 360px
                             </p>
                             <div className="w-[360px] max-w-full rounded-sm border-2 border-paper-edge bg-surface p-5">
@@ -830,14 +832,14 @@ export default function Design() {
 
                     <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Massing &middot; three storeys
                             </p>
                             <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={3} />
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Section &middot; six of fourteen units recorded
                             </p>
                             <BuildingSection floors={3} unitCount={14} units={GALLERY_UNITS} />
@@ -846,21 +848,21 @@ export default function Design() {
 
                     <div className="mt-10 grid gap-8 lg:grid-cols-3">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 One storey
                             </p>
                             <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={1} size={150} />
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Six storeys
                             </p>
                             <BuildingMassing footprint={GALLERY_FOOTPRINT} floors={6} size={150} />
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Nothing detected
                             </p>
                             <BuildingMassing footprint={null} floors={null} size={150} />
@@ -873,7 +875,7 @@ export default function Design() {
 
                     <div className="mt-10 grid gap-8 lg:grid-cols-3">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 No storey recorded
                             </p>
                             <BuildingSection
@@ -884,7 +886,7 @@ export default function Design() {
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Some businesses unplaced
                             </p>
                             <BuildingSection
@@ -895,7 +897,7 @@ export default function Design() {
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 A contradiction
                             </p>
                             <BuildingSection
@@ -934,32 +936,32 @@ export default function Design() {
 
                     <div className="flex flex-wrap gap-8">
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Backed up
                             </p>
-                            <div className="w-[248px] rounded-sm border border-rule-strong py-3">
-                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6 }} />
+                            <div className="w-[248px] rounded-card border border-rule py-3 bg-raised">
+                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4 }} />
                             </div>
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 All clear
                             </p>
-                            <div className="w-[248px] rounded-sm border border-rule-strong py-3">
-                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0, orders: 0 }} />
+                            <div className="w-[248px] rounded-card border border-rule py-3 bg-raised">
+                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0, orders: 0, messages: 0 }} />
                             </div>
                         </div>
 
                         <div>
-                            <p className="mb-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mb-3 text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Narrow, as a strip
                             </p>
-                            <div className="w-[380px] overflow-x-auto rounded-sm border border-rule-strong py-2">
+                            <div className="w-[380px] overflow-x-auto rounded-card border border-rule py-2 bg-raised">
                                 <div className="flex gap-1 px-2 [&>a]:shrink-0">
                                     <ConsoleNav
                                         current="claims"
-                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6 }}
+                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4 }}
                                         dense
                                     />
                                 </div>

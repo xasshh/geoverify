@@ -28,14 +28,14 @@ export default function Campaigns({ campaigns }: { campaigns: Row[] }) {
         <ClientShell current="campaigns">
             <Head title="Campaigns" />
 
-            <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+            <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                 <h1 className="font-display text-display-m text-ink">All campaigns</h1>
                 <p className="numeric-mono text-mono text-muted">{campaigns.length} in total</p>
             </header>
 
             <ul className="mt-6 flex flex-col gap-3">
                 {campaigns.map((campaign) => (
-                    <li key={campaign.id} className="rounded-sm border border-rule-strong">
+                    <li key={campaign.id} className="rounded-card border border-rule bg-raised">
                         <Link
                             href={`/client/campaigns/${String(campaign.id)}`}
                             className="flex flex-wrap items-start justify-between gap-4 px-5 py-4 hover:bg-raised"

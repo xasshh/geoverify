@@ -1,6 +1,6 @@
 # GeoVerify
 
-Two phases of the GeoVerify programme live here.
+Three phases of the GeoVerify programme live here.
 
 **Phase 1, the Field Enumeration Platform**: an offline-first PWA for field
 officers, plus the supervisor console behind it. Complete.
@@ -8,6 +8,14 @@ officers, plus the supervisor console behind it. Complete.
 **Phase 2, the Business & Citizen Portal**: the self-service face of the
 register. Business owners claim the listing we enumerated or register a new one,
 and buy physical verification of it. Under construction. Plan in `_plan/phase-2/`.
+
+**Phase 3, the public Discovery Portal**: the directory anybody can read, and
+identity checks sold as a product. Surveyed in `_plan/phase-3/00-survey.md`,
+with milestones P1 to P4 (the public directory is P2). There is no build plan
+for it yet.
+
+`README.md` is the stock Laravel file. The project is documented here, in
+`CAMPAIGNS.md`, `docs/` and `_plan/`.
 
 ## Hard rules
 
@@ -108,16 +116,19 @@ and captures; a supervisor assigns and reviews; an admin also rules on
 escalations, reads the audit log, manages people and devices, and contracts
 mandates.
 
-Three session guards, and they never overlap: `web` (staff, against `users`),
-`portal` (parties, against `party_users`) and `client` (the commissioning body,
-against `client_users`). A portal or client session cannot satisfy `supervises`
-by construction rather than by check, which is the entire reason there are three
-rather than one table with a wider `Role`.
+Four session guards, and they never overlap: `web` (staff, against `users`),
+`portal` (parties, against `party_users`), `client` (the commissioning body,
+against `client_users`) and `investor` (investor organisations, against
+`investor_users`). A portal, client or investor session cannot satisfy
+`supervises` by construction rather than by check, which is the entire reason
+there are four rather than one table with a wider `Role`.
 
-Five surfaces, five middleware aliases, all registered in `bootstrap/app.php`:
+Six surfaces, six middleware aliases, all registered in `bootstrap/app.php`:
 `field` (`/field`), `supervises` (`/console`), `administers` (`/admin`),
-`portal` (`/portal`) and `client` (`/client`). Per record access is
-`AssignmentPolicy` and `DevicePolicy`.
+`portal` (`/portal`), `client` (`/client`) and `investor` (`/invest`).
+`investor:verified` additionally requires the organisation to have passed KYC,
+which an admin rules on at `/admin/investors`; everything that names a business
+sits behind it. Per record access is `AssignmentPolicy` and `DevicePolicy`.
 
 `Role::supervises()` is true for an admin too, so the admin views are a separate
 route group behind `administers` rather than a section of the console. That
@@ -132,7 +143,7 @@ second took a wrong turn.
 Devices carry their own revocable Sanctum token scoped to `field:capture`, so a
 lost handset is cut off without touching the person's account.
 
-Four things answer with no session at all, each for a stated reason.
+Five things answer with no session at all, each for a stated reason.
 `webhooks/paystack` is authenticated by the provider's signature over the body
 and is named individually in the CSRF exemption list in `bootstrap/app.php`, so
 a second route cannot join that exemption by being filed beside it.
@@ -141,8 +152,11 @@ the presigned object storage link it replaces. `verify/{token}` is how the
 holder of a printed certificate checks it without an account, so the token is
 forty random characters rather than anything derivable from the reference
 printed next to it, and what may be disclosed is decided in
-`ResolvePublicVerification` rather than in the controller. The print routes
-below are signed, short lived and refused off the loopback interface.
+`ResolvePublicVerification` rather than in the controller.
+`receipts/{token}` is a person's copy of the consent they gave, open on a
+forty-eight character token because somebody asked at their door may never have
+had an account here. The print routes below are signed, short lived and refused
+off the loopback interface.
 
 Behind a load balancer or a tunnel, name it in `TRUSTED_PROXIES` (see
 `config/app.php`). Left empty, forwarded headers are ignored, the app generates
@@ -157,10 +171,30 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Campaign,Claim,Coverage,Field,Identity,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Field,Identity,Investment,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
 `Party` and `Claim` are Phase 2: parties, portal accounts, the access between
-them, and the claim and dispute flow. `Staff` is the in-house side: creating,
-suspending and reinstating the people who work this system. `Ledger` is the
+them, and the claim and dispute flow. `Investment` is Phase 4 (plan in
+`_plan/phase-4/`): investor organisations, the opportunities a business
+publishes, data rooms and their grants. Every investor read goes through
+`ReadOpportunities` (one FROM, one WHERE, like `DirectoryVisibility`), and a
+business reaches investors only by publishing an opportunity itself. An
+investor may pay for a verification visit: `verification_orders` has exactly
+one payer, a party or an investor organisation, held by check constraint.
+`Catalogue` is the merchant hub's product list: party-authored outright, its
+photographs `media` of kind `product` with a party author, and public only on a
+published listing through `SearchDirectory::productsFor`, which returns nothing
+at the reduced depth.
+`Commerce` is the merchant hub's buying (Phase 4 M2): product orders priced
+from the catalogue, paid through the same signed webhook (it routes by
+reference: `GV-2026-000123` verification, `GV-10482` product, `gvpo-...`
+withdrawal), held in `BUYER_FUNDS_HELD`, released to `MERCHANT_BALANCES` on the
+buyer's word, a ruling, or `orders:release-delivered`. Wallet balances are sums
+over the ledger, never a column. Field messaging lives in `Field`
+(`FieldMessaging`, `field_messages`): an officer's supervisor is whoever
+assigned their newest open cell, so there is no team table; it is its own
+channel beside the sync contract, never part of it.
+`Staff` is the in-house side: creating, suspending and reinstating the people
+who work this system. `Ledger` is the
 double-entry record behind paid verification: one signed `amount_minor` column,
 append-only by database trigger, and `PostTransaction` is the only writer.
 Business rules go in action classes, not in controllers and not in models.
@@ -204,9 +238,9 @@ decides an order is late.
 
 ## Documents a browser prints
 
-Three documents leave the system as PDF: the evidence pack, the campaign brief
-and the verification certificate. All three take one path, and a fourth should
-join it rather than grow a second pipeline. A Blade view in
+Four documents leave the system as PDF: the evidence pack, the campaign brief,
+the verification certificate and the consent receipt. All four take one path,
+and a fifth should join it rather than grow a second pipeline. A Blade view in
 `resources/views/exports` is served by a signed, short lived HTML route
 registered outside the guard group that owns the feature, because the headless
 browser fetching it has no session. `PdfRenderer` drives Chromium over that URL
@@ -216,16 +250,29 @@ with itself is a document that fails in production. Set `CHROMIUM_BINARY` when
 the browser is not in one of the usual places, and `services.chromium.base_url`
 when loopback is not where the application answers, as in a container.
 
+Printing needs the application to answer a second request while the first is
+still open, because Chromium fetches the document from the application that
+launched it. One worker waits on itself until the Chromium timeout, and
+`php artisan serve` has one: it ignores `PHP_CLI_SERVER_WORKERS` unless
+`--no-reload` is passed too. That is why `composer run dev` runs
+`PHP_CLI_SERVER_WORKERS=4 php artisan serve --no-reload`, why a bare
+`php artisan serve` (as in the browser test instructions below) times out on
+every PDF, and why production needs more than one php-fpm worker.
+
 ## Commands
 
 ```bash
-composer run dev            # server, queue, pail logs and Vite together
+composer run dev            # server (:8000, four workers), queue, pail logs, Vite
 npm run dev                 # Vite alone
 
 ./vendor/bin/pint                                 # formatting
 ./vendor/bin/phpstan analyse --memory-limit=1G    # Larastan level 6
 npm run types && npm run lint                     # tsc --noEmit, then ESLint
 ```
+
+`pint.json` adds `declare_strict_types` and `strict_comparison` to the Laravel
+preset, so Pint rewrites `==` as `===`. Write the strict form yourself: a
+formatter changing a comparison is a behaviour change nobody reviewed.
 
 ### Tests
 
@@ -242,6 +289,9 @@ PostGIS and h3-pg. There is no SQLite fallback and there will not be one: this
 system's behaviour is defined by spatial predicates, so a suite that does not
 exercise them proves nothing. `RefreshDatabase` is applied to `Feature` only
 (`tests/Pest.php`); `tests/Unit` runs without a database.
+`ServiceWorkerPrecacheTest` skips rather than fails when `public/sw.js` has not
+been built, so run `npm run build` before the suite or the offline precache
+check never runs. CI builds first.
 
 The `load` group is excluded in `phpunit.xml` because it spends about two
 minutes: one proving the sync endpoint holds at two thousand mutations, one
@@ -330,5 +380,8 @@ correction to the ledger is a posted movement, made by somebody who has looked.
 Seeders: `FieldTeamSeeder` (staff sign in), `VerificationPricingSeeder` (prices
 and ledger accounts), `CampaignSeeder`, `FieldDaySeeder`.
 
-Setup, including the h3-pg build, is in `docs/setup.md`. The Phase 1 design and
+Setup, including the h3-pg build, is in `docs/setup.md`. The development machine
+has no Docker runtime: it runs Homebrew PostgreSQL 17 with PostGIS 3.6 and a
+native Redis (option B there), and photographs go to a private local disk rather
+than the MinIO bucket in `docker-compose.yml`. The Phase 1 design and
 build plan is in `_plan/design-plan.html`; Phase 2 is in `_plan/phase-2/`.

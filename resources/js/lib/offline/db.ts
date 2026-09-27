@@ -136,6 +136,26 @@ export interface LocalPack {
  * A 67 MB file on a connection that drops must resume, not restart. Chunks are
  * written as they land, so an officer who loses wifi at 60 MB has 60 MB.
  */
+/**
+ * One message in the officer's thread, as last seen from the server, or
+ * written here and not yet sent (`pending`). Kept so the inbox reads with no
+ * signal and a reply typed in a dead zone goes when the signal comes back.
+ */
+export interface LocalMessage {
+    uuid: string;
+    id: number | null;
+    direction: 'to_officer' | 'from_officer';
+    kind: 'text' | 'returned_record' | 'cell_assigned' | 'broadcast';
+    body: string;
+    sender: string | null;
+    senderRef: string | null;
+    sentAt: string;
+    pinned: boolean;
+    read: boolean;
+    record: { id: number; ref: string; structureType: string; assignmentId: number | null } | null;
+    pending: 0 | 1;
+}
+
 export interface PackChunk {
     packId: number;
     index: number;
@@ -151,6 +171,7 @@ const db = new Dexie('geoverify') as Dexie & {
     meta: EntityTable<Meta, 'key'>;
     packs: EntityTable<LocalPack, 'packId'>;
     packChunks: EntityTable<PackChunk, 'packId'>;
+    messages: EntityTable<LocalMessage, 'uuid'>;
 };
 
 db.version(1).stores({
@@ -169,6 +190,11 @@ db.version(1).stores({
 db.version(2).stores({
     packs: 'packId, coverageAreaId',
     packChunks: '[packId+index], packId',
+});
+
+// The supervisor inbox. Its own version again, for the same reason.
+db.version(3).stores({
+    messages: 'uuid, id, pending, sentAt',
 });
 
 export { db };

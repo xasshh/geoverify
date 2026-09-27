@@ -47,7 +47,7 @@ export function BuildingPicker({
         <div className="flex flex-col gap-3">
             <svg
                 viewBox={`${String(-EXTENT)} ${String(-EXTENT)} ${String(EXTENT * 2)} ${String(EXTENT * 2)}`}
-                className="w-full rounded-sm border border-rule bg-sunken"
+                className="w-full rounded-card border border-rule bg-sunken"
                 role="presentation"
             >
                 {buildings.map((building) => (

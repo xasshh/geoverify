@@ -125,9 +125,9 @@ export default function Audit({
             <Head title="Audit log" />
 
             <div className="mx-auto max-w-[1400px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             In house
                         </p>
                         <h1 className="font-display text-display-m text-ink">Audit log</h1>
@@ -143,7 +143,7 @@ export default function Audit({
                     left a line here saying who changed it and what it was based on.
                 </p>
 
-                <div className="mt-6 flex flex-wrap items-end gap-3 rounded-sm border border-rule-strong p-4">
+                <div className="mt-6 flex flex-wrap items-end gap-3 rounded-card border border-rule p-4 bg-raised">
                     <SelectField
                         label="Event"
                         value={draft.event}
@@ -209,7 +209,7 @@ export default function Audit({
                     <Button onClick={apply}>Apply</Button>
                 </div>
 
-                <ul className="mt-6 flex flex-col rounded-sm border border-rule-strong px-4">
+                <ul className="mt-6 flex flex-col rounded-card border border-rule px-4 bg-raised">
                     {events.map((event) => (
                         <Row key={event.id} event={event} />
                     ))}

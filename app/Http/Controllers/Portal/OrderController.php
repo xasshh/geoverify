@@ -25,6 +25,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
@@ -176,7 +177,7 @@ final class OrderController
     }
 
     /** Sends the customer to the provider's checkout page. */
-    public function pay(Request $request, VerificationOrder $order, InitialisePayment $payments): RedirectResponse
+    public function pay(Request $request, VerificationOrder $order, InitialisePayment $payments): HttpResponse
     {
         $membership = $this->membership($request);
 
@@ -199,7 +200,10 @@ final class OrderController
             return back()->withErrors(['payment' => $e->getMessage()]);
         }
 
-        return redirect()->away($url);
+        // Inertia::location, not redirect()->away: the form posts over XHR, which
+        // cannot follow a redirect to another origin. A plain request still
+        // gets an ordinary redirect.
+        return Inertia::location($url);
     }
 
     /**

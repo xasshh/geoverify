@@ -4,12 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Domain\Catalogue\Actions\ReadListingStrength;
 use App\Domain\Claim\Actions\CountClaimsAwaitingDecision;
+use App\Domain\Claim\Models\PartyBusiness;
+use App\Domain\Commerce\Enums\PurchaseStatus;
+use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Field\Actions\FieldMessaging;
+use App\Domain\Field\Models\FieldMessage;
+use App\Domain\Investment\Models\InvestorUser;
+use App\Domain\Party\Actions\ActingParty;
+use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Registry\Actions\CountCorrectionsAwaitingReview;
 use App\Domain\Verification\Actions\CountEscalations;
 use App\Domain\Verification\Actions\CountObservationsAwaitingReview;
 use App\Domain\Verification\Actions\CountOrdersAwaitingAssignment;
+use App\Domain\Verification\Models\VerificationOrder;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -58,6 +68,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $this->staff($request),
                 'portal' => $this->portal($request),
+                'investor' => $this->investor($request),
             ],
 
             // What the console sidebar puts against its queues. Only
@@ -90,7 +101,7 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        if (! $request->is('console/*') && ! $request->is('admin/*')) {
+        if (! $request->is('console', 'console/*', 'admin/*')) {
             return null;
         }
 
@@ -104,6 +115,12 @@ class HandleInertiaRequests extends Middleware
             // Counted only for the people who can act on it. A supervisor
             // seeing a number they cannot clear is a number that never moves.
             'escalations' => $user->administers() ? app(CountEscalations::class)() : 0,
+            // Replies from officers this supervisor has not read yet.
+            'messages' => FieldMessage::query()
+                ->whereIn('officer_id', app(FieldMessaging::class)->teamOf($user)->pluck('id'))
+                ->where('direction', FieldMessage::FROM_OFFICER)
+                ->whereNull('read_at')
+                ->count(),
         ];
     }
 
@@ -144,6 +161,99 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        return ['id' => $account->id, 'name' => $account->name];
+        $acting = app(ActingParty::class)->forRequest($request, $account);
+
+        return [
+            'id' => $account->id,
+            'name' => $account->name,
+            'role' => $acting?->role->value,
+            'business' => $this->portalBusiness($account),
+            // Invitations waiting on this person: somebody added their number
+            // to a business and they have not said yes yet.
+            'invitations' => PartyUser::query()
+                ->where('portal_account_id', $account->id)
+                ->whereNull('accepted_at')
+                ->whereNull('revoked_at')
+                ->count(),
+        ];
+    }
+
+    /**
+     * The signed-in investor and their organisation's standing, or null.
+     *
+     * @return array{name: string, title: string|null, organisation: string|null, verified: bool}|null
+     */
+    private function investor(Request $request): ?array
+    {
+        $investor = $request->user('investor');
+
+        if (! $investor instanceof InvestorUser) {
+            return null;
+        }
+
+        return [
+            'name' => $investor->name,
+            'title' => $investor->title,
+            'organisation' => $investor->organisation?->name,
+            'verified' => $investor->isVerified(),
+        ];
+    }
+
+    /**
+     * The business the portal's sidebar is about: the one most recently
+     * established, which is the same one the dashboard opens on. Null until
+     * the account controls a listing. The count is orders not yet settled, so
+     * the sidebar can say something is moving without anybody opening it.
+     *
+     * @return array{id: int, name: string, place: string|null, openOrders: int, strength: array{percent: int, missing: list<string>, hint: string}}|null
+     */
+    private function portalBusiness(PortalAccount $account): ?array
+    {
+        $partyIds = PartyUser::query()
+            ->where('portal_account_id', $account->id)
+            ->whereNull('revoked_at')
+            ->whereNotNull('accepted_at')
+            ->pluck('party_id')
+            ->all();
+
+        if ($partyIds === []) {
+            return null;
+        }
+
+        $control = PartyBusiness::query()
+            ->with(['enterprise.structure.ward', 'enterprise.structure.lga'])
+            ->whereIn('party_id', $partyIds)
+            ->where('status', PartyBusiness::STATUS_ACTIVE)
+            ->orderByDesc('established_at')
+            ->first();
+
+        $enterprise = $control?->enterprise;
+
+        if ($enterprise === null) {
+            return null;
+        }
+
+        $structure = $enterprise->structure;
+
+        $openOrders = VerificationOrder::query()
+            ->where('enterprise_id', $enterprise->id)
+            ->get(['id', 'status'])
+            ->filter(static fn (VerificationOrder $order): bool => ! $order->status->isSettled())
+            ->count()
+            // And product orders paid for and waiting to be packed and sent.
+            + PurchaseOrder::query()
+                ->where('seller_party_id', $control->party_id)
+                ->where('status', PurchaseStatus::Held->value)
+                ->count();
+
+        $place = implode(', ', array_filter([$structure->ward?->name, $structure->lga?->name]));
+
+        return [
+            'id' => $enterprise->id,
+            'name' => $enterprise->trading_name,
+            'place' => $place === '' ? null : $place,
+            'openOrders' => $openOrders,
+            'strength' => app(ReadListingStrength::class)($enterprise),
+        ];
     }
 }

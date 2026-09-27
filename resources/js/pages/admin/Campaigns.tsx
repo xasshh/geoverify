@@ -68,9 +68,9 @@ export default function Campaigns({ campaigns, filters, clients, statuses, state
             <Head title="Campaigns" />
 
             <div className="mx-auto max-w-[1300px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             In house
                         </p>
                         <h1 className="font-display text-display-m text-ink">Campaigns</h1>
@@ -85,7 +85,7 @@ export default function Campaigns({ campaigns, filters, clients, statuses, state
                 </header>
 
                 {creating && (
-                    <section className="mt-6 rounded-sm border border-rule-strong p-4">
+                    <section className="mt-6 rounded-card border border-rule p-4 bg-raised">
                         <h2 className="font-display text-display-s text-ink">
                             Commission a campaign
                         </h2>
@@ -166,7 +166,7 @@ export default function Campaigns({ campaigns, filters, clients, statuses, state
                     </section>
                 )}
 
-                <div className="mt-6 flex flex-wrap items-end gap-3 rounded-sm border border-rule-strong p-4">
+                <div className="mt-6 flex flex-wrap items-end gap-3 rounded-card border border-rule p-4 bg-raised">
                     <SelectField
                         label="Client"
                         value={draft.client}
@@ -232,7 +232,7 @@ export default function Campaigns({ campaigns, filters, clients, statuses, state
                     <Button onClick={apply}>Apply</Button>
                 </div>
 
-                <ul className="mt-6 flex flex-col rounded-sm border border-rule-strong px-4">
+                <ul className="mt-6 flex flex-col rounded-card border border-rule px-4 bg-raised">
                     {campaigns.map((campaign) => (
                         <li key={campaign.id} className="border-b border-rule last:border-b-0">
                             <Link

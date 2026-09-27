@@ -30,7 +30,7 @@ export function Button({
             aria-busy={busy || undefined}
             className={cx(
                 buttonClass(variant, size, fullWidth),
-                'disabled:cursor-not-allowed disabled:opacity-45',
+                'disabled:cursor-not-allowed disabled:border-transparent disabled:bg-sunken disabled:text-muted',
             )}
         >
             {busy && (

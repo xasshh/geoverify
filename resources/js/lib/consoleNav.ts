@@ -11,6 +11,9 @@
  * you already know where you are going.
  */
 export type ConsoleView =
+    | 'team'
+    | 'messages'
+    | 'brief'
     | 'coverage'
     | 'review'
     | 'claims'
@@ -22,10 +25,12 @@ export type ConsoleView =
     | 'audit'
     | 'people'
     | 'mandates'
-    | 'campaigns';
+    | 'campaigns'
+    | 'investors'
+    | 'disputes';
 
 /** Which waiting count belongs against a view, where one does. */
-export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders';
+export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages';
 
 export interface ConsoleNavItem {
     key: ConsoleView;
@@ -38,30 +43,75 @@ export interface ConsoleNavItem {
     queue?: ConsoleQueue;
 }
 
+/*
+ * The supervisor's views, in the enumeration mockup's order: the team first,
+ * then the map, the queue and the inbox, then the ground and the paperwork.
+ * Registry work that is not enumeration (claims, corrections, paid visits)
+ * follows as its own group, so it keeps its counts without crowding the day.
+ */
 const VIEWS: ConsoleNavItem[] = [
     {
-        key: 'coverage',
-        label: 'Coverage',
-        href: '/console/coverage',
-        caption: 'The ground, and who holds it',
-        // The H3 cell, which is the unit the whole console counts in.
-        icon: 'M8 1.6 13.4 4.8v6.4L8 14.4 2.6 11.2V4.8z',
+        key: 'team',
+        label: 'Team today',
+        href: '/console',
+        caption: 'Who is out, and what is waiting',
+        // A roof: the day starts here.
+        icon: 'M2.4 7.4 8 2.6l5.6 4.8M3.8 6.4v7h8.4v-7',
+    },
+    {
+        key: 'live',
+        label: 'Live map',
+        href: '/console/live',
+        caption: 'Who is out right now',
+        icon: 'M8 6.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 1 0 0-2.8M4.4 4.4a5 5 0 0 0 0 7.2M11.6 4.4a5 5 0 0 1 0 7.2',
     },
     {
         key: 'review',
-        label: 'Review',
+        label: 'QA review',
         href: '/console/review',
         caption: 'Waiting on a decision',
-        // A record with a mark against it.
         icon: 'M2.6 3.4h7m-7 3h7m-7 3h4M10.8 11.2l1.6 1.6 2.8-3.4',
         queue: 'review',
     },
+    {
+        key: 'messages',
+        label: 'Messages',
+        href: '/console/messages',
+        caption: 'Officers, and what they said',
+        // A speech box.
+        icon: 'M2.6 3h10.8v7.4H6.4L3.4 13v-2.6h-.8z',
+        queue: 'messages',
+    },
+    {
+        key: 'coverage',
+        label: 'Cell assignments',
+        href: '/console/coverage',
+        caption: 'The ground, and who holds it',
+        icon: 'M8 1.6 13.4 4.8v6.4L8 14.4 2.6 11.2V4.8z',
+    },
+    {
+        key: 'brief',
+        label: 'Campaign brief',
+        href: '/console/brief',
+        caption: 'What the client commissioned',
+        icon: 'M3.4 1.8h6l3.2 3.2v9.2H3.4zM5.8 8h4.4M5.8 10.6h4.4',
+    },
+    {
+        key: 'exports',
+        label: 'Reports',
+        href: '/console/exports',
+        caption: 'Evidence a client can hold',
+        icon: 'M3 13.4V8.6M6.4 13.4V4.6M9.8 13.4V7M13.2 13.4V2.6',
+    },
+];
+
+/** Registry work beside enumeration: ownership, corrections and paid visits. */
+const REGISTRY_VIEWS: ConsoleNavItem[] = [
     {
         key: 'claims',
         label: 'Claims',
         href: '/console/claims',
         caption: 'Who owns which listing',
-        // A document with a seal on it.
         icon: 'M3.4 1.8h6l3.2 3.2v9.2H3.4zM9.2 1.8V5h3.4M6.4 11.4a1.8 1.8 0 1 0 3.6 0 1.8 1.8 0 1 0-3.6 0',
         queue: 'claims',
     },
@@ -70,7 +120,6 @@ const VIEWS: ConsoleNavItem[] = [
         label: 'Corrections',
         href: '/console/corrections',
         caption: 'What a business says we got wrong',
-        // A record, and a mark against one line of it.
         icon: 'M2.8 3h7.4m-7.4 3h5m-5 3h4M11 9.6l1.4 1.4 2.4-3M2.8 12h3',
         queue: 'corrections',
     },
@@ -79,27 +128,14 @@ const VIEWS: ConsoleNavItem[] = [
         label: 'Verifications',
         href: '/console/orders',
         caption: 'Paid, and owed a visit',
-        // A mark of value, and the promise around it.
         icon: 'M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 1 0 8 2.4M8 5.2v3.4l2.2 1.4',
         queue: 'orders',
     },
-    {
-        key: 'live',
-        label: 'Live',
-        href: '/console/live',
-        caption: 'Who is out right now',
-        // A fix, and the accuracy around it.
-        icon: 'M8 6.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 1 0 0-2.8M4.4 4.4a5 5 0 0 0 0 7.2M11.6 4.4a5 5 0 0 1 0 7.2',
-    },
-    {
-        key: 'exports',
-        label: 'Exports',
-        href: '/console/exports',
-        caption: 'Evidence a client can hold',
-        // Out of the system, onto something.
-        icon: 'M8 2.2v7.2m0 0L5.4 6.8M8 9.4l2.6-2.6M2.8 11.4v2.4h10.4v-2.4',
-    },
 ];
+
+export function registryNav(): ConsoleNavItem[] {
+    return REGISTRY_VIEWS;
+}
 
 /**
  * The in-house views, which only an administrator is shown.
@@ -143,6 +179,22 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'What clients commissioned',
         // A contract, and the ground it covers.
         icon: 'M3.6 2.2h8.8v11.6H3.6zM6 5.2h4M6 7.6h4M6 10h2.4',
+    },
+    {
+        key: 'investors',
+        label: 'Investors',
+        href: '/admin/investors',
+        caption: 'Organisations awaiting KYC',
+        // A briefcase.
+        icon: 'M2.4 5.2h11.2v7.6H2.4zM5.8 5.2V3.4h4.4v1.8M2.4 8.4h11.2',
+    },
+    {
+        key: 'disputes',
+        label: 'Disputes',
+        href: '/admin/disputes',
+        caption: 'Buyer issues, money held',
+        // Two sides of a scale.
+        icon: 'M8 2.4v11.2M4.4 13.6h7.2M2.4 4.4h11.2M4 4.4 2.4 8.4h3.2zM12 4.4l-1.6 4h3.2z',
     },
     {
         key: 'mandates',

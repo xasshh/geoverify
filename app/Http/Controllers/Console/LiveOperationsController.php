@@ -53,7 +53,7 @@ final class LiveOperationsController
      *
      * @return array{float, float, float, float}
      */
-    private function bounds(?int $areaId): array
+    public function bounds(?int $areaId): array
     {
         $where = $areaId === null ? '' : 'where id = ?';
 

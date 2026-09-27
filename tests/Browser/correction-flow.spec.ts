@@ -55,7 +55,7 @@ function controlledListing(phone: string): { name: string; id: number } {
 }
 
 async function signInAsParty(page: Page, phone: string): Promise<void> {
-    await page.goto(`${BASE}/portal/sign-in`);
+    await page.goto(`${BASE}/portal/sign-in?mode=code`);
     await page.getByLabel('Phone number').fill(phone);
     await page.getByRole('button', { name: 'Send me a code' }).click();
 

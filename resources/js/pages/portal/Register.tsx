@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/components/Button';
-import { PortalShell } from '@/components/PortalShell';
+import { AudienceTabs, BusinessAuthLayout } from '@/components/AuthLayouts';
 import { SelectField, TextField } from '@/components/Field';
 
 /**
@@ -11,8 +11,9 @@ import { SelectField, TextField } from '@/components/Field';
  * applies, because a market trader does not have one and asking implies they
  * should.
  */
-export default function Register() {
+export default function Register({ audience: initial }: { audience: 'buyer' | 'business' }) {
     const form = useForm({
+        audience: initial,
         person_name: '',
         display_name: '',
         kind: 'individual',
@@ -21,14 +22,27 @@ export default function Register() {
     });
 
     const isCompany = form.data.kind === 'company';
+    const buying = form.data.audience === 'buyer';
 
     return (
-        <PortalShell kicker="Nigeria Business Directory" title="Create your account">
+        <BusinessAuthLayout mobileTitle="Create your account" mobileSubtitle="Your number is confirmed.">
             <Head title="Create your account" />
 
-            <p className="mb-8 max-w-[46ch] text-body text-muted">
-                Your number is confirmed. Tell us who you are and we will issue your code.
+            <h1 className="hidden font-display text-display-l text-ink lg:block">Create your account</h1>
+            <p className="mt-1.5 mb-6 max-w-[46ch] text-body text-muted">
+                {buying
+                    ? 'Your number is confirmed. Tell us your name and you are in.'
+                    : 'Your number is confirmed. Tell us who you are and we will issue your business ID.'}
             </p>
+
+            <div className="mb-6">
+                <AudienceTabs
+                    value={form.data.audience}
+                    onChange={(value) => {
+                        form.setData('audience', value);
+                    }}
+                />
+            </div>
 
             <form
                 onSubmit={(event) => {
@@ -49,6 +63,8 @@ export default function Register() {
                     {...(form.errors.person_name !== undefined && { error: form.errors.person_name })}
                 />
 
+                {!buying && (
+                    <>
                 <SelectField
                     label="Are you registering as"
                     name="kind"
@@ -93,6 +109,9 @@ export default function Register() {
                     />
                 )}
 
+                    </>
+                )}
+
                 <TextField
                     label="Email"
                     name="email"
@@ -107,10 +126,10 @@ export default function Register() {
                     {...(form.errors.email !== undefined && { error: form.errors.email })}
                 />
 
-                <Button type="submit" fullWidth disabled={form.processing}>
-                    {form.processing ? 'Creating' : 'Create my account'}
+                <Button type="submit" variant="primary" size="field-primary" fullWidth busy={form.processing}>
+                    Create my account
                 </Button>
             </form>
-        </PortalShell>
+        </BusinessAuthLayout>
     );
 }

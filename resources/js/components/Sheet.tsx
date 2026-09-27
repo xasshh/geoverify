@@ -61,7 +61,7 @@ export function SheetSection({ label, trailing, children }: SheetSectionProps) {
     return (
         <div className="border-b border-rule px-4 py-3 last:border-b-0">
             <div className="mb-2.5 flex items-baseline justify-between gap-3">
-                <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <h3 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     {label}
                 </h3>
                 {trailing !== undefined && (
@@ -86,7 +86,7 @@ export function PriorObservation({ observedOn, summary }: PriorObservationProps)
     return (
         <div className="border-b border-rule bg-sunken px-4 py-3 last:border-b-0">
             <div className="mb-1 flex items-baseline gap-2">
-                <span className="text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                <span className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                     Prior observation
                 </span>
                 <span className="numeric-mono text-mono text-faint">{observedOn}</span>

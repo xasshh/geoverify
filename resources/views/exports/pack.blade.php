@@ -30,7 +30,7 @@
         html, body { background: #FBFAF7; color: #16202B; }
 
         body {
-            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             font-size: 9.5pt;
             line-height: 1.5;
             font-variant-numeric: tabular-nums;
@@ -43,7 +43,7 @@
         .running-head {
             display: flex;
             justify-content: space-between;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -53,15 +53,15 @@
         }
 
         .running-foot {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             color: #97A3AE;
             border-top: 0.5pt solid #D8D3C8;
             padding-top: 2mm;
         }
 
-        .display { font-family: 'Newsreader Variable', 'Newsreader', Georgia, serif; font-weight: 400; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        .display { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 400; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
 
         h1.title { font-size: 34pt; line-height: 1.05; margin: 0; letter-spacing: -0.01em; }
         h2.section { font-size: 17pt; line-height: 1.2; margin: 0 0 4mm; }
@@ -94,10 +94,10 @@
             padding: 0 2mm 1.5mm 0;
         }
         td { padding: 1.6mm 2mm 1.6mm 0; border-bottom: 0.4pt solid #E8E4DA; vertical-align: top; }
-        td.num, th.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+        td.num, th.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
 
         .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm 6mm; }
-        .fact-value { font-size: 15pt; font-family: 'IBM Plex Mono', monospace; }
+        .fact-value { font-size: 15pt; font-family: 'JetBrains Mono', monospace; }
 
         .sheet { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
         .shot { break-inside: avoid; }

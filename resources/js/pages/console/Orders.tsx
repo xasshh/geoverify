@@ -88,7 +88,7 @@ function AssignRow({ order, officers }: { order: Order; officers: Officer[] }) {
             }}
         >
             <label className="flex flex-col gap-1">
-                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     Send
                 </span>
                 <select
@@ -96,7 +96,7 @@ function AssignRow({ order, officers }: { order: Order; officers: Officer[] }) {
                     onChange={(event) => {
                         form.setData("officer_id", event.target.value);
                     }}
-                    className="rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                    className="rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                 >
                     <option value="">Choose an officer</option>
                     {officers.map((officer) => (
@@ -140,7 +140,7 @@ function AcceptRow({ order, outcomes }: { order: Order; outcomes: Outcome[] }) {
 
     return (
         <form
-            className="mt-3 flex flex-col gap-3 rounded-sm border border-rule-strong bg-raised p-3"
+            className="mt-3 flex flex-col gap-3 rounded-card border border-rule bg-raised p-3"
             onSubmit={(event) => {
                 event.preventDefault();
                 form.post(`/console/orders/${String(order.id)}/complete`, {
@@ -148,7 +148,7 @@ function AcceptRow({ order, outcomes }: { order: Order; outcomes: Outcome[] }) {
                 });
             }}
         >
-            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                 What the officer found
             </p>
 
@@ -186,7 +186,7 @@ function AcceptRow({ order, outcomes }: { order: Order; outcomes: Outcome[] }) {
                 onChange={(event) => {
                     form.setData("note", event.target.value);
                 }}
-                className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
             />
 
             {Object.values(form.errors).map((error) => (
@@ -218,7 +218,7 @@ function Row({
     const time = clock(order.daysLeft);
 
     return (
-        <li className="rounded-sm border border-rule-strong p-4">
+        <li className="rounded-card border border-rule p-4 bg-raised">
             <header className="flex flex-wrap items-baseline justify-between gap-3">
                 <div>
                     <h2 className="font-display text-display-s text-ink">
@@ -256,7 +256,7 @@ function Row({
                     ["Promised", order.dueBy ?? "not yet"],
                 ].map(([label, value]) => (
                     <div key={label} className="flex items-baseline gap-2">
-                        <dt className="text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                        <dt className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                             {label}
                         </dt>
                         <dd className="numeric-mono text-mono text-ink">
@@ -286,7 +286,7 @@ function Row({
                         );
                     }}
                 >
-                    <label className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <label className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Why the money is going back
                     </label>
                     <p className="text-label text-faint">
@@ -297,7 +297,7 @@ function Row({
                         onChange={(event) => {
                             refund.setData("reason", event.target.value);
                         }}
-                        className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                        className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                     />
                     {Object.values(refund.errors).map((error) => (
                         <p key={error} className="text-label text-alert">
@@ -353,7 +353,7 @@ export default function Orders({ orders, officers, outcomes, held }: Props) {
             <Head title="Verifications" />
 
             <div className="mx-auto max-w-[1000px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
                         <h1 className="font-display text-display-l text-ink">
                             Verifications
@@ -365,7 +365,7 @@ export default function Orders({ orders, officers, outcomes, held }: Props) {
                     </div>
                     <dl className="flex gap-6">
                         <div>
-                            <dt className="text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <dt className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                 Held
                             </dt>
                             <dd className="numeric-mono text-mono text-ink">
@@ -374,7 +374,7 @@ export default function Orders({ orders, officers, outcomes, held }: Props) {
                         </div>
                         {late > 0 && (
                             <div>
-                                <dt className="text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                                <dt className="text-label font-semibold tracking-[0.05em] text-faint uppercase">
                                     Late
                                 </dt>
                                 <dd className="numeric-mono text-mono text-alert">
@@ -388,7 +388,7 @@ export default function Orders({ orders, officers, outcomes, held }: Props) {
                 {flash !== null && (
                     <p
                         role="status"
-                        className="mt-6 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink"
+                        className="rounded-sm bg-green-soft mt-6 px-4 py-2.5 text-ui text-ink"
                     >
                         {flash}
                     </p>

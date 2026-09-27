@@ -25,7 +25,9 @@ final class EnsurePortalAccount
         $account = Auth::guard('portal')->user();
 
         if (! $account instanceof PortalAccount) {
-            return redirect()->route('portal.sign-in');
+            // guest() rather than route(): it remembers the page, so signing in
+            // returns somebody to the checkout they were sent from.
+            return redirect()->guest(route('portal.sign-in'));
         }
 
         if (! $account->canSignIn()) {

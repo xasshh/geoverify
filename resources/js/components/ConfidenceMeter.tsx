@@ -23,7 +23,7 @@ interface ConfidenceMeterProps {
 export function ConfidenceMeter({ score, flags = [] }: ConfidenceMeterProps) {
     const tone = score >= 75 ? 'green' : score >= 45 ? 'amber' : 'alert';
     const bar = { green: 'bg-green', amber: 'bg-amber', alert: 'bg-alert' }[tone];
-    const text = { green: 'text-green', amber: 'text-amber', alert: 'text-alert' }[tone];
+    const text = { green: 'text-green', amber: 'text-amber-ink', alert: 'text-alert' }[tone];
 
     // Reads as a word as well as a hue and a number, so it survives greyscale.
     const verdict = score >= 75 ? 'Consistent' : score >= 45 ? 'Needs review' : 'Contested';
@@ -31,7 +31,7 @@ export function ConfidenceMeter({ score, flags = [] }: ConfidenceMeterProps) {
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3">
-                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     Confidence
                 </span>
                 <span className="flex items-baseline gap-2">

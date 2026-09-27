@@ -277,5 +277,5 @@ it('rejects an entity this system does not sync', function () {
 it('keeps a supervisor out of the sync endpoint', function () {
     $this->actingAs(person(Role::Supervisor))
         ->postJson('/api/field/sync', ['mutations' => []])
-        ->assertRedirect('/console/coverage');
+        ->assertRedirect('/console');
 });

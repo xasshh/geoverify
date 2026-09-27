@@ -61,6 +61,12 @@ final class Media extends Model
      */
     public const KIND_STOREFRONT = 'storefront';
 
+    /**
+     * A photograph of something a business sells, taken by the business.
+     * Published with its product and asked for by name, like storefront.
+     */
+    public const KIND_PRODUCT = 'product';
+
     /** Held and published. */
     public const STATUS_STORED = 'stored';
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Models;
 
+use App\Domain\Investment\Models\InvestorUser;
 use App\Domain\Party\Models\Party;
+use App\Domain\Party\Models\PortalAccount;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -40,6 +42,11 @@ final class VerificationEvent extends Model
      * an audit log that flattened them would be answering the wrong question.
      */
     public const ACTOR_PARTY = 'party';
+
+    /** Somebody acting for an investor organisation. */
+    public const ACTOR_INVESTOR = 'investor';
+
+    public const ACTOR_BUYER = 'buyer';
 
     public const UPDATED_AT = null;
 
@@ -84,6 +91,30 @@ final class VerificationEvent extends Model
     }
 
     /**
+     * An investor did this. Labelled with the organisation, because it is the
+     * organisation a business grants and the organisation that is vetted.
+     *
+     * @param  array<string, mixed>  $evidence
+     */
+    public static function recordForInvestor(
+        Model $subject,
+        string $event,
+        InvestorUser $investor,
+        array $evidence = [],
+    ): self {
+        return self::query()->create([
+            'subject_type' => $subject->getMorphClass(),
+            'subject_id' => $subject->getKey(),
+            'event' => $event,
+            'actor_type' => self::ACTOR_INVESTOR,
+            'actor_id' => $investor->id,
+            'actor_label' => $investor->organisation?->name,
+            'evidence' => $evidence + ['investor_organisation_id' => $investor->investor_organisation_id],
+            'occurred_at' => now(),
+        ]);
+    }
+
+    /**
      * The same, when the actor is a party rather than a member of staff.
      *
      * A sibling of record() rather than a widened signature. The field platform
@@ -113,6 +144,32 @@ final class VerificationEvent extends Model
             'actor_type' => self::ACTOR_PARTY,
             'actor_id' => $party->id,
             'actor_label' => $party->code,
+            'evidence' => $evidence === [] ? null : $evidence,
+            'occurred_at' => now(),
+        ]);
+    }
+
+    /**
+     * A buyer did this: a portal account acting for itself rather than for a
+     * party, because buying a bag of rice is not something a business does.
+     * Labelled with the account id, never the name or the phone, for the same
+     * reason a party is labelled with its code.
+     *
+     * @param  array<string, mixed>  $evidence
+     */
+    public static function recordForBuyer(
+        Model $subject,
+        string $event,
+        PortalAccount $buyer,
+        array $evidence = [],
+    ): self {
+        return self::query()->create([
+            'subject_type' => $subject->getMorphClass(),
+            'subject_id' => $subject->getKey(),
+            'event' => $event,
+            'actor_type' => self::ACTOR_BUYER,
+            'actor_id' => $buyer->id,
+            'actor_label' => 'account '.$buyer->id,
             'evidence' => $evidence === [] ? null : $evidence,
             'occurred_at' => now(),
         ]);

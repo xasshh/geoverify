@@ -17,7 +17,7 @@ it('loads the font subsets Nigerian orthography needs', function (string $family
         ->and($css)->toContain("@fontsource/{$family}/latin-400.css")
         ->and($css)->toContain("@fontsource/{$family}/latin-ext-400.css")
         ->and($css)->toContain("@fontsource/{$family}/vietnamese-400.css");
-})->with(['ibm-plex-sans', 'ibm-plex-mono']);
+})->with(['plus-jakarta-sans', 'jetbrains-mono']);
 
 it('documents which characters depend on each subset', function () {
     // A failure here means a subset was dropped and these would fall back.
@@ -33,12 +33,24 @@ it('documents which characters depend on each subset', function () {
     }
 });
 
-it('does not ship the optical size axis of the display face', function () {
+it('borrows the Hausa hooked letters from Montserrat', function () {
     $css = file_get_contents(resource_path('css/app.css'));
 
-    // The opsz build costs 272 KB on latin against 120 KB for weight only, and the
-    // display face is rationed in the field app. An officer on 2G does not pay for it.
+    // Plus Jakarta Sans has no b, d or k with a hook (measured against the font
+    // files), so Montserrat's latin-ext face sits second in the stack to supply
+    // them. Dropping either the import or its place in the stack sends a Hausa
+    // name to whatever the device has.
     expect($css)->toBeString()
-        ->and($css)->toContain('@fontsource-variable/newsreader/wght.css')
-        ->and($css)->not->toContain('newsreader/opsz');
+        ->and($css)->toContain('@fontsource/montserrat/latin-ext-400.css')
+        ->and($css)->toMatch("/--font-sans: 'Plus Jakarta Sans', 'Montserrat'/");
+});
+
+it('loads the wordmark face at the one weight it is set in', function () {
+    $css = file_get_contents(resource_path('css/app.css'));
+
+    // Montserrat is the wordmark and the Hausa fallback, nothing else. Its full
+    // latin face at every weight would be a second UI family nobody chose.
+    expect($css)->toBeString()
+        ->and($css)->toContain('@fontsource/montserrat/latin-700.css')
+        ->and($css)->not->toContain('@fontsource/montserrat/latin-400.css');
 });

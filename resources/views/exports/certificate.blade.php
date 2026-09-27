@@ -16,7 +16,7 @@
         html, body { background: #FBFAF7; color: #16202B; }
 
         body {
-            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             font-size: 9.5pt;
             line-height: 1.5;
             font-variant-numeric: tabular-nums;
@@ -37,14 +37,14 @@
         }
 
         .wordmark {
-            font-family: 'Newsreader', Georgia, serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 16pt;
             letter-spacing: -0.01em;
             margin: 0;
         }
 
         .doctype {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -53,7 +53,7 @@
         }
 
         .reference {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 8pt;
             text-align: right;
             color: #6B7A88;
@@ -74,7 +74,7 @@
         .finding.negative { border-color: #8F2721; }
 
         .finding-label {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -82,7 +82,7 @@
             margin: 0 0 1.5mm;
         }
         .finding-value {
-            font-family: 'Newsreader', Georgia, serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 19pt;
             line-height: 1.1;
             margin: 0;
@@ -90,7 +90,7 @@
         .finding.negative .finding-value { color: #8F2721; }
 
         .business-name {
-            font-family: 'Newsreader', Georgia, serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 13pt;
             margin: 0 0 1mm;
         }
@@ -102,7 +102,7 @@
             margin: 4mm 0;
         }
         .cell .k {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6.5pt;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -110,7 +110,7 @@
             margin: 0 0 0.8mm;
         }
         .cell .v { margin: 0; font-size: 9.5pt; }
-        .cell .v.mono { font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; }
+        .cell .v.mono { font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; }
 
         .split { display: flex; gap: 8mm; margin-top: 4mm; }
         .split > .main { flex: 1 1 auto; }
@@ -118,7 +118,7 @@
 
         .qr { width: 38mm; height: 38mm; display: block; margin: 0 auto 2mm; }
         .qr-caption {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6.5pt;
             line-height: 1.5;
             color: #6B7A88;
@@ -135,7 +135,7 @@
             display: block;
         }
         .shots figcaption {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6pt;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -144,7 +144,7 @@
         }
 
         .section-head {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -163,7 +163,7 @@
         .colophon {
             margin-top: 5mm;
             padding-top: 2.5mm;
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 6.5pt;
             letter-spacing: 0.06em;
             color: #97A3AE;

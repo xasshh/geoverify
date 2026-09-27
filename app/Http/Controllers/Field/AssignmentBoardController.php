@@ -76,6 +76,26 @@ final class AssignmentBoardController
     }
 
     /**
+     * Every capture sent back to this officer on cells they still hold, for
+     * My records. The same query the board uses, over all their open cells.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function returnedFor(User $officer): array
+    {
+        $ids = Assignment::query()->where('user_id', $officer->id)->whereNull('closed_at')->pluck('id')->all();
+        $out = [];
+
+        foreach ($this->returnedCaptures($officer, $ids) as $assignmentId => $captures) {
+            foreach ($captures as $capture) {
+                $out[] = $capture + ['assignmentId' => $assignmentId];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Captures a supervisor sent back, grouped by the assignment they belong to.
      *
      * The reason is read from the log rather than copied onto the observation,

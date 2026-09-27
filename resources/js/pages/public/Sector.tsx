@@ -47,13 +47,13 @@ export default function Sector({ sector, results, total }: Props) {
 
                     <dl className="mt-6 flex flex-wrap gap-x-10 gap-y-4">
                         <div className="flex flex-col gap-0.5">
-                            <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 In the directory
                             </dt>
                             <dd className="numeric-mono text-display-s text-ink">{sector.count}</dd>
                         </div>
                         <div className="flex flex-col gap-0.5">
-                            <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Officer verified
                             </dt>
                             <dd className="numeric-mono text-display-s text-green">
@@ -62,7 +62,7 @@ export default function Sector({ sector, results, total }: Props) {
                         </div>
                         {sector.wards.length > 0 && (
                             <div className="flex flex-col gap-1">
-                                <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                     Where they are
                                 </dt>
                                 <dd className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-ui text-ink">

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Verification\Models;
 
 use App\Domain\Field\Models\Assignment;
+use App\Domain\Investment\Models\InvestorOrganisation;
 use App\Domain\Ledger\Models\LedgerEntry;
 use App\Domain\Party\Models\Party;
 use App\Domain\Party\Models\PortalAccount;
@@ -26,7 +27,9 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property string $reference
- * @property int $party_id
+ * @property int|null $party_id
+ * @property int|null $investor_organisation_id
+ * @property int|null $ordered_by_investor
  * @property int $enterprise_id
  * @property int $structure_id
  * @property string $tier
@@ -45,7 +48,7 @@ use Illuminate\Support\Carbon;
 final class VerificationOrder extends Model
 {
     protected $fillable = [
-        'reference', 'party_id', 'enterprise_id', 'structure_id', 'ordered_by',
+        'reference', 'party_id', 'investor_organisation_id', 'enterprise_id', 'structure_id', 'ordered_by', 'ordered_by_investor',
         'tier', 'urgency', 'zone', 'price_id', 'amount_minor', 'currency',
         'sla_working_days', 'status', 'outcome', 'paid_at', 'due_by',
         'assignment_id', 'completed_by', 'completed_at', 'cancelled_at',
@@ -72,6 +75,22 @@ final class VerificationOrder extends Model
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class);
+    }
+
+    /**
+     * The investor organisation that commissioned this visit, when it was not
+     * the business itself. Exactly one of this and party is set.
+     *
+     * @return BelongsTo<InvestorOrganisation, $this>
+     */
+    public function investorOrganisation(): BelongsTo
+    {
+        return $this->belongsTo(InvestorOrganisation::class);
+    }
+
+    public function isCommissionedByInvestor(): bool
+    {
+        return $this->investor_organisation_id !== null;
     }
 
     /** @return BelongsTo<Enterprise, $this> */

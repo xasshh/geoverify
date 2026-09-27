@@ -1,8 +1,8 @@
 import { cx } from '@/lib/cx';
 
-export type Variant = 'primary' | 'secondary' | 'quiet' | 'destructive';
+export type Variant = 'primary' | 'secondary' | 'soft' | 'quiet' | 'destructive';
 /**
- * console        32px, for a mouse and a keyboard in a register room.
+ * console        36px, for a mouse and a keyboard in a register room.
  * field-compact   44px, inline row actions on a field surface.
  * field           48px, ordinary field actions and anything destructive.
  * field-primary   52px, the one action a field screen is about.
@@ -13,19 +13,20 @@ export type Variant = 'primary' | 'secondary' | 'quiet' | 'destructive';
 export type Size = 'console' | 'field-compact' | 'field' | 'field-primary';
 
 const VARIANT: Record<Variant, string> = {
-    // Gold means verification and action. It is the only accent on the screen.
-    primary: 'bg-gold text-on-accent border-transparent hover:opacity-90 active:opacity-80',
-    secondary: 'bg-transparent text-ink border-rule-strong hover:bg-raised active:bg-sunken',
-    quiet: 'bg-transparent text-muted border-transparent hover:bg-raised hover:text-ink',
-    destructive: 'bg-transparent text-alert border-current/50 hover:bg-alert hover:text-on-accent',
+    // The accent means verification and action. It is the only one on the screen.
+    primary: 'bg-gold text-on-accent border-transparent font-extrabold hover:bg-gold-dark active:bg-gold-dark',
+    secondary: 'bg-raised text-ink border-rule-strong font-bold hover:bg-sunken active:bg-sunken',
+    soft: 'bg-gold-soft text-gold-dark border-transparent font-bold hover:brightness-95',
+    quiet: 'bg-transparent text-muted border-transparent font-semibold hover:bg-sunken hover:text-ink',
+    destructive: 'bg-raised text-alert-ink border-current/40 font-bold hover:bg-alert hover:text-on-accent',
 };
 
 const SIZE: Record<Size, string> = {
-    console: 'h-8 px-3 text-ui gap-2',
+    console: 'h-9 px-3.5 text-ui gap-2',
     // Inline row actions on a field surface. 44px is the absolute floor.
     'field-compact': 'min-h-touch px-4 text-ui gap-2',
     field: 'min-h-touch-lg px-5 text-body gap-2.5',
-    'field-primary': 'min-h-touch-xl px-6 text-body font-semibold gap-2.5',
+    'field-primary': 'min-h-touch-xl px-6 text-body gap-2.5',
 };
 
 /**
@@ -42,8 +43,8 @@ export function buttonClass(
     fullWidth = false,
 ): string {
     return cx(
-        'inline-flex items-center justify-center rounded-sm border font-medium',
-        'transition-[opacity,background-color,color] duration-150',
+        'inline-flex items-center justify-center rounded-sm border',
+        'transition-[opacity,background-color,color,filter] duration-150',
         VARIANT[variant],
         SIZE[size],
         fullWidth && 'w-full',

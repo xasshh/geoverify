@@ -51,7 +51,7 @@ function Row({ correction }: { correction: Correction }) {
     };
 
     return (
-        <li className="rounded-sm border border-rule-strong p-4">
+        <li className="rounded-card border border-rule p-4 bg-raised">
             <header className="flex flex-wrap items-baseline justify-between gap-3">
                 <div>
                     <h2 className="font-display text-display-s text-ink">
@@ -69,13 +69,13 @@ function Row({ correction }: { correction: Correction }) {
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-sm bg-raised px-3 py-2">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         {correction.fieldLabel}, as recorded
                     </p>
                     <p className="text-ui text-ink">{correction.currentValue ?? 'nothing recorded'}</p>
                 </div>
-                <div className="rounded-sm border-l-2 border-gold bg-raised px-3 py-2">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <div className="rounded-sm bg-gold-soft px-3 py-2">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         What the business says
                     </p>
                     <p className="text-ui text-ink">{correction.proposedValue ?? 'nothing'}</p>
@@ -129,10 +129,10 @@ function Row({ correction }: { correction: Correction }) {
                     </Button>
                 </div>
             ) : (
-                <div className="mt-4 flex flex-col gap-2 rounded-sm border border-rule-strong bg-raised p-3">
+                <div className="mt-4 flex flex-col gap-2 rounded-card border border-rule bg-raised p-3">
                     <label
                         htmlFor={`note-${String(correction.id)}`}
-                        className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                        className="text-label font-semibold tracking-[0.05em] text-muted uppercase"
                     >
                         {deciding === 'accepted' ? 'Why you accepted it' : 'Why you did not'}
                     </label>
@@ -147,7 +147,7 @@ function Row({ correction }: { correction: Correction }) {
                         onChange={(event) => {
                             form.setData('note', event.target.value);
                         }}
-                        className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                        className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                     />
                     {Object.values(form.errors).map((error) => (
                         <p key={error} className="text-label text-alert">
@@ -196,9 +196,9 @@ export default function Corrections({ corrections }: { corrections: Correction[]
             <Head title="Corrections" />
 
             <div className="mx-auto max-w-[1000px] px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Supervision
                         </p>
                         <h1 className="font-display text-display-m text-ink">Corrections</h1>
@@ -209,7 +209,7 @@ export default function Corrections({ corrections }: { corrections: Correction[]
                 </header>
 
                 {flash !== null && (
-                    <p className="mt-4 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink">
+                    <p className="rounded-sm bg-green-soft mt-4 px-4 py-2.5 text-ui text-ink">
                         {flash}
                     </p>
                 )}
@@ -222,7 +222,7 @@ export default function Corrections({ corrections }: { corrections: Correction[]
                 </p>
 
                 {corrections.length === 0 ? (
-                    <p className="mt-8 border-l-2 border-rule-strong bg-raised px-4 py-3 text-ui text-muted">
+                    <p className="rounded-sm bg-sunken mt-8 px-4 py-3 text-ui text-muted">
                         Nothing is waiting. Corrections arrive here when a business that manages a
                         listing tells us something on it is wrong.
                     </p>

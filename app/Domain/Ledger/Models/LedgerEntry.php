@@ -21,6 +21,8 @@ use Illuminate\Support\Carbon;
  * @property int $amount_minor
  * @property string $currency
  * @property int|null $verification_order_id
+ * @property int|null $purchase_order_id
+ * @property int|null $payout_id
  * @property string $reason
  * @property Carbon $occurred_at
  */
@@ -32,9 +34,17 @@ final class LedgerEntry extends Model
 
     public const REASON_REFUNDED = 'refunded';
 
+    public const REASON_RELEASED = 'released';
+
+    public const REASON_PAYOUT_REQUESTED = 'payout_requested';
+
+    public const REASON_PAYOUT_SENT = 'payout_sent';
+
+    public const REASON_PAYOUT_RETURNED = 'payout_returned';
+
     protected $fillable = [
         'transaction_uuid', 'ledger_account_id', 'amount_minor', 'currency',
-        'verification_order_id', 'reason', 'narrative', 'occurred_at',
+        'verification_order_id', 'purchase_order_id', 'payout_id', 'reason', 'narrative', 'occurred_at',
     ];
 
     protected function casts(): array

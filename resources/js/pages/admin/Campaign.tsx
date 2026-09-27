@@ -54,7 +54,7 @@ const SECTIONS = [
 type Section = (typeof SECTIONS)[number];
 
 function Panel({ children }: { children: React.ReactNode }) {
-    return <div className="mt-6 rounded-sm border border-rule-strong p-5">{children}</div>;
+    return <div className="mt-6 rounded-card border border-rule p-5 bg-raised">{children}</div>;
 }
 
 export default function Campaign({
@@ -122,9 +122,9 @@ export default function Campaign({
             <Head title={campaign.name} />
 
             <div className="mx-auto max-w-[1200px] px-6 pb-24">
-                <header className="mt-8 flex flex-wrap items-start justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-start justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             <Link href="/admin/campaigns" className="underline underline-offset-2">
                                 Campaigns
                             </Link>
@@ -143,7 +143,7 @@ export default function Campaign({
                 </header>
 
                 {flash !== null && (
-                    <p className="mt-4 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink">
+                    <p className="rounded-sm bg-green-soft mt-4 px-4 py-2.5 text-ui text-ink">
                         {flash}
                     </p>
                 )}
@@ -172,7 +172,7 @@ export default function Campaign({
                 </div>
 
                 {confirming !== null && (
-                    <div className="mt-4 flex flex-col gap-3 rounded-sm border border-rule-strong bg-raised p-4">
+                    <div className="mt-4 flex flex-col gap-3 rounded-card border border-rule bg-raised p-4">
                         <p className="text-ui text-ink">
                             Move this campaign to{' '}
                             <strong>
@@ -300,7 +300,7 @@ export default function Campaign({
                             </div>
 
                             <label className="flex flex-col gap-1">
-                                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                     Objective
                                 </span>
                                 <textarea
@@ -309,12 +309,12 @@ export default function Campaign({
                                     onChange={(e) => {
                                         definition.setData('objective', e.target.value);
                                     }}
-                                    className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                                    className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                                 />
                             </label>
 
                             <label className="flex flex-col gap-1">
-                                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                     About, the dossier narrative
                                 </span>
                                 <textarea
@@ -323,7 +323,7 @@ export default function Campaign({
                                     onChange={(e) => {
                                         definition.setData('about', e.target.value);
                                     }}
-                                    className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-body text-ink"
+                                    className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-body text-ink"
                                 />
                             </label>
 
@@ -626,7 +626,7 @@ export default function Campaign({
                         <div className="mt-5 flex flex-col gap-5">
                             {campaign.stakeholders.byCategory.map((group) => (
                                 <div key={group.category}>
-                                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                         {group.label}
                                     </p>
                                     <ul className="mt-1 flex flex-col border-t border-rule">
@@ -754,7 +754,7 @@ export default function Campaign({
 
                 {section === 'Commercials' && commercial !== null && (
                     <Panel>
-                        <p className="mb-4 max-w-[68ch] border-l-2 border-alert bg-raised px-3 py-2 text-ui text-muted">
+                        <p className="rounded-sm bg-alert-soft mb-4 max-w-[68ch] px-3 py-2 text-ui text-muted">
                             Nothing on this tab is ever sent to the client. It lives in its own
                             table, and the action that builds every client screen has no code path
                             to it.
@@ -800,7 +800,7 @@ export default function Campaign({
                         </div>
 
                         <label className="mt-4 flex flex-col gap-1">
-                            <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Internal notes
                             </span>
                             <textarea
@@ -809,7 +809,7 @@ export default function Campaign({
                                 onChange={(e) => {
                                     money.setData('internal_notes', e.target.value);
                                 }}
-                                className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                                className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                             />
                         </label>
 
@@ -858,7 +858,7 @@ export default function Campaign({
                                 ['Client', campaign.client.name ?? ''],
                             ].map(([label, value]) => (
                                 <div key={label}>
-                                    <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                    <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                         {label}
                                     </dt>
                                     <dd className="numeric-mono text-mono text-ink">{value}</dd>

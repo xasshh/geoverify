@@ -342,7 +342,7 @@ export function FieldMap({
 
             {opened === null && (
                 <div className="absolute inset-0 flex items-center justify-center bg-sunken/90 p-6">
-                    <p className="max-w-[34ch] text-center text-ui text-amber">
+                    <p className="max-w-[34ch] text-center text-ui text-amber-ink">
                         The map pack on this device is incomplete.
                     </p>
                 </div>
@@ -356,7 +356,7 @@ export function FieldMap({
                     data-testid="map-error"
                     className="pointer-events-none absolute inset-x-0 top-12 px-2.5"
                 >
-                    <p className="max-w-[36ch] rounded-sm bg-surface/85 px-2 py-1 text-ui text-amber backdrop-blur-sm">
+                    <p className="max-w-[36ch] rounded-sm bg-surface/85 px-2 py-1 text-ui text-amber-ink backdrop-blur-sm">
                         {failed}
                     </p>
                 </div>

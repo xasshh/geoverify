@@ -105,7 +105,7 @@ export default function Assignments({
                 row.dueOn === null ? (
                     <span className="text-faint">No date</span>
                 ) : (
-                    <span className={cx('numeric-mono text-mono', row.overdue && 'text-amber')}>
+                    <span className={cx('numeric-mono text-mono', row.overdue && 'text-amber-ink')}>
                         {row.dueOn}
                         {row.overdue && ' overdue'}
                     </span>
@@ -140,9 +140,9 @@ export default function Assignments({
             <Head title={`Assignments: ${area.name}`} />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Assignments
                         </p>
                         <h1 className="font-display text-display-m text-ink">{area.name}</h1>
@@ -153,7 +153,7 @@ export default function Assignments({
                 </header>
 
                 {flash.status !== null && (
-                    <p className="mt-4 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink">
+                    <p className="rounded-sm bg-green-soft mt-4 px-4 py-2.5 text-ui text-ink">
                         {flash.status}
                     </p>
                 )}
@@ -162,9 +162,9 @@ export default function Assignments({
                     <aside className="flex flex-col gap-6">
                         <form
                             onSubmit={submit}
-                            className="flex flex-col gap-4 rounded-sm border border-rule-strong p-4"
+                            className="flex flex-col gap-4 rounded-card border border-rule p-4 bg-raised"
                         >
-                            <h2 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Hand out work
                             </h2>
 
@@ -211,8 +211,8 @@ export default function Assignments({
                             </Button>
                         </form>
 
-                        <div className="rounded-sm border border-rule-strong">
-                            <h2 className="border-b border-rule px-4 py-2.5 text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        <div className="rounded-card border border-rule bg-raised">
+                            <h2 className="border-b border-rule px-4 py-2.5 text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Workload
                             </h2>
                             <ul>
@@ -230,7 +230,7 @@ export default function Assignments({
                                         <span className="shrink-0 text-right">
                                             <span className="numeric-mono text-ui text-ink">{o.open}</span>
                                             {o.overdue > 0 && (
-                                                <span className="ml-2 numeric-mono text-label text-amber">
+                                                <span className="ml-2 numeric-mono text-label text-amber-ink">
                                                     {o.overdue} late
                                                 </span>
                                             )}

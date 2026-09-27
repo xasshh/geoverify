@@ -3,11 +3,12 @@ import { Link, router, usePage } from '@inertiajs/react';
 import {
     adminNav,
     consoleNav,
+    registryNav,
     type ConsoleNavItem,
     type ConsoleView,
 } from '@/lib/consoleNav';
 import { cx } from '@/lib/cx';
-import { GeoVerifyMark } from '@/components/GeoVerifyMark';
+import { GeoVerifyLockup, GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 /**
  * The console, given a standing frame.
@@ -26,12 +27,12 @@ import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 function Mark({ path, className }: { path: string; className?: string }) {
     return (
         <svg
-            width="16"
-            height="16"
+            width="18"
+            height="18"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.1"
+            strokeWidth="1.3"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
@@ -56,7 +57,7 @@ function Waiting({ count }: { count: number }) {
 
     return (
         <span
-            className="ml-auto shrink-0 rounded-sm bg-gold px-1.5 py-0.5 numeric-mono text-label font-semibold text-on-accent"
+            className="ml-auto flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-gold px-1.5 text-label font-extrabold tracking-normal text-on-accent"
             aria-label={`${String(count)} waiting`}
         >
             {count}
@@ -80,18 +81,28 @@ function NavRow({
             href={item.href}
             aria-current={current ? 'page' : undefined}
             className={cx(
-                'group flex items-center gap-2.5 border-l-2 py-2 pr-2 pl-3 transition-colors',
+                'group flex items-center gap-3 rounded-sm px-3.5 transition-colors',
+                dense ? 'min-h-touch py-1.5' : 'py-2.5',
                 current
-                    ? 'border-gold bg-raised text-ink'
-                    : 'border-transparent text-muted hover:border-rule-strong hover:bg-raised hover:text-ink',
+                    ? 'bg-gold-soft text-gold-dark'
+                    : 'text-ink hover:bg-sunken',
             )}
         >
-            <Mark path={item.icon} className={current ? 'text-gold' : 'text-faint'} />
+            <Mark path={item.icon} className={current ? 'text-gold-dark' : 'text-muted'} />
 
             <span className="flex min-w-0 flex-col">
-                <span className={cx('text-ui', current && 'font-semibold')}>{item.label}</span>
+                <span className={cx('text-ui', current ? 'font-bold' : 'font-semibold')}>
+                    {item.label}
+                </span>
                 {!dense && (
-                    <span className="truncate text-label text-faint">{item.caption}</span>
+                    <span
+                        className={cx(
+                            'truncate text-[0.75rem] leading-snug',
+                            current ? 'text-gold-dark/80' : 'text-faint',
+                        )}
+                    >
+                        {item.caption}
+                    </span>
                 )}
             </span>
 
@@ -113,6 +124,7 @@ export type QueueCounts = {
     corrections: number;
     escalations: number;
     orders: number;
+    messages: number;
 };
 
 export function ConsoleNav({
@@ -138,6 +150,26 @@ export function ConsoleNav({
                 />
             ))}
         </>
+    );
+}
+
+/** Two letters on the soft accent, for the person the session belongs to. */
+export function Initials({ name, size = 44 }: { name: string; size?: number }) {
+    const letters = name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((word) => word[0]?.toUpperCase() ?? '')
+        .join('');
+
+    return (
+        <span
+            aria-hidden="true"
+            style={{ width: size, height: size }}
+            className="flex shrink-0 items-center justify-center rounded-full bg-gold-soft text-ui font-extrabold text-gold-dark"
+        >
+            {letters}
+        </span>
     );
 }
 
@@ -174,35 +206,36 @@ export function ConsoleShell({
         <div
             data-mode={mode}
             className={cx(
-                'bg-surface text-ink lg:grid lg:grid-cols-[248px_minmax(0,1fr)]',
+                'bg-surface text-ink lg:grid lg:grid-cols-[280px_minmax(0,1fr)]',
                 fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',
             )}
         >
             {/* The sidebar proper, from lg up. Sticky rather than scrolling with
                 the page: the counts are the reason it exists, and a count you
                 have to scroll back up to read is a count you stop checking. */}
-            <aside className="hidden border-r border-rule lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
-                <Link
-                    href="/console/coverage"
-                    className="flex items-center gap-2 border-b border-rule px-4 py-3"
-                >
-                    <GeoVerifyMark size={24} />
-                    <span className="flex flex-col">
-                        <span className="font-display text-display-s leading-none text-ink">
-                            GeoVerify
-                        </span>
-                        <span className="text-label tracking-[0.12em] text-faint uppercase">
-                            {user?.role === 'admin' ? 'Administration' : 'Supervisor console'}
-                        </span>
-                    </span>
+            {/* Dusk, as the supervisor board draws it: the one dark surface in
+                an otherwise daylight console, so the frame reads as the frame. */}
+            <aside
+                data-mode="dusk"
+                className="hidden border-r border-rule bg-surface text-ink lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col"
+            >
+                <Link href="/console" className="flex items-center px-7 pt-7 pb-6">
+                    <GeoVerifyLockup
+                        caption={user?.role === 'admin' ? 'Administration' : 'Field · Supervisor'}
+                    />
                 </Link>
 
-                <nav className="flex flex-col py-3" aria-label="Console">
+                <nav className="flex flex-col gap-1 overflow-y-auto px-5 pb-4" aria-label="Console">
                     <ConsoleNav current={current} counts={queues} />
+
+                    <p className="mt-5 mb-1 px-3.5 text-label font-bold tracking-[0.05em] text-faint uppercase">
+                        Registry
+                    </p>
+                    <ConsoleNav current={current} counts={queues} items={registryNav()} />
 
                     {user?.role === 'admin' && (
                         <>
-                            <p className="mt-4 mb-1 px-3 text-label font-semibold tracking-[0.12em] text-faint uppercase">
+                            <p className="mt-5 mb-1 px-3.5 text-label font-bold tracking-[0.05em] text-faint uppercase">
                                 In house
                             </p>
                             <ConsoleNav
@@ -215,15 +248,23 @@ export function ConsoleShell({
                 </nav>
 
                 {user !== null && (
-                    <div className="mt-auto border-t border-rule px-4 py-3">
-                        <p className="text-ui text-ink">{user.name}</p>
-                        <p className="numeric-mono text-label text-faint">
-                            {user.staffRef ?? '.'} &middot; {user.roleLabel}
-                        </p>
+                    <div className="mt-auto px-5 pb-6">
+                        <div className="flex items-center gap-3 px-2 py-3">
+                            <Initials name={user.name} />
+                            <span className="flex min-w-0 flex-col">
+                                <span className="truncate text-ui font-bold text-ink">
+                                    {user.name}
+                                </span>
+                                <span className="truncate text-[0.75rem] text-faint">
+                                    <span className="numeric-mono">{user.staffRef ?? '.'}</span>{' '}
+                                    &middot; {user.roleLabel}
+                                </span>
+                            </span>
+                        </div>
                         <button
                             type="button"
                             onClick={signOut}
-                            className="mt-2 min-h-touch w-full rounded-sm border border-rule-strong px-3 text-ui text-muted hover:bg-raised hover:text-ink"
+                            className="min-h-touch w-full rounded-sm border border-rule-strong bg-raised px-3 text-ui font-bold text-ink hover:bg-sunken"
                         >
                             Sign out
                         </button>
@@ -236,18 +277,18 @@ export function ConsoleShell({
                 afford to be. */}
             <div
                 className={cx(
-                    'flex flex-col border-b border-rule lg:hidden',
+                    'flex flex-col border-b border-rule bg-raised lg:hidden',
                     fill && 'shrink-0',
                 )}
             >
                 <div className="flex items-center gap-2 px-4 py-2">
-                    <GeoVerifyMark size={22} />
-                    <span className="font-display text-display-s text-ink">GeoVerify</span>
+                    <GeoVerifyMark size={28} />
+                    <span className="font-wordmark text-[1.125rem] font-bold text-logo">GeoVerify</span>
                     {user !== null && (
                         <button
                             type="button"
                             onClick={signOut}
-                            className="ml-auto min-h-touch rounded-sm border border-rule-strong px-3 text-ui text-muted"
+                            className="ml-auto min-h-touch rounded-sm border border-rule-strong bg-raised px-3 text-ui font-bold text-ink"
                         >
                             Sign out
                         </button>
@@ -259,6 +300,7 @@ export function ConsoleShell({
                     aria-label="Console"
                 >
                     <ConsoleNav current={current} counts={queues} dense />
+                    <ConsoleNav current={current} counts={queues} items={registryNav()} dense />
                     {user?.role === 'admin' && (
                         <ConsoleNav
                             current={current}

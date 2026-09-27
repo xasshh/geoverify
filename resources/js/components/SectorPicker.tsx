@@ -71,7 +71,7 @@ export function SectorPicker({ value, onChange, error }: SectorPickerProps) {
     if (value !== null) {
         return (
             <div className="flex flex-col gap-1.5">
-                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     Sector
                 </span>
                 <div className="flex items-center justify-between gap-3 rounded-sm border border-gold bg-raised px-3 py-2.5">
@@ -100,7 +100,7 @@ export function SectorPicker({ value, onChange, error }: SectorPickerProps) {
         <div className="relative flex flex-col gap-1.5">
             <label
                 htmlFor="sector-search"
-                className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                className="text-label font-semibold tracking-[0.05em] text-muted uppercase"
             >
                 Sector
             </label>
@@ -126,7 +126,7 @@ export function SectorPicker({ value, onChange, error }: SectorPickerProps) {
             {error !== undefined && <p className="text-ui text-alert">{error}</p>}
 
             {open && results.length > 0 && (
-                <ul className="absolute top-full right-0 left-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-sm border border-rule-strong bg-surface">
+                <ul className="absolute top-full right-0 left-0 z-20 mt-1 max-h-72 overflow-y-auto rounded-card border border-rule bg-raised">
                     {results.map((sector) => (
                         <li key={`${sector.code}-${sector.matchedOn}`}>
                             <button

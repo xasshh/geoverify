@@ -43,15 +43,15 @@ export default function Mandates({ mandates, lgas }: Props) {
             <Head title="Mandates" />
 
             <div className="mx-auto max-w-[1100px] px-6 pb-20">
-                <header className="mt-8 border-b-[1.5px] border-ink pb-3">
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <header className="mt-8 border-b border-rule pb-3">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                         In house
                     </p>
                     <h1 className="font-display text-display-m text-ink">Mandates</h1>
                 </header>
 
                 {flash !== null && (
-                    <p className="mt-4 border-l-2 border-green bg-raised px-4 py-2.5 text-ui text-ink">
+                    <p className="rounded-sm bg-green-soft mt-4 px-4 py-2.5 text-ui text-ink">
                         {flash}
                     </p>
                 )}
@@ -65,7 +65,7 @@ export default function Mandates({ mandates, lgas }: Props) {
                         it arrives with a work list rather than empty.
                     </p>
 
-                    <div className="flex flex-wrap items-end gap-3 rounded-sm border border-rule-strong p-4">
+                    <div className="flex flex-wrap items-end gap-3 rounded-card border border-rule p-4 bg-raised">
                         <SelectField
                             label="LGA"
                             value={form.data.lgaCode}
@@ -130,7 +130,7 @@ export default function Mandates({ mandates, lgas }: Props) {
                         </p>
                     ))}
 
-                    <p className="mt-3 max-w-[68ch] border-l-2 border-amber bg-raised px-3 py-2 text-ui text-muted">
+                    <p className="rounded-sm bg-amber-soft mt-3 max-w-[68ch] px-3 py-2 text-ui text-muted">
                         Two steps still need the server: ingesting building footprints, which is
                         the denominator every completion figure is measured against, and building
                         the offline map pack. Both read files too large to upload through a
@@ -141,7 +141,7 @@ export default function Mandates({ mandates, lgas }: Props) {
 
                 <section className="mt-10">
                     <h2 className="font-display text-display-s text-ink">Under contract</h2>
-                    <ul className="mt-3 flex flex-col rounded-sm border border-rule-strong px-4">
+                    <ul className="mt-3 flex flex-col rounded-card border border-rule px-4 bg-raised">
                         {mandates.map((mandate) => (
                             <li
                                 key={mandate.id}
@@ -163,7 +163,7 @@ export default function Mandates({ mandates, lgas }: Props) {
                                 <span
                                     className={
                                         mandate.footprints === 0
-                                            ? 'numeric-mono w-[190px] text-label text-amber'
+                                            ? 'numeric-mono w-[190px] text-label text-amber-ink'
                                             : 'numeric-mono w-[190px] text-label text-muted'
                                     }
                                 >

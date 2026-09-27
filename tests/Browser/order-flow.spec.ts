@@ -39,7 +39,7 @@ function queryOne<T>(sql: string): T {
 }
 
 async function registerParty(page: Page, phone: string, name: string) {
-    await page.goto("/portal/sign-in");
+    await page.goto("/portal/sign-in?mode=code");
     await page.getByLabel("Phone number").fill(phone);
     await page.getByRole("button", { name: "Send me a code" }).click();
 

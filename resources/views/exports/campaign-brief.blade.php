@@ -25,7 +25,7 @@
         html, body { background: #FBFAF7; color: #16202B; }
 
         body {
-            font-family: 'IBM Plex Sans', system-ui, sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             font-size: 9.5pt;
             line-height: 1.5;
             font-variant-numeric: tabular-nums;
@@ -34,7 +34,7 @@
         }
 
         .running-head, .running-foot {
-            font-family: 'IBM Plex Mono', monospace;
+            font-family: 'JetBrains Mono', monospace;
             font-size: 7pt;
             letter-spacing: 0.08em;
             text-transform: uppercase;
@@ -46,18 +46,18 @@
         }
         .running-foot { border-top: 0.5pt solid #D8D3C8; padding-top: 2mm; color: #97A3AE; }
 
-        h1 { font-family: 'Newsreader', Georgia, serif; font-size: 20pt; line-height: 1.15; margin: 0; font-weight: 400; }
+        h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 20pt; line-height: 1.15; margin: 0; font-weight: 400; }
         h2 {
-            font-family: 'IBM Plex Sans', sans-serif; font-size: 7.5pt; font-weight: 600;
+            font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 600;
             letter-spacing: 0.12em; text-transform: uppercase; color: #6B7A88;
             margin: 6mm 0 2mm; border-bottom: 0.5pt solid #D8D3C8; padding-bottom: 1mm;
         }
         .lede { font-size: 10pt; color: #43535F; margin: 2mm 0 0; }
-        .mono { font-family: 'IBM Plex Mono', monospace; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
 
         .facts { display: flex; flex-wrap: wrap; gap: 6mm; margin-top: 3mm; }
         .fact-label { font-size: 6.5pt; letter-spacing: 0.1em; text-transform: uppercase; color: #97A3AE; }
-        .fact-value { font-family: 'IBM Plex Mono', monospace; font-size: 11pt; }
+        .fact-value { font-family: 'JetBrains Mono', monospace; font-size: 11pt; }
 
         table.grid { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
         table.grid th {

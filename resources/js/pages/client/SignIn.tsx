@@ -25,13 +25,13 @@ export default function SignIn() {
             <CityBackdrop />
 
             <div className="relative w-full max-w-sm">
-                <div className="rounded-md bg-surface shadow-[0_18px_48px_rgb(14_30_46/0.34)]">
+                <div className="rounded-card bg-raised shadow-[0_18px_48px_rgb(15_26_23/0.34)]">
                     <div className="flex flex-col items-center px-6 pt-7 pb-5 text-center sm:pt-8 sm:pb-6">
                         <GeoVerifyMark size={64} className="mb-3 sm:mb-4" title="GeoVerify" />
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Nigeria Business Directory
                         </p>
-                        <h1 className="font-display text-display-m text-ink">GeoVerify</h1>
+                        <h1 className="font-wordmark text-[1.75rem] leading-none font-bold text-logo">GeoVerify</h1>
                     </div>
 
                     {/* A hairline, not a keyline round the whole card. On a
@@ -47,7 +47,7 @@ export default function SignIn() {
                         }}
                     >
                         {form.errors.email !== undefined && (
-                            <p className="border-l-2 border-alert bg-raised px-3 py-2 text-ui text-alert">
+                            <p className="rounded-sm bg-alert-soft px-3 py-2 text-ui text-alert-ink">
                                 {form.errors.email}
                             </p>
                         )}
@@ -87,7 +87,7 @@ export default function SignIn() {
                     </form>
                 </div>
 
-                <p className="mt-4 text-center numeric-mono text-label text-[#C6CEDA]">
+                <p className="mt-4 text-center numeric-mono text-label text-white/80">
                     Accounts are created by GeoVerify. There is no self sign up.
                 </p>
             </div>

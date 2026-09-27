@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Actions;
 
+use App\Domain\Field\Actions\FieldMessaging;
 use App\Domain\Registry\Models\Structure;
 use App\Domain\Registry\Models\StructureObservation;
 use App\Domain\Verification\Enums\ReviewDecision;
@@ -24,6 +25,8 @@ use RuntimeException;
  */
 final class ReviewObservation
 {
+    public function __construct(private readonly FieldMessaging $messages) {}
+
     public function __invoke(
         StructureObservation $observation,
         ReviewDecision $decision,
@@ -63,6 +66,12 @@ final class ReviewObservation
                 'reason' => $reason,
                 'note' => $note,
             ], static fn (mixed $value): bool => $value !== null && $value !== []));
+
+            // The officer hears about it in their inbox, with the reason, in
+            // the same transaction: a return nobody is told about is not one.
+            if ($decision->returnsToOfficer()) {
+                $this->messages->returned($observation, $supervisor, $reason);
+            }
 
             return $observation->refresh();
         });

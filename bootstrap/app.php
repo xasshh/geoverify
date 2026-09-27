@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureAdministers;
 use App\Http\Middleware\EnsureCapturesInTheField;
 use App\Http\Middleware\EnsureClientUser;
+use App\Http\Middleware\EnsureInvestor;
 use App\Http\Middleware\EnsurePortalAccount;
 use App\Http\Middleware\EnsureSupervises;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'portal' => EnsurePortalAccount::class,
             'administers' => EnsureAdministers::class,
             'client' => EnsureClientUser::class,
+            'investor' => EnsureInvestor::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

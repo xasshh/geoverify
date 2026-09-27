@@ -24,6 +24,16 @@ Schedule::command('orders:sweep-sla')
     ->withoutOverlapping();
 
 /*
+| A dispatched order whose buyer neither confirmed nor raised an issue within
+| the window is released to the merchant. Before the reconciliation, so the
+| morning's movements are all posted by the time it reads them.
+*/
+Schedule::command('orders:release-delivered')
+    ->dailyAt('07:15')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
+
+/*
 | The two records of the same money, compared every morning.
 |
 | After the sweep rather than before it, so a refund posted at seven is inside

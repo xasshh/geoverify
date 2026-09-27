@@ -47,14 +47,14 @@ export default function Order({
             <Head title={tier.name} />
 
             {errors.tier !== undefined && (
-                <p className="mb-6 border-l-2 border-alert bg-raised px-4 py-2.5 text-ui text-alert">
+                <p className="rounded-sm bg-alert-soft mb-6 px-4 py-2.5 text-ui text-alert-ink">
                     {errors.tier}
                 </p>
             )}
 
             {expressAvailable && (
                 <div className="mb-8 flex flex-col gap-2">
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         How soon
                     </p>
                     <div className="flex gap-2">

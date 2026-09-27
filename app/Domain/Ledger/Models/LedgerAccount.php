@@ -36,6 +36,24 @@ final class LedgerAccount extends Model
     /** Money handed back, whether for an SLA breach or a withdrawal. */
     public const REFUNDS = 'expense.refunds';
 
+    /**
+     * What buyers have paid for goods they have not yet confirmed receiving.
+     *
+     * Theirs until they confirm, or until a ruling says otherwise. Kept apart
+     * from CUSTOMER_FUNDS_HELD because the two are released by different
+     * events and a balance that mixed them could not say which it was waiting on.
+     */
+    public const BUYER_FUNDS_HELD = 'liability.buyer_funds_held';
+
+    /** What we owe merchants for delivered orders: their available balance. */
+    public const MERCHANT_BALANCES = 'liability.merchant_balances';
+
+    /** A withdrawal asked of the provider and not yet confirmed by it. */
+    public const PAYOUTS_IN_TRANSIT = 'liability.payouts_in_transit';
+
+    /** Commission and service fees on a released order. */
+    public const COMMERCE_INCOME = 'income.commerce_fees';
+
     protected $fillable = ['code', 'name', 'type', 'currency'];
 
     protected function casts(): array

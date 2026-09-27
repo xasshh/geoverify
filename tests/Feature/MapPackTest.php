@@ -122,5 +122,5 @@ it('sends a supervisor to the console rather than handing them a field pack', fu
     // are put back where their work is.
     $this->actingAs($supervisor)
         ->get("/api/field/packs/{$pack->id}")
-        ->assertRedirect(route('console.coverage.index'));
+        ->assertRedirect(route('console.team'));
 });

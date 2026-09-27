@@ -54,6 +54,15 @@ final class TaxonomyLoadCommand extends Command
         return self::SUCCESS;
     }
 
+    /** @var array<string, array{int, int}> */
+    public const SECTION_RANGES = [
+        'A' => [1, 3], 'B' => [5, 9], 'C' => [10, 33], 'D' => [35, 35], 'E' => [36, 39],
+        'F' => [41, 43], 'G' => [45, 47], 'H' => [49, 53], 'I' => [55, 56], 'J' => [58, 63],
+        'K' => [64, 66], 'L' => [68, 68], 'M' => [69, 75], 'N' => [77, 82], 'O' => [84, 84],
+        'P' => [85, 85], 'Q' => [86, 88], 'R' => [90, 93], 'S' => [94, 96], 'T' => [97, 98],
+        'U' => [99, 99],
+    ];
+
     private function loadIsic(string $path): int
     {
         $handle = fopen($path, 'rb');
@@ -150,12 +159,29 @@ final class TaxonomyLoadCommand extends Command
     private function parentFor(string $code): ?string
     {
         // A division's parent is its section, which the structure file does not
-        // state, so it is resolved after loading by the section ranges. Numeric
-        // levels nest by prefix.
+        // state, so it comes from the section ranges. Numeric levels nest by
+        // prefix.
         return match (true) {
             ctype_alpha($code) => null,
-            strlen($code) === 2 => null,
+            strlen($code) === 2 => self::sectionOf($code),
             default => substr($code, 0, strlen($code) - 1),
         };
+    }
+
+    /**
+     * The ISIC Rev. 4 section a two-digit division sits in. Fixed by the
+     * standard, so held here rather than read from a file that omits it.
+     */
+    public static function sectionOf(string $division): ?string
+    {
+        $n = (int) $division;
+
+        foreach (self::SECTION_RANGES as $section => [$from, $to]) {
+            if ($n >= $from && $n <= $to) {
+                return $section;
+            }
+        }
+
+        return null;
     }
 }

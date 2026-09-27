@@ -37,8 +37,8 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
     if (rows.length === 0 && empty !== undefined) {
         return (
-            <div className="rounded-sm border border-rule-strong bg-surface">
-                <div className="border-b border-rule px-4 py-2.5 text-label font-semibold tracking-[0.12em] text-muted uppercase">
+            <div className="rounded-card border border-rule bg-raised">
+                <div className="border-b border-rule px-5 py-3.5 text-table font-bold text-muted">
                     {caption}
                 </div>
                 <div className="px-4 py-10 text-center text-ui text-muted">{empty}</div>
@@ -47,7 +47,7 @@ export function DataTable<Row>({
     }
 
     return (
-        <div className="overflow-x-auto rounded-sm border border-rule-strong">
+        <div className="overflow-x-auto rounded-card border border-rule bg-raised">
             <table className="w-full border-collapse text-table">
                 <caption className="sr-only">{caption}</caption>
                 <thead>
@@ -58,8 +58,8 @@ export function DataTable<Row>({
                                 scope="col"
                                 style={column.width === undefined ? undefined : { width: column.width }}
                                 className={cx(
-                                    'sticky top-0 z-10 border-b border-ink bg-surface px-3 py-2',
-                                    'text-label font-semibold tracking-[0.12em] text-muted uppercase',
+                                    'sticky top-0 z-10 border-b border-rule bg-raised px-4 py-3.5',
+                                    'text-table font-bold text-muted',
                                     column.numeric === true ? 'text-right' : 'text-left',
                                 )}
                             >
@@ -89,14 +89,14 @@ export function DataTable<Row>({
                             className={cx(
                                 'border-b border-rule last:border-b-0',
                                 onRowActivate !== undefined &&
-                                    'cursor-pointer hover:bg-raised focus-visible:bg-raised',
+                                    'cursor-pointer hover:bg-surface focus-visible:bg-surface',
                             )}
                         >
                             {columns.map((column) => (
                                 <td
                                     key={column.key}
                                     className={cx(
-                                        'px-3 py-2 align-middle text-ink',
+                                        'px-4 py-3 align-middle text-ink',
                                         column.numeric === true && 'text-right numeric-mono',
                                     )}
                                 >

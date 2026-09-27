@@ -67,7 +67,7 @@ export function MoneyPanel({ terms, children, className }: MoneyPanelProps) {
                         key={label}
                         className="flex items-baseline justify-between gap-4 border-b border-rule py-2.5 last:border-b-0"
                     >
-                        <dt className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                        <dt className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                             {label}
                         </dt>
                         <dd className="numeric-mono text-mono text-ink">{value}</dd>
@@ -76,7 +76,7 @@ export function MoneyPanel({ terms, children, className }: MoneyPanelProps) {
             </dl>
 
             <div className="flex flex-col gap-2">
-                <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <h3 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     What you get
                 </h3>
                 <p className="text-body text-ink">{terms.whatHappens}</p>
@@ -87,7 +87,7 @@ export function MoneyPanel({ terms, children, className }: MoneyPanelProps) {
                 and the fee is charged: a customer who discovers that afterwards
                 is a chargeback we deserved. */}
             <div className="flex flex-col gap-2">
-                <h3 className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <h3 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     What you should know
                 </h3>
                 <p className="text-body text-ink">

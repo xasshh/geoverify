@@ -40,7 +40,7 @@ function scoreTone(score: number | null): string {
         return 'text-faint';
     }
 
-    return score >= 75 ? 'text-green' : score >= 45 ? 'text-amber' : 'text-alert';
+    return score >= 75 ? 'text-green' : score >= 45 ? 'text-amber-ink' : 'text-alert';
 }
 
 function whenObserved(iso: string): string {
@@ -140,7 +140,7 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
                                 key={flag.signal}
                                 className={cx(
                                     'text-label',
-                                    flag.verdict === 'fail' ? 'text-alert' : 'text-amber',
+                                    flag.verdict === 'fail' ? 'text-alert' : 'text-amber-ink',
                                 )}
                             >
                                 {flag.verdict === 'fail' ? '!' : '?'} {flag.message}
@@ -161,9 +161,9 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
             <Head title="Review queue" />
 
             <div className="mx-auto max-w-7xl px-6 pb-20">
-                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+                <header className="mt-8 flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
                     <div>
-                        <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Supervision
                         </p>
                         <h1 className="font-display text-display-m text-ink">Review queue</h1>
@@ -174,7 +174,7 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
                 </header>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
-                    <label className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <label className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Officer
                     </label>
                     <select
@@ -186,7 +186,7 @@ export default function Review({ queue, awaiting, officers, filters }: ReviewPro
                                 { preserveState: true, replace: true },
                             );
                         }}
-                        className="rounded-sm border border-rule-strong bg-surface px-3 py-1.5 text-ui text-ink"
+                        className="rounded-sm border border-rule-strong bg-raised px-3 py-1.5 text-ui text-ink"
                     >
                         <option value="">Everyone</option>
                         {officers.map((officer) => (

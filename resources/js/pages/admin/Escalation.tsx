@@ -74,8 +74,8 @@ export default function Escalation({ record }: { record: Record_ }) {
             <Head title={`Escalation: ${record.structureType}`} />
 
             <div className="mx-auto max-w-[1100px] px-6 pb-32">
-                <header className="mt-8 border-b-[1.5px] border-ink pb-3">
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                <header className="mt-8 border-b border-rule pb-3">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                         <Link href="/admin/escalations" className="underline underline-offset-2">
                             Escalations
                         </Link>
@@ -90,7 +90,7 @@ export default function Escalation({ record }: { record: Record_ }) {
                 </header>
 
                 <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-                    <section className="flex flex-col gap-4 rounded-sm border border-rule-strong p-4">
+                    <section className="flex flex-col gap-4 rounded-card border border-rule p-4 bg-raised">
                         <div className="flex flex-col items-center gap-2">
                             <PresenceMark
                                 points={record.trace}
@@ -124,7 +124,7 @@ export default function Escalation({ record }: { record: Record_ }) {
                     </section>
 
                     <section className="flex flex-col gap-4">
-                        <div className="rounded-sm border border-rule-strong p-4">
+                        <div className="rounded-card border border-rule p-4 bg-raised">
                             <h2 className="mb-3 font-display text-display-s text-ink">
                                 Every signal, as it was scored
                             </h2>
@@ -137,7 +137,7 @@ export default function Escalation({ record }: { record: Record_ }) {
                                                 reading.verdict === 'fail'
                                                     ? 'text-alert'
                                                     : reading.verdict === 'warn'
-                                                      ? 'text-amber'
+                                                      ? 'text-amber-ink'
                                                       : 'text-green',
                                             )}
                                         >
@@ -170,7 +170,7 @@ export default function Escalation({ record }: { record: Record_ }) {
                                                 href={photo.url}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="block overflow-hidden rounded-sm border border-rule"
+                                                className="block overflow-hidden rounded-card border border-rule bg-raised"
                                             >
                                                 <img
                                                     src={photo.url}
@@ -196,13 +196,13 @@ export default function Escalation({ record }: { record: Record_ }) {
                             </ul>
                         </div>
 
-                        <div className="flex flex-col gap-4 rounded-sm border border-rule-strong p-4">
+                        <div className="flex flex-col gap-4 rounded-card border border-rule p-4 bg-raised">
                             {record.score !== null && <ConfidenceMeter score={record.score} />}
 
                             <div>
                                 <label
                                     htmlFor="note"
-                                    className="text-label font-semibold tracking-[0.12em] text-muted uppercase"
+                                    className="text-label font-semibold tracking-[0.05em] text-muted uppercase"
                                 >
                                     What you found
                                 </label>
@@ -217,7 +217,7 @@ export default function Escalation({ record }: { record: Record_ }) {
                                         form.setData('note', event.target.value);
                                     }}
                                     rows={3}
-                                    className="w-full rounded-sm border border-rule-strong bg-surface px-3 py-2 text-ui text-ink"
+                                    className="w-full rounded-sm border border-rule-strong bg-raised px-3 py-2.5 text-ui text-ink"
                                 />
                                 {form.errors.note !== undefined && (
                                     <p className="mt-1 text-label text-alert">{form.errors.note}</p>

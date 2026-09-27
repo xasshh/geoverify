@@ -243,7 +243,7 @@ it('pushes a returned capture back to the officer who made it', function () {
 
     // Before the decision the officer's board is clean.
     $this->actingAs($officer)
-        ->get(route('field.index'))
+        ->get(route('field.cells'))
         ->assertInertia(fn ($page) => $page->has('assignments.0.returnedCaptures', 0));
 
     app(ReviewObservation::class)(
@@ -256,7 +256,7 @@ it('pushes a returned capture back to the officer who made it', function () {
     // A return the officer cannot see is not a return. The reason travels with
     // it, read from the log rather than copied.
     $this->actingAs($officer)
-        ->get(route('field.index'))
+        ->get(route('field.cells'))
         ->assertInertia(fn ($page) => $page
             ->has('assignments.0.returnedCaptures', 1)
             ->where('assignments.0.returnedCaptures.0.id', $observation->id)
@@ -292,7 +292,7 @@ it('keeps one officer\'s returned work off another officer\'s board', function (
     app(AssignCells::class)->assign([$second->id], $other, $supervisor);
 
     $this->actingAs($other)
-        ->get(route('field.index'))
+        ->get(route('field.cells'))
         ->assertInertia(fn ($page) => $page->has('assignments.0.returnedCaptures', 0));
 });
 

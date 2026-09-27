@@ -1,5 +1,5 @@
 import { cx } from '@/lib/cx';
-import { STATUS_COLOR, STATUS_SHAPE, type StatusShape, type StatusTone } from '@/lib/status';
+import { STATUS_SHAPE, type StatusShape, type StatusTone } from '@/lib/status';
 
 interface StatusGlyphProps {
     shape: StatusShape;
@@ -50,10 +50,9 @@ interface StatusPillProps {
 
 export function StatusPill({ tone, label, emphasis = 'outline', size = 'md' }: StatusPillProps) {
     const shape = STATUS_SHAPE[tone];
-    const color = STATUS_COLOR[tone];
 
     const filledBackground: Record<StatusTone, string> = {
-        accepted: 'bg-green',
+        accepted: 'bg-gold',
         review: 'bg-amber',
         rejected: 'bg-alert',
         progress: 'bg-gold',
@@ -61,17 +60,28 @@ export function StatusPill({ tone, label, emphasis = 'outline', size = 'md' }: S
         held: 'bg-held',
     };
 
+    /* The guide's pill: a soft tint and a darker ink of the same hue. The
+       glyph stays, so the shape still carries the meaning in greyscale. */
+    const soft: Record<StatusTone, string> = {
+        accepted: 'bg-green-soft text-green',
+        review: 'bg-amber-soft text-amber-ink',
+        rejected: 'bg-alert-soft text-alert-ink',
+        progress: 'bg-gold-soft text-gold-dark',
+        idle: 'bg-graphite-soft text-muted',
+        held: 'bg-held-soft text-held-ink',
+    };
+
     return (
         <span
             className={cx(
-                'inline-flex items-center gap-2 rounded-sm border font-semibold whitespace-nowrap',
-                size === 'sm' ? 'px-2 py-0.5 text-label' : 'px-2.5 py-1 text-ui',
+                'inline-flex items-center gap-1.5 rounded-full font-bold whitespace-nowrap',
+                size === 'sm' ? 'px-2.5 py-0.5 text-label' : 'px-3 py-1 text-table',
                 emphasis === 'filled'
-                    ? cx(filledBackground[tone], 'text-on-accent border-transparent')
-                    : cx(color, 'border-current/45'),
+                    ? cx(filledBackground[tone], 'text-on-accent')
+                    : soft[tone],
             )}
         >
-            <StatusGlyph shape={shape} size={size === 'sm' ? 8 : 9} />
+            <StatusGlyph shape={shape} size={size === 'sm' ? 7 : 8} />
             {label}
         </span>
     );

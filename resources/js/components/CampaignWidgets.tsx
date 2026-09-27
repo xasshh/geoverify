@@ -37,7 +37,7 @@ export function Progress({
     return (
         <div className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-3">
-                <span className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                <span className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                     {label}
                 </span>
                 <span className="numeric-mono text-mono text-ink">
@@ -108,7 +108,7 @@ export function ActiveCampaignCard({ campaign }: { campaign: CampaignDossier }) 
     const { timeline, collection, coverage, deployment, schema, stakeholders } = campaign;
 
     return (
-        <section className="rounded-sm border border-rule-strong">
+        <section className="rounded-card border border-rule bg-raised">
             <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule px-5 py-4">
                 <div>
                     <p className="numeric-mono text-label text-faint">{campaign.code}</p>
@@ -149,14 +149,14 @@ export function ActiveCampaignCard({ campaign }: { campaign: CampaignDossier }) 
             </div>
 
             {timeline.overrun && (
-                <p className="mx-5 mb-5 border-l-2 border-amber bg-raised px-3 py-2 text-ui text-muted">
+                <p className="rounded-sm bg-amber-soft mx-5 mb-5 px-3 py-2 text-ui text-muted">
                     This campaign has run past its end date and is still active.
                 </p>
             )}
 
             <div className="grid gap-x-6 gap-y-5 border-t border-rule px-5 py-5 md:grid-cols-3">
                 <div>
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Deployment
                     </p>
                     <p className="numeric-mono text-display-s text-ink">
@@ -175,7 +175,7 @@ export function ActiveCampaignCard({ campaign }: { campaign: CampaignDossier }) 
                 </div>
 
                 <div>
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Coverage
                     </p>
                     <p className="numeric-mono text-display-s text-ink">{coverage.areaCount}</p>
@@ -186,7 +186,7 @@ export function ActiveCampaignCard({ campaign }: { campaign: CampaignDossier }) 
                 </div>
 
                 <div>
-                    <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                         Stakeholders
                     </p>
                     <p className="numeric-mono text-display-s text-ink">{stakeholders.total}</p>
@@ -202,7 +202,7 @@ export function ActiveCampaignCard({ campaign }: { campaign: CampaignDossier }) 
                     openLabel={`Show all ${String(schema.fieldCount)} fields`}
                     summary={
                         <div>
-                            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Data being collected
                             </p>
                             <p className="mt-1 text-ui text-ink">
@@ -300,7 +300,7 @@ export function CampaignIntroModal({
             aria-modal="true"
             aria-labelledby="campaign-intro-title"
         >
-            <div className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-sm border border-rule-strong bg-surface">
+            <div className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-card border border-rule bg-raised">
                 <header className="border-b border-rule px-5 py-4">
                     <p className="numeric-mono text-label text-faint">{campaign.code}</p>
                     <h2 id="campaign-intro-title" className="font-display text-display-m text-ink">
@@ -333,7 +333,7 @@ export function CampaignIntroModal({
                             ],
                         ].map(([label, value]) => (
                             <div key={label}>
-                                <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                                <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                     {label}
                                 </p>
                                 <p className="text-ui text-ink">{value}</p>
@@ -343,7 +343,7 @@ export function CampaignIntroModal({
 
                     {campaign.stakeholders.total > 0 && (
                         <div className="border-t border-rule pt-4">
-                            <p className="text-label font-semibold tracking-[0.12em] text-muted uppercase">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
                                 Key stakeholders
                             </p>
                             <p className="mt-1 text-ui text-muted">

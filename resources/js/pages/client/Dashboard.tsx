@@ -30,9 +30,9 @@ export default function Dashboard({ organisation, active, campaign, mustAcknowle
         <ClientShell current="dashboard" organisation={organisation}>
             <Head title="Active campaign" />
 
-            <header className="mt-8 flex flex-wrap items-end justify-between gap-4 border-b-[1.5px] border-ink pb-3">
+            <header className="mt-8 flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-3">
                 <div>
-                    <p className="text-label font-semibold tracking-[0.14em] text-gold uppercase">
+                    <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                         {organisation.name ?? 'Your organisation'}
                     </p>
                     <h1 className="font-display text-display-m text-ink">Active campaign</h1>
