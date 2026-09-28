@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { PortalShell } from '@/components/PortalShell';
-import { DeliveryCard, ItemsTable, MoneyCard, PurchasePill, Timeline, type PurchaseView } from '@/components/PurchaseParts';
+import { DeliveryCard, InspectionReport, ItemsTable, MoneyCard, PurchasePill, Timeline, type PurchaseView } from '@/components/PurchaseParts';
 
 /**
  * The merchant's order, to the mockup's order board: what to pack, where it
@@ -65,12 +65,19 @@ export default function Sale({ order, can }: { order: PurchaseView; can: { dispa
                 </section>
             )}
             {order.status === 'held' && (
-                <p className="mb-6 rounded-sm bg-held-soft px-4 py-3 text-ui font-semibold text-ink">
-                    Paid and held. Pack it and send it, then mark it dispatched so the buyer knows.
+                <p className="mb-6 max-w-none rounded-sm bg-held-soft px-4 py-3 text-ui font-semibold text-ink">
+                    {order.inspection === null
+                        ? 'Paid and held. Pack it and send it, then mark it dispatched so the buyer knows.'
+                        : order.inspection.status === 'approved'
+                          ? 'The buyer approved the report. Send it, then mark it dispatched.'
+                          : order.inspection.status === 'submitted'
+                            ? 'Waiting for the buyer to approve the report. You can dispatch once it is approved.'
+                            : `Paid and held. A GeoVerify agent will ${order.inspection.kind === 'site_visit' ? 'visit' : 'check the goods'} before it is sent.`}
                 </p>
             )}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="flex min-w-0 flex-col gap-6">
+                    {order.inspection !== null && <InspectionReport inspection={order.inspection} />}
                     <ItemsTable order={order} />
                     <DeliveryCard order={order} />
                 </div>

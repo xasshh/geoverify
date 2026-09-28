@@ -184,18 +184,24 @@ it('will not let a business buy from itself', function () {
     expect(fn () => placePurchase($it))->toThrow(RuntimeException::class, 'cannot buy from it');
 });
 
-it('offers inspection and site visits only once agents can carry them out', function () {
+it('offers inspection and site visits only once they have a price', function () {
     $it = shopWithCatalogue();
-    config()->set('geoverify.commerce.inspection_fee_minor', 250_000);
+    config()->set('geoverify.commerce.inspection_fee_minor', null);
 
-    expect(fn () => app(PlacePurchase::class)(
+    $place = static fn (): PurchaseOrder => app(PlacePurchase::class)(
         $it['buyer'],
         $it['seller']['shop'],
         [$it['rice']->id => 1],
         ['name' => 'Tunde', 'phone' => '0803', 'address' => 'Maitama'],
         Protection::Inspection,
         PayChannel::Card,
-    ))->toThrow(RuntimeException::class, 'not available yet');
+    );
+
+    expect($place)->toThrow(RuntimeException::class, 'not available yet');
+
+    config()->set('geoverify.commerce.inspection_fee_minor', 250_000);
+
+    expect($place()->service_fee_minor)->toBe(250_000);
 });
 
 it('holds the money when the signed webhook says it arrived, once', function () {

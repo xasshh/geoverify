@@ -67,6 +67,14 @@ final class Media extends Model
      */
     public const KIND_PRODUCT = 'product';
 
+    /**
+     * An agent's photograph of goods or premises for an inspection a buyer
+     * paid for (Phase 4 M3). Officer authored, attached to the inspection,
+     * never to the building, and shown only to that order's buyer and
+     * merchant. The one officer photograph that leaves, and only that far.
+     */
+    public const KIND_INSPECTION = 'inspection';
+
     /** Held and published. */
     public const STATUS_STORED = 'stored';
 

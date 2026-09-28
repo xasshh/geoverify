@@ -78,11 +78,23 @@ disputes at /admin/disputes. Inspection and site visit render on checkout but
 cannot be chosen until M3 (`Protection::isOffered`). A refund ruling posts the
 ledger movement; the provider-side refund is sent by hand, as RefundOrder does.
 
-**M3 · Inspections and visits**
+**M3 · Inspections and visits** (done 2026-09-28)
 Inspection and site-visit jobs for field agents (a new assignment kind on the
 existing field client, extracted as a shared service rather than a refactor of
 the field code), the inspection report with its checklist and geo-tagged photos
 the buyer approves.
+
+Built as `inspections` (one per protected order) and `ManageInspections`.
+Requested with the order, queued for supervisors at /console/inspections once
+paid, sent to an agent as an assignment of kind `inspection` naming the
+building. The agent's job screen (/field/jobs/{id}) works offline through an
+ordered outbox: arrival (distance to the premises measured in PostGIS, shown
+to the parties only as matched or not), photographs, then the report against a
+fixed checklist. Dispatch waits for the buyer's approval; a rejected report
+becomes an issue with the money still held. Site visits carry a time and
+"with me" or "for me"; no live video. Decided with the owner: inspection
+photographs are shown to that order's buyer and merchant only (written into
+the hard rule in CLAUDE.md). Fees stay unset until someone decides them.
 
 **M4 · Directory search and map**
 The split list and map, "what" and "where", Verified only, popular chips, the

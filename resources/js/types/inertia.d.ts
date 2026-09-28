@@ -54,6 +54,7 @@ declare module '@inertiajs/core' {
             escalations: number;
             orders: number;
             messages: number;
+            inspections: number;
         } | null;
     }
 }

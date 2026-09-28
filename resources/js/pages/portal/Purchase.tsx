@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/Button';
 import { PortalShell } from '@/components/PortalShell';
-import { DeliveryCard, ItemsTable, MoneyCard, PurchasePill, Timeline, type PurchaseView } from '@/components/PurchaseParts';
+import { DeliveryCard, InspectionReport, ItemsTable, MoneyCard, PurchasePill, Timeline, type PurchaseView } from '@/components/PurchaseParts';
 import { clearCart } from '@/lib/cart';
 
 interface Props {
@@ -20,6 +20,8 @@ export default function Purchase({ order, can }: Props) {
     const errors = page.props.errors as Record<string, string | undefined>;
     const [asking, setAsking] = useState(false);
     const [reason, setReason] = useState('');
+    const [rejecting, setRejecting] = useState(false);
+    const [rejectNote, setRejectNote] = useState('');
     const [busy, setBusy] = useState<string | null>(null);
 
     // The cart this order was placed from has done its job.
@@ -140,6 +142,65 @@ export default function Purchase({ order, can }: Props) {
                             <p className="mt-1 text-ui text-ink">“{order.dispute}”</p>
                             <p className="mt-2 text-table text-muted">Held until our team rules. If it is sorted between you, confirm delivery above.</p>
                         </section>
+                    )}
+
+                    {order.inspection !== null && (
+                        <InspectionReport
+                            inspection={order.inspection}
+                            footer={
+                                order.inspection.status === 'submitted' ? (
+                                    <div className="border-t border-rule bg-gold-soft px-6 py-5">
+                                        <p className="max-w-none text-ui font-bold text-ink">Is this what you ordered?</p>
+                                        <p className="max-w-none text-table text-muted">The business sends it only once you approve. Your money stays held until you confirm delivery.</p>
+                                        <div className="mt-3 flex flex-wrap gap-3">
+                                            <Button
+                                                variant="primary"
+                                                size="field"
+                                                busy={busy === 'inspection'}
+                                                onClick={() => {
+                                                    post('inspection', { approve: '1' });
+                                                }}
+                                            >
+                                                Approve the report
+                                            </Button>
+                                            <Button
+                                                variant="secondary"
+                                                size="field"
+                                                onClick={() => {
+                                                    setRejecting((r) => !r);
+                                                }}
+                                            >
+                                                Something is wrong
+                                            </Button>
+                                        </div>
+                                        {rejecting && (
+                                            <form
+                                                className="mt-4"
+                                                onSubmit={(e) => {
+                                                    e.preventDefault();
+                                                    post('inspection', { approve: '0', note: rejectNote });
+                                                }}
+                                            >
+                                                <textarea
+                                                    rows={3}
+                                                    value={rejectNote}
+                                                    aria-label="What is wrong with the report"
+                                                    onChange={(e) => {
+                                                        setRejectNote(e.target.value);
+                                                    }}
+                                                    className="w-full rounded-sm border border-rule-strong bg-raised p-3 text-ui text-ink"
+                                                />
+                                                <div className="mt-2">
+                                                    <Button type="submit" variant="destructive" size="field" busy={busy === 'inspection'}>
+                                                        Raise it with our team
+                                                    </Button>
+                                                </div>
+                                            </form>
+                                        )}
+                                    </div>
+                                ) : undefined
+                            }
+                        />
                     )}
 
                     <ItemsTable order={order} />

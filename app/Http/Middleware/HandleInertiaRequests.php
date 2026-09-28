@@ -8,6 +8,7 @@ use App\Domain\Catalogue\Actions\ReadListingStrength;
 use App\Domain\Claim\Actions\CountClaimsAwaitingDecision;
 use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Commerce\Enums\PurchaseStatus;
+use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
 use App\Domain\Field\Actions\FieldMessaging;
 use App\Domain\Field\Models\FieldMessage;
@@ -115,6 +116,11 @@ class HandleInertiaRequests extends Middleware
             // Counted only for the people who can act on it. A supervisor
             // seeing a number they cannot clear is a number that never moves.
             'escalations' => $user->administers() ? app(CountEscalations::class)() : 0,
+            // Paid inspections and visits nobody has been sent to yet.
+            'inspections' => Inspection::query()
+                ->where('status', Inspection::REQUESTED)
+                ->whereHas('order', static fn ($q) => $q->where('status', PurchaseStatus::Held->value))
+                ->count(),
             // Replies from officers this supervisor has not read yet.
             'messages' => FieldMessage::query()
                 ->whereIn('officer_id', app(FieldMessaging::class)->teamOf($user)->pluck('id'))

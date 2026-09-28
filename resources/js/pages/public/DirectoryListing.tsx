@@ -46,10 +46,12 @@ interface ListedProduct {
 export default function DirectoryListing({
     listing,
     products,
+    services,
     similar,
 }: {
     listing: Listing;
     products: ListedProduct[];
+    services: { value: 'inspection' | 'site_visit'; feeNaira: number | null }[];
     similar: DirectoryEntry[];
 }) {
     const flash = usePage().props.flash.status;
@@ -303,7 +305,7 @@ export default function DirectoryListing({
                             </Link>
                         )}
                         <VerificationRecord listing={listing} />
-                        {buyable && <MoneyProtected />}
+                        {buyable && <MoneyProtected services={services} />}
                         <section
                             className="rounded-card border border-rule bg-raised px-6 py-6"
                             aria-labelledby="owner"
@@ -416,7 +418,13 @@ export default function DirectoryListing({
  * "Your money is protected", from the mockup's profile, in words we are allowed
  * to use: the money is held, and released when the buyer says so.
  */
-function MoneyProtected() {
+function MoneyProtected({ services }: { services: { value: 'inspection' | 'site_visit'; feeNaira: number | null }[] }) {
+    const fee = (value: 'inspection' | 'site_visit') => {
+        const naira = services.find((s) => s.value === value)?.feeNaira ?? null;
+
+        return naira === null ? 'Not offered yet.' : `₦${naira.toLocaleString("en-NG")}, added at checkout.`;
+    };
+
     return (
         <section
             className="rounded-card border border-rule bg-raised px-6 py-6"
@@ -440,13 +448,13 @@ function MoneyProtected() {
                         Product inspection
                     </dt>
                     <dd className="mt-1 text-table text-muted">
-                        An agent checks goods before dispatch. Coming soon.
+                        An agent checks goods before dispatch. {fee("inspection")}
                     </dd>
                 </div>
                 <div className="rounded-sm border border-rule px-3 py-3">
                     <dt className="text-ui font-bold text-ink">Site visit</dt>
                     <dd className="mt-1 text-table text-muted">
-                        An agent visits with you, or for you. Coming soon.
+                        An agent visits with you, or for you. {fee("site_visit")}
                     </dd>
                 </div>
             </dl>

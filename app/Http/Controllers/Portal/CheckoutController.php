@@ -13,6 +13,7 @@ use App\Domain\Registry\Models\Enterprise;
 use App\Http\Controllers\Portal\Concerns\ActsForBusiness;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -76,6 +77,8 @@ final class CheckoutController
             'delivery.note' => ['nullable', 'string', 'max:280'],
             'protection' => ['required', Rule::enum(Protection::class)],
             'channel' => ['required', Rule::enum(PayChannel::class)],
+            'visit_at' => ['nullable', 'required_if:protection,site_visit', 'date', 'after:now'],
+            'visit_mode' => ['nullable', 'required_if:protection,site_visit', Rule::in(['with_me', 'for_me'])],
         ]);
 
         $quantities = [];
@@ -94,6 +97,8 @@ final class CheckoutController
                 $validated['delivery'],
                 Protection::from($validated['protection']),
                 PayChannel::from($validated['channel']),
+                isset($validated['visit_at']) ? Carbon::parse($validated['visit_at'], config('app.timezone')) : null,
+                $validated['visit_mode'] ?? null,
             );
         } catch (RuntimeException $e) {
             return back()->withErrors(['checkout' => $e->getMessage()]);

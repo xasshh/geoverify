@@ -251,6 +251,28 @@ export default function Today({ day }: { day: OfficerDay }) {
                 />
             </div>
 
+            {day.jobs.length > 0 && (
+                <section className="mt-5 flex flex-col gap-2" aria-label="Inspections and visits">
+                    {day.jobs.map((job) => (
+                        <Link
+                            key={job.id}
+                            href={`/field/jobs/${String(job.id)}`}
+                            className="flex items-center justify-between gap-3 rounded-card border border-held/30 bg-held-soft px-4 py-3"
+                        >
+                            <span className="min-w-0">
+                                <span className="block text-label font-extrabold tracking-[0.05em] text-held-ink uppercase">
+                                    {job.kind === 'site_visit' ? 'Site visit' : 'Product inspection'} · {job.orderRef}
+                                </span>
+                                <span className="block truncate text-ui font-bold text-ink">{job.business}</span>
+                            </span>
+                            <span className="shrink-0 text-table font-bold text-held-ink">
+                                {job.requestedFor === null ? 'Today' : new Date(job.requestedFor).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                            </span>
+                        </Link>
+                    ))}
+                </section>
+            )}
+
             <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
                 <MapPanel day={day} />
 

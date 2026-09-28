@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Commerce\Enums\Protection;
 use App\Domain\Registry\Actions\ReadDirectorySectors;
 use App\Domain\Registry\Actions\ReadRoadsInBox;
 use App\Domain\Registry\Actions\SearchDirectory;
@@ -108,6 +109,12 @@ final class DirectoryController extends Controller
         return Inertia::render('public/DirectoryListing', [
             'listing' => $match,
             'products' => $search->productsFor($match),
+            // What a buyer can add at checkout, and for how much, so the page
+            // never promises a service that has no price yet.
+            'services' => array_map(static fn (Protection $p): array => [
+                'value' => $p->value,
+                'feeNaira' => $p->feeMinor() === null ? null : intdiv($p->feeMinor(), 100),
+            ], [Protection::Inspection, Protection::SiteVisit]),
             'similar' => $search->similarTo(
                 $enterprise->id,
                 is_string($match['sectorCode']) ? $match['sectorCode'] : null,

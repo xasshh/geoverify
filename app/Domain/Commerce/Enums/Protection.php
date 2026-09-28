@@ -8,9 +8,7 @@ namespace App\Domain\Commerce\Enums;
  * "Add a verification service" at checkout.
  *
  * Every order is held until delivery whatever is chosen here; these add a field
- * agent. The agent's side of both is M3, and until it exists neither can be
- * bought: an order waiting on an inspection nobody can carry out would hold a
- * buyer's money against nothing.
+ * agent, whose report the buyer approves before the goods are sent (M3).
  */
 enum Protection: string
 {
@@ -40,11 +38,11 @@ enum Protection: string
     }
 
     /**
-     * Whether a buyer can choose this today. Needs a price, and needs the
-     * agents' side of it to exist, which it does not until M3.
+     * Whether a buyer can choose this today: it needs a price. The agents'
+     * side exists since M3, so a configured fee is the only thing missing.
      */
     public function isOffered(): bool
     {
-        return $this === self::None;
+        return $this->feeMinor() !== null;
     }
 }

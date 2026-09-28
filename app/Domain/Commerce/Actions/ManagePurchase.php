@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Commerce\Actions;
 
+use App\Domain\Commerce\Enums\Protection;
 use App\Domain\Commerce\Enums\PurchaseStatus;
+use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
 use App\Domain\Ledger\Actions\PostTransaction;
 use App\Domain\Ledger\Models\LedgerAccount;
@@ -44,11 +46,18 @@ final class ManagePurchase
         $this->assertSeller($order, $membership);
 
         return $this->move($order, PurchaseStatus::Dispatched, function (PurchaseOrder $fresh) use ($membership): void {
-            // Until M3, nothing but an unprotected order can exist. When
-            // inspections do, an inspected order ships only once the buyer has
-            // approved the report, and this is where that will be enforced.
-            if ($fresh->protection->value !== 'none') {
-                throw new RuntimeException('This order waits for its inspection before it can be sent.');
+            // An inspected or visited order ships only once the buyer has
+            // approved the agent's report. Checked here, so no second caller
+            // can send goods the buyer has not seen checked.
+            if ($fresh->protection !== Protection::None) {
+                $approved = Inspection::query()
+                    ->where('purchase_order_id', $fresh->id)
+                    ->where('status', Inspection::APPROVED)
+                    ->exists();
+
+                if (! $approved) {
+                    throw new RuntimeException('This order waits for the buyer to approve the inspection report.');
+                }
             }
 
             $fresh->update(['status' => PurchaseStatus::Dispatched, 'dispatched_at' => now()]);

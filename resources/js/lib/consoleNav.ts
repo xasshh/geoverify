@@ -12,6 +12,7 @@
  */
 export type ConsoleView =
     | 'team'
+    | 'inspections'
     | 'messages'
     | 'brief'
     | 'coverage'
@@ -30,7 +31,7 @@ export type ConsoleView =
     | 'disputes';
 
 /** Which waiting count belongs against a view, where one does. */
-export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages';
+export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections';
 
 export interface ConsoleNavItem {
     key: ConsoleView;
@@ -72,6 +73,15 @@ const VIEWS: ConsoleNavItem[] = [
         caption: 'Waiting on a decision',
         icon: 'M2.6 3.4h7m-7 3h7m-7 3h4M10.8 11.2l1.6 1.6 2.8-3.4',
         queue: 'review',
+    },
+    {
+        key: 'inspections',
+        label: 'Inspections & visits',
+        href: '/console/inspections',
+        caption: 'Paid for, waiting for an agent',
+        // A magnifier over a box.
+        icon: 'M2.6 5.6h7.2v7.2H2.6zM11.4 9.8a2 2 0 1 0 0-4 2 2 0 0 0 0 4M12.8 9.2l1.6 1.6',
+        queue: 'inspections',
     },
     {
         key: 'messages',

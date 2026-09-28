@@ -6,6 +6,7 @@ namespace App\Domain\Verification\Actions;
 
 use App\Domain\Field\Enums\AssignmentStatus;
 use App\Domain\Field\Models\Assignment;
+use App\Domain\Registry\Actions\ResolveStructureCell;
 use App\Domain\Verification\Enums\OrderStatus;
 use App\Domain\Verification\Models\VerificationEvent;
 use App\Domain\Verification\Models\VerificationOrder;
@@ -30,6 +31,8 @@ use RuntimeException;
  */
 final class AssignVerificationVisit
 {
+    public function __construct(private readonly ResolveStructureCell $cells) {}
+
     public function __invoke(
         VerificationOrder $order,
         User $officer,
@@ -60,7 +63,9 @@ final class AssignVerificationVisit
                 // The cell as well as the structure. Everything the console
                 // draws is organised by cell, and a visit that sat outside that
                 // organisation would be invisible on every map we have.
-                'grid_cell_id' => $fresh->structure->grid_cell_id,
+                // Found spatially for a business that registered itself,
+                // which carries no cell of its own.
+                'grid_cell_id' => ($this->cells)($fresh->structure),
                 'structure_id' => $fresh->structure_id,
                 'kind' => Assignment::KIND_VISIT,
                 'priority' => $fresh->urgency->priority(),

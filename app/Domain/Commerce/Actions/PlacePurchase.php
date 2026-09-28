@@ -15,6 +15,7 @@ use App\Domain\Registry\Actions\SearchDirectory;
 use App\Domain\Registry\Models\Enterprise;
 use App\Domain\Verification\Models\VerificationEvent;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -35,7 +36,10 @@ final class PlacePurchase
 {
     public const MAX_LINES = 30;
 
-    public function __construct(private readonly SearchDirectory $directory) {}
+    public function __construct(
+        private readonly SearchDirectory $directory,
+        private readonly ManageInspections $inspections,
+    ) {}
 
     /**
      * @param  array<int, int>  $quantities  Product id to quantity.
@@ -48,6 +52,8 @@ final class PlacePurchase
         array $delivery,
         Protection $protection,
         PayChannel $channel,
+        ?Carbon $visitAt = null,
+        ?string $visitMode = null,
     ): PurchaseOrder {
         if (! $buyer->canSignIn()) {
             throw new RuntimeException('This account cannot place orders.');
@@ -87,7 +93,7 @@ final class PlacePurchase
             }
         }
 
-        return DB::transaction(function () use ($buyer, $enterprise, $quantities, $delivery, $protection, $channel): PurchaseOrder {
+        return DB::transaction(function () use ($buyer, $enterprise, $quantities, $delivery, $protection, $channel, $visitAt, $visitMode): PurchaseOrder {
             $control = PartyBusiness::query()
                 ->where('enterprise_id', $enterprise->id)
                 ->where('status', PartyBusiness::STATUS_ACTIVE)
@@ -157,6 +163,10 @@ final class PlacePurchase
             ]);
 
             $order->items()->createMany($lines);
+
+            // The job the buyer paid for, with its arrangement. It waits in
+            // the console's queue from the moment the money is held.
+            $this->inspections->request($order, $visitAt, $visitMode);
 
             VerificationEvent::recordForBuyer($order, 'purchase.placed', $buyer, [
                 'reference' => $order->reference,

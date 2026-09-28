@@ -24,6 +24,7 @@ type NavKey =
     | 'listings'
     | 'orders'
     | 'wallet'
+    | 'inspections'
     | 'purchases'
     | 'verification'
     | 'profile'
@@ -38,6 +39,7 @@ const ICONS: Record<NavKey, string> = {
     home: 'M3 10.5 12 3l9 7.5M5.5 9v11h13V9',
     listings: 'M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9zM3.5 7.5 12 12l8.5-4.5M12 12v9.2',
     orders: 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4',
+    inspections: 'M4 7h11v11H4zM17 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.2 13.2l2.3 2.3',
     wallet: 'M3.5 7.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15zM3.5 7.5V6a2 2 0 0 1 2-2h11M16 14h2',
     purchases: 'M4 5h2l2 11h10l2-8H7.5M9.5 20a1 1 0 1 0 0-.1M17 20a1 1 0 1 0 0-.1',
     verification: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5',
@@ -147,7 +149,7 @@ export function PortalShell({
     }
 
     // The mockup's Merchant Hub nav once a business is attached; before that,
-    // the two ways to get one. Inspections join in M3. My orders is the buyer's
+    // the two ways to get one. My orders is the buyer's
     // side, which anybody signed in has, business or not.
     const base = business === null ? null : `/portal/businesses/${String(business.id)}`;
     const nav: { key: NavKey; label: string; href: string; count?: number }[] =
@@ -163,6 +165,7 @@ export function PortalShell({
                   { key: 'home', label: 'Home', href: '/portal' },
                   { key: 'listings', label: 'Listings', href: `${base}/listings` },
                   { key: 'orders', label: 'Orders', href: '/portal/orders', count: business.openOrders },
+                  { key: 'inspections', label: 'Inspections & visits', href: '/portal/inspections' },
                   { key: 'wallet', label: 'Wallet', href: '/portal/wallet' },
                   { key: 'verification', label: 'Verification', href: `${base}/verification` },
                   { key: 'profile', label: 'Business profile', href: base },

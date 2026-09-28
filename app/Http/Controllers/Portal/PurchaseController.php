@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Portal;
 
 use App\Domain\Commerce\Actions\InitialisePurchasePayment;
+use App\Domain\Commerce\Actions\ManageInspections;
 use App\Domain\Commerce\Actions\ManagePurchase;
 use App\Domain\Commerce\Actions\PresentPurchase;
+use App\Domain\Commerce\Enums\Protection;
 use App\Domain\Commerce\Enums\PurchaseStatus;
+use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
 use App\Domain\Party\Models\PortalAccount;
 use App\Http\Controllers\Portal\Concerns\ActsForBusiness;
@@ -64,7 +67,10 @@ final class PurchaseController
             'can' => [
                 'pay' => $order->status === PurchaseStatus::AwaitingPayment,
                 'cancel' => $order->status === PurchaseStatus::AwaitingPayment,
-                'confirm' => $order->status->allowsMoveTo(PurchaseStatus::Released),
+                // On an inspected order the question before dispatch is the
+                // report, not receipt: nothing has been sent to receive.
+                'confirm' => $order->status->allowsMoveTo(PurchaseStatus::Released)
+                    && ($order->protection === Protection::None || $order->status !== PurchaseStatus::Held),
                 'raiseIssue' => $order->status->allowsMoveTo(PurchaseStatus::Disputed),
             ],
         ]);
@@ -110,6 +116,21 @@ final class PurchaseController
         return $this->attempt(
             fn () => $this->purchases->raiseIssue($order, $account, $reason),
             'Your issue is with our team. The money stays held until they have looked at it.',
+        );
+    }
+
+    /** The buyer's word on the agent's report. */
+    public function inspection(Request $request, PurchaseOrder $order, ManageInspections $inspections): RedirectResponse
+    {
+        $account = $this->own($request, $order);
+        $input = $request->validate(['approve' => ['required', 'boolean'], 'note' => ['nullable', 'string', 'max:500']]);
+        $inspection = Inspection::query()->where('purchase_order_id', $order->id)->firstOrFail();
+
+        return $this->attempt(
+            fn () => $inspections->decide($inspection, $account, (bool) $input['approve'], $input['note'] ?? null),
+            (bool) $input['approve']
+                ? 'Report approved. The business can send your order now.'
+                : 'We have your concern. The money stays held while our team looks at it.',
         );
     }
 

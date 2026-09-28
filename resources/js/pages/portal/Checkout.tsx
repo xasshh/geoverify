@@ -70,6 +70,10 @@ export default function Checkout({ business, products, deliveryNaira, protection
     const [delivery, setDelivery] = useState({ name: account?.name ?? '', phone: '', address: '', note: '' });
     const [protection, setProtection] = useState<ProtectionOption['value']>('none');
     const [channel, setChannel] = useState(channels[0]?.value ?? 'card');
+    const [visitAt, setVisitAt] = useState('');
+    // An hour from when the page opened, worked out once rather than on every render.
+    const [earliestVisit] = useState(() => new Date(Date.now() + 3_600_000).toISOString().slice(0, 16));
+    const [visitMode, setVisitMode] = useState<'with_me' | 'for_me'>('with_me');
     const [busy, setBusy] = useState(false);
 
     const itemsNaira = lines.reduce((n, line) => n + line.priceNaira * line.quantity, 0);
@@ -88,6 +92,7 @@ export default function Checkout({ business, products, deliveryNaira, protection
                 delivery,
                 protection,
                 channel,
+                ...(protection === 'site_visit' ? { visit_at: visitAt, visit_mode: visitMode } : {}),
             },
             {
                 onFinish: () => {
@@ -335,6 +340,51 @@ export default function Checkout({ business, products, deliveryNaira, protection
                                 </div>
                             </section>
 
+                            {protection === 'site_visit' && (
+                                <section className="rounded-card border border-rule bg-raised px-5 py-5">
+                                    <h2 className="text-body font-extrabold text-ink">Arrange the visit</h2>
+                                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                                        <label className="flex flex-col gap-1.5 text-label font-bold tracking-[0.05em] text-muted uppercase">
+                                            When
+                                            <input
+                                                type="datetime-local"
+                                                value={visitAt}
+                                                min={earliestVisit}
+                                                onChange={(e) => {
+                                                    setVisitAt(e.target.value);
+                                                }}
+                                                className="h-11 rounded-sm border border-rule-strong bg-raised px-3 text-ui font-normal tracking-normal text-ink normal-case"
+                                            />
+                                        </label>
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="text-label font-bold tracking-[0.05em] text-muted uppercase">The agent</span>
+                                            <div className="flex gap-2" role="radiogroup" aria-label="The agent">
+                                                {(
+                                                    [
+                                                        ['with_me', 'Goes with me'],
+                                                        ['for_me', 'Goes for me'],
+                                                    ] as const
+                                                ).map(([value, label]) => (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        role="radio"
+                                                        aria-checked={visitMode === value}
+                                                        onClick={() => {
+                                                            setVisitMode(value);
+                                                        }}
+                                                        className={cx('min-h-11 flex-1 rounded-sm border text-ui font-bold', visitMode === value ? 'border-gold bg-gold-soft text-gold-dark' : 'border-rule-strong text-ink')}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {(errors.visit_at ?? errors.visit_mode) !== undefined && <p className="mt-2 text-ui text-alert">{errors.visit_at ?? errors.visit_mode}</p>}
+                                </section>
+                            )}
+
                             <section>
                                 <h2 className="font-display text-display-s text-ink">Pay with</h2>
                                 <div className="mt-4 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Payment method">
@@ -396,7 +446,7 @@ export default function Checkout({ business, products, deliveryNaira, protection
                         </dl>
                         {step === 2 && (
                             <div className="mt-5">
-                                <Button variant="primary" size="field-primary" fullWidth busy={busy} disabled={lines.length === 0} onClick={pay}>
+                                <Button variant="primary" size="field-primary" fullWidth busy={busy} disabled={lines.length === 0 || (protection === 'site_visit' && visitAt === '')} onClick={pay}>
                                     Pay and hold {naira(totalNaira)}
                                 </Button>
                             </div>

@@ -220,6 +220,9 @@ it('exposes no portal route that could write to an observation', function () {
         'portal.checkout', 'portal.checkout.store',
         'portal.purchases.index', 'portal.purchases.show', 'portal.purchases.pay', 'portal.purchases.return',
         'portal.purchases.confirm', 'portal.purchases.issue', 'portal.purchases.cancel',
+        // M3: the buyer's word on an inspection report, and the merchant's
+        // list of agents booked at their shop. Neither reaches an observation.
+        'portal.purchases.inspection', 'portal.inspections',
         'portal.sales.show', 'portal.sales.dispatch',
         'portal.wallet', 'portal.wallet.account', 'portal.wallet.withdraw',
     ];

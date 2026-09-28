@@ -156,6 +156,22 @@ export interface LocalMessage {
     pending: 0 | 1;
 }
 
+/**
+ * Something an agent did on an inspection job, waiting to be sent: the
+ * arrival, a photograph, or the report. Sent strictly in the order it was
+ * done, so a report never reaches the server ahead of its photographs.
+ */
+export interface JobAction {
+    seq?: number;
+    uuid: string;
+    inspectionId: number;
+    type: 'arrive' | 'photo' | 'report';
+    payload: Record<string, unknown>;
+    blob: Blob | null;
+    state: 'queued' | 'done' | 'failed';
+    error: string | null;
+}
+
 export interface PackChunk {
     packId: number;
     index: number;
@@ -172,6 +188,7 @@ const db = new Dexie('geoverify') as Dexie & {
     packs: EntityTable<LocalPack, 'packId'>;
     packChunks: EntityTable<PackChunk, 'packId'>;
     messages: EntityTable<LocalMessage, 'uuid'>;
+    jobActions: EntityTable<JobAction, 'seq'>;
 };
 
 db.version(1).stores({
@@ -195,6 +212,11 @@ db.version(2).stores({
 // The supervisor inbox. Its own version again, for the same reason.
 db.version(3).stores({
     messages: 'uuid, id, pending, sentAt',
+});
+
+// Inspection jobs (Phase 4 M3). Its own version, for the same reason again.
+db.version(4).stores({
+    jobActions: '++seq, uuid, inspectionId, state',
 });
 
 export { db };

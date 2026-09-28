@@ -25,6 +25,7 @@ export interface OfficerDay {
     returned: { count: number; oldestAt: string | null };
     unread: number;
     captures: FieldCapture[];
+    jobs: { id: number; kind: 'inspection' | 'site_visit'; business: string; orderRef: string; requestedFor: string | null }[];
 }
 
 export interface FieldCapture {

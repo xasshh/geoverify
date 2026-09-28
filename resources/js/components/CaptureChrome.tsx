@@ -29,7 +29,7 @@ export function CaptureStepHeader({ step, title, subtitle, onClose }: { step: 2 
 }
 
 /** "GPS locked · ±3 m": the fix the record will carry, and whether it is good enough. */
-export function GpsCard({ position, cellH3 }: { position: { latitude: number; longitude: number; accuracy_m: number | null } | null; cellH3: string }) {
+export function GpsCard({ position, cellH3 = null }: { position: { latitude: number; longitude: number; accuracy_m: number | null } | null; cellH3?: string | null }) {
     const accuracy = position?.accuracy_m ?? null;
     const good = accuracy !== null && accuracy <= 10;
 
@@ -46,10 +46,11 @@ export function GpsCard({ position, cellH3 }: { position: { latitude: number; lo
                     {accuracy !== null && ` · ±${String(Math.round(accuracy))} m`}
                 </span>
                 <span className="block truncate numeric-mono text-table opacity-80">
-                    {position === null ? 'Stand still in the open' : `${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}`} · cell {shortCell(cellH3)}
+                    {position === null ? 'Stand still in the open' : `${position.latitude.toFixed(4)}, ${position.longitude.toFixed(4)}`}
+                    {cellH3 !== null && ` · cell ${shortCell(cellH3)}`}
                 </span>
             </span>
-            {position !== null && <span className="shrink-0 rounded-full bg-gold px-2.5 py-1 text-table font-extrabold text-on-accent">In your cell</span>}
+            {position !== null && cellH3 !== null && <span className="shrink-0 rounded-full bg-gold px-2.5 py-1 text-table font-extrabold text-on-accent">In your cell</span>}
         </div>
     );
 }

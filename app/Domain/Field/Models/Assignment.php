@@ -53,6 +53,13 @@ final class Assignment extends Model
      */
     public const KIND_VISIT = 'visit';
 
+    /**
+     * An inspection or site visit a buyer paid for (Phase 4 M3). Names the
+     * building, like a visit; its report lives on `inspections`, not in the
+     * register.
+     */
+    public const KIND_INSPECTION = 'inspection';
+
     protected $fillable = [
         'grid_cell_id', 'structure_id', 'kind', 'priority',
         'user_id', 'assigned_by', 'assigned_at', 'due_on',

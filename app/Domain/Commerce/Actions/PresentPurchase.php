@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\Commerce\Actions;
 
 use App\Domain\Commerce\Enums\PurchaseStatus;
+use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
 use App\Domain\Commerce\Models\PurchaseOrderItem;
+use App\Domain\Media\Models\Media;
 
 /**
  * One product order, as its buyer and its merchant both see it.
@@ -67,6 +69,48 @@ final class PresentPurchase
             'placedAt' => $order->created_at?->toIso8601String(),
             'timeline' => $this->timeline($order),
             'releaseAfterDays' => (int) config('geoverify.commerce.release_after_days', 7),
+            'inspection' => $this->inspection($order),
+        ];
+    }
+
+    /**
+     * The agent's report, for the two parties to the order.
+     *
+     * The only place an officer's photograph is shown outside the staff side,
+     * and only these: kind `inspection`, attached to this order's inspection,
+     * through links that expire in minutes. Where the agent stood is reduced
+     * to whether it matched the premises; neither point is disclosed.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function inspection(PurchaseOrder $order): ?array
+    {
+        /** @var Inspection|null $i */
+        $i = Inspection::query()->with(['agent:id,name,staff_ref', 'photos'])->where('purchase_order_id', $order->id)->first();
+
+        if ($i === null) {
+            return null;
+        }
+
+        return [
+            'id' => $i->id,
+            'kind' => $i->kind,
+            'label' => $i->label(),
+            'status' => $i->status,
+            'requestedFor' => $i->requested_for?->toIso8601String(),
+            'visitMode' => $i->visit_mode,
+            'agent' => $i->agent === null ? null : ['name' => $i->agent->name, 'ref' => $i->agent->staff_ref],
+            'arrivedAt' => $i->arrived_at?->toIso8601String(),
+            'matchedPremises' => $i->arrival_distance_m === null ? null : $i->arrival_distance_m <= Inspection::ARRIVAL_TOLERANCE_M,
+            'onSiteMinutes' => $i->arrived_at === null || $i->submitted_at === null ? null : (int) $i->arrived_at->diffInMinutes($i->submitted_at),
+            'checklist' => $i->checklist ?? [],
+            'notes' => $i->notes,
+            'submittedAt' => $i->submitted_at?->toIso8601String(),
+            'decidedAt' => $i->decided_at?->toIso8601String(),
+            'decisionNote' => $i->decision_note,
+            'photos' => $i->status === Inspection::REQUESTED || $i->status === Inspection::ASSIGNED
+                ? []
+                : $i->photos->map(static fn (Media $m): array => ['url' => $m->temporaryUrl(15)])->values()->all(),
         ];
     }
 
@@ -80,8 +124,23 @@ final class PresentPurchase
     {
         $steps = [
             ['label' => 'Paid and held', 'at' => $order->paid_at?->toIso8601String(), 'detail' => $order->paid_at === null ? null : $order->channel->label()],
-            ['label' => 'Dispatched', 'at' => $order->dispatched_at?->toIso8601String(), 'detail' => null],
         ];
+
+        $inspection = Inspection::query()->with('agent:id,staff_ref')->withCount('photos')->where('purchase_order_id', $order->id)->first();
+
+        if ($inspection !== null) {
+            $name = $inspection->kind === Inspection::KIND_SITE_VISIT ? 'Visit' : 'Inspection';
+            $steps[] = ['label' => "{$name} assigned", 'at' => $inspection->assigned_at?->toIso8601String(), 'detail' => $inspection->agent?->staff_ref === null ? null : 'agent '.$inspection->agent->staff_ref];
+            $steps[] = ['label' => "{$name} report uploaded", 'at' => $inspection->submitted_at?->toIso8601String(), 'detail' => $inspection->submitted_at === null ? null : trans_choice(':count photo|:count photos', (int) $inspection->getAttribute('photos_count'))];
+            $steps[] = ['label' => 'Buyer approval', 'at' => $inspection->decided_at?->toIso8601String(), 'detail' => match ($inspection->status) {
+                Inspection::APPROVED => 'Approved',
+                Inspection::REJECTED => 'Not accepted',
+                Inspection::SUBMITTED => 'Waiting for the buyer',
+                default => null,
+            }];
+        }
+
+        $steps[] = ['label' => 'Dispatched', 'at' => $order->dispatched_at?->toIso8601String(), 'detail' => null];
 
         if ($order->status === PurchaseStatus::Disputed || $order->disputed_at !== null) {
             $steps[] = ['label' => 'Buyer raised issue', 'at' => $order->disputed_at?->toIso8601String(), 'detail' => null];

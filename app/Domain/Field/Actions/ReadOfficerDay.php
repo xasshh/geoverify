@@ -53,7 +53,31 @@ final class ReadOfficerDay
                 ->whereNull('read_at')
                 ->count(),
             'captures' => $captures,
+            'jobs' => $this->jobs($officer),
         ];
+    }
+
+    /**
+     * Inspections and site visits given to this officer and not yet reported.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function jobs(User $officer): array
+    {
+        return array_map(static fn (object $r): array => [
+            'id' => (int) $r->id,
+            'kind' => (string) $r->kind,
+            'business' => (string) $r->trading_name,
+            'orderRef' => (string) $r->reference,
+            'requestedFor' => $r->requested_for === null ? null : Carbon::parse((string) $r->requested_for)->toIso8601String(),
+        ], DB::select(<<<'SQL'
+            SELECT i.id, i.kind, i.requested_for, e.trading_name, po.reference
+              FROM inspections i
+              JOIN purchase_orders po ON po.id = i.purchase_order_id
+              JOIN enterprises e ON e.id = po.enterprise_id
+             WHERE i.agent_id = ? AND i.status = 'assigned'
+             ORDER BY i.requested_for NULLS FIRST, i.assigned_at
+        SQL, [$officer->id]));
     }
 
     /** @return array{name: string, code: string, area: string|null, day: int|null, days: int|null}|null */
@@ -129,6 +153,8 @@ final class ReadOfficerDay
             ->with('gridCell:id,h3_index,footprint_count,structures_captured,coverage_area_id')
             ->where('user_id', $officer->id)
             ->whereNotIn('status', [AssignmentStatus::Reassigned->value])
+            // A paid inspection is a job, listed on its own, not a cell to sweep.
+            ->where('kind', '<>', Assignment::KIND_INSPECTION)
             ->where(static fn ($q) => $q->whereNull('closed_at')->orWhereIn('status', [AssignmentStatus::Submitted->value, AssignmentStatus::Accepted->value]))
             ->orderByRaw('due_on nulls last')
             ->orderBy('assigned_at')

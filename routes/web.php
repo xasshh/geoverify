@@ -19,6 +19,7 @@ use App\Http\Controllers\Console\ClaimReviewController;
 use App\Http\Controllers\Console\CorrectionReviewController;
 use App\Http\Controllers\Console\CoverageController;
 use App\Http\Controllers\Console\ExportController;
+use App\Http\Controllers\Console\InspectionController as ConsoleInspectionController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\MessageController as ConsoleMessageController;
 use App\Http\Controllers\Console\ReviewController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\FieldHomeController;
+use App\Http\Controllers\Field\FieldJobController;
 use App\Http\Controllers\Field\FieldMessageController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
@@ -76,6 +78,9 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     // Team today, the supervisor's home, and the field inbox from this side.
     Route::get('/', TeamTodayController::class)->name('team');
     Route::get('brief', [TeamTodayController::class, 'brief'])->name('brief');
+    // Inspections and site visits buyers paid for (Phase 4 M3).
+    Route::get('inspections', [ConsoleInspectionController::class, 'index'])->name('inspections');
+    Route::post('inspections/{inspection}/assign', [ConsoleInspectionController::class, 'assign'])->name('inspections.assign');
     Route::get('messages/{officer?}', [ConsoleMessageController::class, 'index'])->name('messages');
     Route::post('messages/{officer}', [ConsoleMessageController::class, 'send'])
         ->whereNumber('officer')->middleware('throttle:60,1')->name('messages.send');
@@ -403,6 +408,7 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
             ->name('listings.photos.withdraw');
         Route::get('businesses/{enterprise}/verification', [PortalVerificationController::class, 'show'])->name('verification');
         Route::get('orders', OrdersIndexController::class)->name('orders.index');
+        Route::get('inspections', [SaleController::class, 'inspections'])->name('inspections');
         Route::get('sales/{order}', [SaleController::class, 'show'])->name('sales.show');
         Route::post('sales/{order}/dispatch', [SaleController::class, 'dispatch'])->name('sales.dispatch');
 
@@ -453,6 +459,7 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
         Route::post('purchases/{order}/issue', [PurchaseController::class, 'issue'])
             ->middleware('throttle:10,1')->name('purchases.issue');
         Route::post('purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+        Route::post('purchases/{order}/inspection', [PurchaseController::class, 'inspection'])->name('purchases.inspection');
 
         // Buying verification. The order is placed here, but it is only ever
         // paid by the provider's signed webhook: nothing on this guard, and
@@ -484,6 +491,8 @@ Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(fun
     Route::get('device', [FieldHomeController::class, 'device'])->name('device');
     // The previous board, kept for the cells list it shows.
     Route::get('cells', [AssignmentBoardController::class, 'index'])->name('cells');
+    // An inspection or site visit a buyer paid for (Phase 4 M3).
+    Route::get('jobs/{inspection}', [FieldJobController::class, 'show'])->name('jobs.show');
     Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
 });
 
@@ -516,6 +525,12 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     Route::post('messages', [FieldMessageController::class, 'store'])
         ->middleware('throttle:60,1')->name('messages.store');
     Route::post('messages/read', [FieldMessageController::class, 'read'])->name('messages.read');
+
+    // What the job screen's outbox sends: arrival, photographs, the report.
+    Route::post('jobs/{inspection}/arrive', [FieldJobController::class, 'arrive'])->name('jobs.arrive');
+    Route::post('jobs/{inspection}/photos', [FieldJobController::class, 'photo'])
+        ->middleware('throttle:60,1')->name('jobs.photos');
+    Route::post('jobs/{inspection}/report', [FieldJobController::class, 'report'])->name('jobs.report');
 });
 
 /*

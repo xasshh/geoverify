@@ -125,6 +125,7 @@ export type QueueCounts = {
     escalations: number;
     orders: number;
     messages: number;
+    inspections: number;
 };
 
 export function ConsoleNav({

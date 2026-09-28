@@ -46,6 +46,13 @@ for it yet.
   never a query that takes everything and excludes the evidence, because that
   filter is one refactor away from publishing an interior shot with somebody's
   family in it. Withdrawing sets `status = withdrawn` and keeps the row.
+  One narrow exception, decided on 2026-09-29 for paid inspections (Phase 4
+  M3): media of kind `inspection`, taken by an agent of the goods or premises a
+  buyer paid to have checked, attached to the `inspections` row and never to
+  the building, are shown to that order's buyer and merchant on the order page
+  through links that expire in minutes. Nowhere else: not the directory, not
+  the investor portal, not an export. `InspectionFlowTest` holds it ("shows the
+  agent photographs to the two parties and on no other surface").
 
 - **A field-enumerated record is private until its party opts in.** Enumeration
   is not consent to publication. `enterprises.publication_state` defaults to
