@@ -12,6 +12,7 @@ use App\Domain\Commerce\Enums\Protection;
 use App\Domain\Commerce\Enums\PurchaseStatus;
 use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Commerce\Models\Review;
 use App\Domain\Party\Models\PortalAccount;
 use App\Http\Controllers\Portal\Concerns\ActsForBusiness;
 use Illuminate\Http\RedirectResponse;
@@ -62,8 +63,11 @@ final class PurchaseController
     {
         $this->own($request, $order);
 
+        $review = Review::query()->where('purchase_order_id', $order->id)->first();
+
         return Inertia::render('portal/Purchase', [
             'order' => $present($order),
+            'review' => $review === null ? null : ['rating' => $review->rating, 'body' => $review->body, 'status' => $review->status],
             'can' => [
                 'pay' => $order->status === PurchaseStatus::AwaitingPayment,
                 'cancel' => $order->status === PurchaseStatus::AwaitingPayment,
@@ -72,6 +76,7 @@ final class PurchaseController
                 'confirm' => $order->status->allowsMoveTo(PurchaseStatus::Released)
                     && ($order->protection === Protection::None || $order->status !== PurchaseStatus::Held),
                 'raiseIssue' => $order->status->allowsMoveTo(PurchaseStatus::Disputed),
+                'review' => $order->status === PurchaseStatus::Released && $review === null,
             ],
         ]);
     }

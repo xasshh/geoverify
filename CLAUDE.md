@@ -93,6 +93,11 @@ for it yet.
   deciding to. Removal by a stranger is honoured (`WithholdOnRequest`) unless an
   owner opted in deliberately, in which case the request is recorded for a
   supervisor instead. Publishing takes proof; being left alone does not.
+  What an owner states (`business_profiles`: hours, delivery, street address)
+  and buyers' ratings appear at the claimed depth only. Directions is a map
+  search for the name, the owner's address, ward and LGA, never our
+  coordinate; "nearest" measures to the cell centre the pin already shows; the
+  map box matches an unclaimed listing only by its ward.
 - **Money moves only on a signed provider webhook.** Not on a callback, not on
   a redirect, not on anything a customer's browser can reach. `RecordPayment`
   is reachable from `HandlePaymentWebhook` and nowhere else.

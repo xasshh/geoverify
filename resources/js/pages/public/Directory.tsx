@@ -1,8 +1,9 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { DirectoryChrome, DepthMark, type DirectoryEntry as Entry } from '@/components/DirectoryChrome';
 import { DirectoryMap, type DirectoryMapData } from '@/components/DirectoryMap';
 import { cx } from '@/lib/cx';
+import { directionsUrl } from '@/lib/directions';
 
 interface Query {
     q: string;
@@ -13,6 +14,12 @@ interface Query {
     photos: boolean;
     products: boolean;
     sort: string;
+    open: boolean;
+    pays: boolean;
+    inspection: boolean;
+    delivers: boolean;
+    near: string | null;
+    box: string | null;
 }
 
 interface Props {
@@ -26,6 +33,8 @@ interface Props {
     meaning: { code: string; name: string }[];
     map: DirectoryMapData;
     places: { ward: string; lga: string | null }[];
+    inspectionOffered: boolean;
+    saved: number[];
 }
 
 const TINTS = ['bg-[#E3F2EF]', 'bg-[#E8EEFD]', 'bg-[#FBF1E0]', 'bg-[#EEEAF7]', 'bg-[#F4E6E4]'];
@@ -36,11 +45,11 @@ const TINTS = ['bg-[#E3F2EF]', 'bg-[#E8EEFD]', 'bg-[#FBF1E0]', 'bg-[#EEEAF7]', '
  *
  * Every row still states its depth in words. The map shows published
  * businesses as their cell and everything else only as density, because an
- * unclaimed business has published its name and ward and nothing else. There
- * is no "nearest first": it needs a position for every row, and most rows have
- * none they may show.
+ * unclaimed business has published its name and ward and nothing else.
+ * "Nearest first" measures to a published business's cell centre, from the
+ * ward searched or the reader's own position, and unclaimed rows follow.
  */
-export default function Directory({ query, results, total, pageNumber, pages, sectors, meaning, map, places }: Props) {
+export default function Directory({ query, results, total, pageNumber, pages, sectors, meaning, map, places, inspectionOffered, saved }: Props) {
     const [what, setWhat] = useState(query.q);
     const [where, setWhere] = useState(query.where ?? '');
     const [verified, setVerified] = useState(query.verified);
@@ -61,6 +70,12 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                 ...(merged.photos && { photos: 1 }),
                 ...(merged.products && { products: 1 }),
                 ...(merged.sort !== 'relevance' && { sort: merged.sort }),
+                ...(merged.open && { open: 1 }),
+                ...(merged.pays && { pays: 1 }),
+                ...(merged.inspection && { inspection: 1 }),
+                ...(merged.delivers && { delivers: 1 }),
+                ...(merged.near !== null && { near: merged.near }),
+                ...(merged.box !== null && { box: merged.box }),
                 ...(next.page !== undefined && next.page > 1 && { page: next.page }),
             },
             { preserveScroll: true },
@@ -68,14 +83,38 @@ export default function Directory({ query, results, total, pageNumber, pages, se
     };
 
     const placeName = query.where ?? query.lga;
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [locating, setLocating] = useState(false);
+    const canNearest = query.where !== null || query.near !== null;
+
+    // The reader's position, asked for once and used for this search only.
+    const nearMe = () => {
+        if (!('geolocation' in navigator)) {
+            return;
+        }
+
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (p) => {
+                setLocating(false);
+                go({ near: `${p.coords.latitude.toFixed(4)},${p.coords.longitude.toFixed(4)}`, sort: 'nearest', page: 1 });
+            },
+            () => {
+                setLocating(false);
+            },
+            { timeout: 10_000, maximumAge: 60_000 },
+        );
+    };
 
     return (
         <DirectoryChrome width="full">
             <Head title="Find and verify any business in Nigeria" />
 
             <section className="border-b border-rule bg-raised">
-                <div className="mx-auto max-w-[1440px] px-5 pt-10 pb-8 lg:px-10">
-                    <div className="flex flex-wrap items-end justify-between gap-6">
+                <div className="mx-auto max-w-[1440px] px-4 pt-4 pb-4 sm:px-5 sm:pt-10 sm:pb-8 lg:px-10">
+                    {/* Phone: straight to the search and the map, as the phone board. */}
+                    <h1 className="sr-only sm:hidden">Find, locate and verify any business in Nigeria.</h1>
+                    <div className="hidden flex-wrap items-end justify-between gap-6 sm:flex">
                         <div>
                             <h1 className="font-display text-display-xl text-ink">Find, locate and verify any business in Nigeria.</h1>
                             <p className="mt-2 max-w-[78ch] text-body text-muted">
@@ -92,7 +131,7 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                     </div>
 
                     <form
-                        className="mt-6 grid overflow-hidden rounded-card border border-rule-strong bg-raised shadow-card md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]"
+                        className="grid overflow-hidden rounded-card border border-rule-strong bg-raised shadow-card sm:mt-6 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]"
                         onSubmit={(e) => {
                             e.preventDefault();
                             go({ q: what.trim(), where: where === '' ? null : where, verified, page: 1 });
@@ -158,7 +197,7 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                     </form>
 
                     {sectors.length > 0 && (
-                        <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                        <div className="mt-5 hidden flex-wrap items-center gap-2.5 sm:flex">
                             <span className="text-ui text-muted">Popular:</span>
                             {sectors.slice(0, 6).map((s) => (
                                 <button
@@ -181,15 +220,16 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                 </div>
             </section>
 
-            <div className="mx-auto grid max-w-[1440px] gap-6 px-5 py-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:px-10">
-                <section aria-label="Results">
+            <div className="mx-auto grid max-w-[1440px] gap-4 px-4 py-4 sm:gap-6 sm:px-5 sm:py-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] lg:px-10">
+                <section aria-label="Results" className="min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-body text-muted">
                             <span className="font-extrabold text-ink">
                                 {total.toLocaleString('en-NG')} {query.verified ? 'verified ' : ''}
                                 {total === 1 ? 'business' : 'businesses'}
                             </span>
-                            {placeName !== null && ` in ${placeName}`}
+                            {query.near !== null ? ' near you' : placeName !== null && ` in ${placeName}`}
+                            {query.box !== null && ' on the map'}
                         </p>
                         <label className="flex items-center gap-2 text-ui text-muted">
                             Sort
@@ -201,29 +241,35 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                                 className="h-10 rounded-sm border border-rule-strong bg-raised px-3 text-ui font-bold text-ink"
                             >
                                 <option value="relevance">Verified first</option>
+                                {canNearest && <option value="nearest">Nearest first</option>}
                                 <option value="name">Name, A to Z</option>
                                 <option value="newest">Newest on the register</option>
                             </select>
                         </label>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <Chip
-                            active={query.verified}
-                            onClick={() => {
-                                setVerified(!query.verified);
-                                go({ verified: !query.verified, page: 1 });
-                            }}
-                        >
-                            Verified only
+                    <div className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible">
+                        <Chip active={query.open} onClick={() => { go({ open: !query.open, page: 1 }); }}>
+                            Open now
                         </Chip>
-                        <Chip active={query.photos} onClick={() => { go({ photos: !query.photos, page: 1 }); }}>
-                            Has photos
+                        <Chip active={query.pays} onClick={() => { go({ pays: !query.pays, page: 1 }); }}>
+                            Pays via GeoVerify
                         </Chip>
-                        <Chip active={query.products} onClick={() => { go({ products: !query.products, page: 1 }); }}>
-                            Lists products
+                        {inspectionOffered && (
+                            <Chip active={query.inspection} onClick={() => { go({ inspection: !query.inspection, page: 1 }); }}>
+                                Inspection available
+                            </Chip>
+                        )}
+                        <Chip active={query.delivers} onClick={() => { go({ delivers: !query.delivers, page: 1 }); }}>
+                            Delivers
                         </Chip>
-                        {(query.sector !== null || query.where !== null || query.lga !== null || query.q !== '') && (
+                        <Chip active={filtersOpen || query.photos || query.products} onClick={() => { setFiltersOpen((o) => !o); }}>
+                            Filters
+                        </Chip>
+                        <Chip active={query.near !== null} onClick={nearMe}>
+                            {locating ? 'Finding you…' : 'Near me'}
+                        </Chip>
+                        {(query.sector !== null || query.where !== null || query.lga !== null || query.q !== '' || query.near !== null || query.box !== null) && (
                             <Chip
                                 active={false}
                                 onClick={() => {
@@ -234,6 +280,25 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                             </Chip>
                         )}
                     </div>
+                    {filtersOpen && (
+                        <div className="mt-3 flex flex-wrap gap-2 rounded-card border border-rule bg-raised p-3">
+                            <Chip
+                                active={query.verified}
+                                onClick={() => {
+                                    setVerified(!query.verified);
+                                    go({ verified: !query.verified, page: 1 });
+                                }}
+                            >
+                                Verified only
+                            </Chip>
+                            <Chip active={query.photos} onClick={() => { go({ photos: !query.photos, page: 1 }); }}>
+                                Has photos
+                            </Chip>
+                            <Chip active={query.products} onClick={() => { go({ products: !query.products, page: 1 }); }}>
+                                Lists products
+                            </Chip>
+                        </div>
+                    )}
 
                     {meaning.length > 0 && (
                         <p className="mt-5 rounded-sm bg-held-soft px-4 py-3 text-ui text-held-ink">
@@ -258,6 +323,7 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                                 tint={TINTS[i % TINTS.length] ?? ''}
                                 cell={cells.get(entry.id)?.cell ?? null}
                                 active={focus === entry.id}
+                                saved={saved.includes(entry.id)}
                                 onShow={
                                     cells.has(entry.id)
                                         ? () => {
@@ -304,8 +370,17 @@ export default function Directory({ query, results, total, pageNumber, pages, se
                     )}
                 </section>
 
-                <div className="lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)]">
-                    <DirectoryMap data={map} focus={focus} onSelect={setFocus} />
+                {/* Phone: the map first, the list under it, as the phone board. */}
+                <div className="order-first h-[46dvh] lg:sticky lg:top-6 lg:order-none lg:h-[calc(100dvh-3rem)]">
+                    <DirectoryMap
+                        data={map}
+                        focus={focus}
+                        onSelect={setFocus}
+                        boxActive={query.box !== null}
+                        onBox={(box) => {
+                            go({ box, page: 1 });
+                        }}
+                    />
                 </div>
             </div>
         </DirectoryChrome>
@@ -340,15 +415,19 @@ function ResultCard({
     tint,
     cell,
     active,
+    saved,
     onShow,
 }: {
     entry: Entry;
     tint: string;
     cell: string | null;
     active: boolean;
+    saved: boolean;
     onShow: (() => void) | null;
 }) {
+    const signedIn = usePage().props.auth.portal !== null;
     const photo = entry.photos[0];
+    const published = entry.depth !== 'reduced';
     const initials = entry.tradingName
         .split(/\s+/)
         .filter(Boolean)
@@ -359,11 +438,11 @@ function ResultCard({
     return (
         <li
             className={cx(
-                'flex gap-5 rounded-card border bg-raised p-5 shadow-card transition-colors',
+                'flex gap-4 rounded-card border bg-raised p-4 shadow-card transition-colors sm:gap-5 sm:p-5',
                 active ? 'border-2 border-gold' : 'border-rule',
             )}
         >
-            <div className={cx('flex size-[108px] shrink-0 items-center justify-center overflow-hidden rounded-[14px]', photo === undefined && tint)}>
+            <div className={cx('flex size-[84px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] sm:size-[108px]', photo === undefined && tint)}>
                 {photo !== undefined ? (
                     <img src={photo.url} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -371,12 +450,26 @@ function ResultCard({
                 )}
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-                <p className="text-body font-extrabold text-ink">{entry.tradingName}</p>
+                <div className="flex items-start justify-between gap-3">
+                    <p className="text-body font-extrabold text-ink">{entry.tradingName}</p>
+                    {entry.distanceKm !== null && <span className="shrink-0 text-ui font-bold text-muted">{entry.distanceKm} km</span>}
+                </div>
                 <p className="mt-0.5 truncate text-ui text-muted">
                     {[entry.sector ?? entry.structureType, entry.ward].filter(Boolean).join(' · ')}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <DepthMark depth={entry.depth} />
+                    {entry.depth === 'verified' && entry.establishedOn !== null && (
+                        <span className="text-[0.75rem] text-muted">
+                            since {new Date(entry.establishedOn).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                    )}
+                    {entry.rating !== null && (
+                        <span className="text-table font-bold text-ink">
+                            ★ {entry.rating.toFixed(1)} <span className="font-normal text-muted">({entry.reviewCount})</span>
+                        </span>
+                    )}
+                    {entry.openNow === true && <span className="text-table font-bold text-green">Open now</span>}
                     {cell !== null && <span className="numeric-mono text-[0.75rem] text-muted">cell {cell}</span>}
                 </div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
@@ -386,14 +479,49 @@ function ResultCard({
                     >
                         View business
                     </Link>
+                    {published && (
+                        <a
+                            href={directionsUrl({ name: entry.tradingName, address: entry.address, ward: entry.ward, lga: entry.lga })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-touch items-center rounded-sm bg-sunken px-4 text-ui font-bold text-ink hover:bg-rule"
+                        >
+                            Directions
+                        </a>
+                    )}
+                    {published && entry.payable && (
+                        <Link
+                            href={`/directory/${String(entry.id)}?visit=1`}
+                            className="inline-flex min-h-touch items-center rounded-sm bg-sunken px-4 text-ui font-bold text-ink hover:bg-rule"
+                        >
+                            Book a visit
+                        </Link>
+                    )}
                     {onShow !== null && (
                         <button
                             type="button"
                             onClick={onShow}
-                            className="inline-flex min-h-touch items-center rounded-sm bg-sunken px-4 text-ui font-bold text-ink hover:bg-rule"
+                            className="hidden min-h-touch items-center rounded-sm bg-sunken px-4 text-ui font-bold text-ink hover:bg-rule lg:inline-flex"
                         >
                             Show on map
                         </button>
+                    )}
+                    {signedIn ? (
+                        <button
+                            type="button"
+                            aria-pressed={saved}
+                            aria-label={saved ? `Remove ${entry.tradingName} from saved` : `Save ${entry.tradingName}`}
+                            onClick={() => {
+                                router.post(`/portal/saved/${String(entry.id)}`, {}, { preserveScroll: true });
+                            }}
+                            className={cx('inline-flex min-h-touch items-center rounded-sm px-3 text-ui font-bold', saved ? 'bg-gold-soft text-gold-dark' : 'bg-sunken text-ink hover:bg-rule')}
+                        >
+                            {saved ? 'Saved' : 'Save'}
+                        </button>
+                    ) : (
+                        <Link href="/portal/sign-in" className="inline-flex min-h-touch items-center rounded-sm bg-sunken px-3 text-ui font-bold text-ink hover:bg-rule">
+                            Save
+                        </Link>
                     )}
                 </div>
             </div>

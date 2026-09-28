@@ -26,6 +26,8 @@ interface Props {
     deliveryNaira: number;
     protections: ProtectionOption[];
     channels: { value: string; label: string }[];
+    /** The business does not deliver: the buyer collects, with no fee and no address. */
+    collection: boolean;
 }
 
 const STEPS = ['Cart', 'Delivery', 'Protection & pay', 'Held until delivery'] as const;
@@ -50,7 +52,7 @@ function naira(amount: number): string {
  * server prices them again: the totals on this page are a preview of the
  * arithmetic PlacePurchase does, never an input to it.
  */
-export default function Checkout({ business, products, deliveryNaira, protections, channels }: Props) {
+export default function Checkout({ business, products, deliveryNaira, protections, channels, collection }: Props) {
     const page = usePage();
     const errors = page.props.errors as Record<string, string | undefined>;
     const account = page.props.auth.portal;
@@ -68,7 +70,12 @@ export default function Checkout({ business, products, deliveryNaira, protection
 
     const [step, setStep] = useState(0);
     const [delivery, setDelivery] = useState({ name: account?.name ?? '', phone: '', address: '', note: '' });
-    const [protection, setProtection] = useState<ProtectionOption['value']>('none');
+    // "Request inspection" and "Book a visit" arrive here with the service
+    // chosen, if it is offered.
+    const asked = new URLSearchParams(page.url.split('?')[1] ?? '').get('service');
+    const [protection, setProtection] = useState<ProtectionOption['value']>(() =>
+        protections.some((p) => p.value === asked && p.offered) ? (asked as ProtectionOption['value']) : 'none',
+    );
     const [channel, setChannel] = useState(channels[0]?.value ?? 'card');
     const [visitAt, setVisitAt] = useState('');
     // An hour from when the page opened, worked out once rather than on every render.
@@ -81,7 +88,7 @@ export default function Checkout({ business, products, deliveryNaira, protection
     const chosen = protections.find((p) => p.value === protection);
     const serviceNaira = chosen?.feeNaira ?? 0;
     const totalNaira = itemsNaira + deliveryNaira + serviceNaira;
-    const deliveryReady = delivery.name.trim() !== '' && delivery.phone.trim() !== '' && delivery.address.trim() !== '';
+    const deliveryReady = delivery.name.trim() !== '' && delivery.phone.trim() !== '' && (collection || delivery.address.trim() !== '');
 
     const pay = () => {
         setBusy(true);
@@ -234,7 +241,7 @@ export default function Checkout({ business, products, deliveryNaira, protection
 
                     {step === 1 && (
                         <section className="rounded-card border border-rule bg-raised px-6 py-6">
-                            <h2 className="font-display text-display-s text-ink">Where should it go?</h2>
+                            <h2 className="font-display text-display-s text-ink">{collection ? 'Who is collecting?' : 'Where should it go?'}</h2>
                             <p className="mt-1 text-ui text-muted">Given to {business.name} so they can deliver, and for nothing else.</p>
                             <div className="mt-5 grid gap-4 sm:grid-cols-2">
                                 <TextField
@@ -256,6 +263,11 @@ export default function Checkout({ business, products, deliveryNaira, protection
                                     }}
                                     {...(errors['delivery.phone'] === undefined ? {} : { error: errors['delivery.phone'] })}
                                 />
+                                {collection ? (
+                                    <p className="max-w-none rounded-sm bg-held-soft px-4 py-3 text-ui text-ink sm:col-span-2">
+                                        {business.name} does not deliver. You collect from the shop, and there is no delivery fee.
+                                    </p>
+                                ) : (
                                 <div className="sm:col-span-2">
                                     <TextField
                                         label="Delivery address"
@@ -267,6 +279,7 @@ export default function Checkout({ business, products, deliveryNaira, protection
                                         {...(errors['delivery.address'] === undefined ? {} : { error: errors['delivery.address'] })}
                                     />
                                 </div>
+                                )}
                                 <div className="sm:col-span-2">
                                     <TextField
                                         label="Note for the rider"
@@ -426,8 +439,8 @@ export default function Checkout({ business, products, deliveryNaira, protection
                                 <dd className="font-bold text-ink">{naira(itemsNaira)}</dd>
                             </div>
                             <div className="flex justify-between gap-3">
-                                <dt className="text-muted">Delivery</dt>
-                                <dd className="font-bold text-ink">{naira(deliveryNaira)}</dd>
+                                <dt className="text-muted">{collection ? 'Collection' : 'Delivery'}</dt>
+                                <dd className="font-bold text-ink">{collection ? 'Free' : naira(deliveryNaira)}</dd>
                             </div>
                             {protection !== 'none' && (
                                 <div className="flex justify-between gap-3">

@@ -59,6 +59,7 @@ final class PresentPurchase
                 'commissionRate' => ((int) config('geoverify.commerce.commission_basis_points', 0)) / 100,
                 'netNaira' => intdiv($order->netPayoutMinor($commission), 100),
             ],
+            'fulfilment' => $order->fulfilment,
             'delivery' => [
                 'name' => $order->delivery_name,
                 'phone' => $order->delivery_phone,

@@ -28,7 +28,8 @@ export type ConsoleView =
     | 'mandates'
     | 'campaigns'
     | 'investors'
-    | 'disputes';
+    | 'disputes'
+    | 'reviews';
 
 /** Which waiting count belongs against a view, where one does. */
 export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections';
@@ -205,6 +206,14 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'Buyer issues, money held',
         // Two sides of a scale.
         icon: 'M8 2.4v11.2M4.4 13.6h7.2M2.4 4.4h11.2M4 4.4 2.4 8.4h3.2zM12 4.4l-1.6 4h3.2z',
+    },
+    {
+        key: 'reviews',
+        label: 'Reviews',
+        href: '/admin/reviews',
+        caption: 'What buyers said, reported first',
+        // A star.
+        icon: 'M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6z',
     },
     {
         key: 'mandates',

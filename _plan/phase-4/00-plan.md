@@ -96,10 +96,21 @@ becomes an issue with the money still held. Site visits carry a time and
 photographs are shown to that order's buyer and merchant only (written into
 the hard rule in CLAUDE.md). Fees stay unset until someone decides them.
 
-**M4 · Directory search and map**
+**M4 · Directory search and map** (done 2026-09-28)
 The split list and map, "what" and "where", Verified only, popular chips, the
 filters (open now, held payment, inspection available, delivers), H3 density,
 clusters, directions, book a visit.
+
+Decided with the owner: "Open now" reads weekly hours the owner sets
+(`business_profiles`), "Delivers" a per-business setting (collection-only
+businesses check out with no fee and no address), Directions is a map search
+for the name, owner-published address, ward and LGA (never our coordinate),
+and Saved businesses and reviews were added. Owner statements and ratings are
+projected only at the claimed depth. Nearest first measures to the cell
+centre the pin uses; "search as I move the map" matches an unclaimed listing
+only by its ward, so a tight box never narrows it further. Reviews come only
+from a released order, one each, without contact details, and are hidden or
+restored by an admin on a report, never deleted.
 
 ## 4. Decisions a person has to make
 

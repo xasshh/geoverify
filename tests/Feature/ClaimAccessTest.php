@@ -223,6 +223,11 @@ it('exposes no portal route that could write to an observation', function () {
         // M3: the buyer's word on an inspection report, and the merchant's
         // list of agents booked at their shop. Neither reaches an observation.
         'portal.purchases.inspection', 'portal.inspections',
+        // M4: a review of a released order and reports on reviews, saved
+        // businesses, and the owner's hours, delivery and address. None
+        // reaches an observation.
+        'portal.purchases.review', 'portal.reviews.report', 'portal.saved', 'portal.saved.toggle',
+        'portal.profile', 'portal.profile.save',
         'portal.sales.show', 'portal.sales.dispatch',
         'portal.wallet', 'portal.wallet.account', 'portal.wallet.withdraw',
     ];

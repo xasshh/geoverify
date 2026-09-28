@@ -7,7 +7,8 @@ import { clearCart } from '@/lib/cart';
 
 interface Props {
     order: PurchaseView;
-    can: { pay: boolean; cancel: boolean; confirm: boolean; raiseIssue: boolean };
+    review: { rating: number; body: string | null; status: string } | null;
+    can: { pay: boolean; cancel: boolean; confirm: boolean; raiseIssue: boolean; review: boolean };
 }
 
 /**
@@ -15,13 +16,15 @@ interface Props {
  * say. "I have it" releases the money to the merchant; "something is wrong"
  * keeps it held until a person has looked.
  */
-export default function Purchase({ order, can }: Props) {
+export default function Purchase({ order, review, can }: Props) {
     const page = usePage();
     const errors = page.props.errors as Record<string, string | undefined>;
     const [asking, setAsking] = useState(false);
     const [reason, setReason] = useState('');
     const [rejecting, setRejecting] = useState(false);
     const [rejectNote, setRejectNote] = useState('');
+    const [stars, setStars] = useState(0);
+    const [reviewText, setReviewText] = useState('');
     const [busy, setBusy] = useState<string | null>(null);
 
     // The cart this order was placed from has done its job.
@@ -201,6 +204,53 @@ export default function Purchase({ order, can }: Props) {
                                 ) : undefined
                             }
                         />
+                    )}
+
+                    {can.review && (
+                        <section className="rounded-card border border-rule bg-raised px-6 py-5">
+                            <h2 className="font-display text-display-s text-ink">How was it?</h2>
+                            <p className="mt-1 max-w-none text-table text-muted">Your first name and your review appear on the business’s page. Leave phone numbers and emails out.</p>
+                            <div className="mt-3 flex gap-1" role="radiogroup" aria-label="Stars">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                    <button
+                                        key={n}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={stars === n}
+                                        aria-label={`${String(n)} ${n === 1 ? 'star' : 'stars'}`}
+                                        onClick={() => {
+                                            setStars(n);
+                                        }}
+                                        className={`text-[28px] leading-none ${n <= stars ? 'text-gold' : 'text-rule-strong'}`}
+                                    >
+                                        ★
+                                    </button>
+                                ))}
+                            </div>
+                            <textarea
+                                rows={3}
+                                maxLength={1000}
+                                value={reviewText}
+                                aria-label="Your review"
+                                onChange={(e) => {
+                                    setReviewText(e.target.value);
+                                }}
+                                className="mt-3 w-full rounded-sm border border-rule-strong bg-raised p-3 text-ui text-ink"
+                            />
+                            {errors.review !== undefined && <p className="mt-1 text-ui text-alert">{errors.review}</p>}
+                            <div className="mt-3">
+                                <Button variant="primary" size="field" disabled={stars === 0} busy={busy === 'review'} onClick={() => { post('review', { rating: String(stars), body: reviewText }); }}>
+                                    Post review
+                                </Button>
+                            </div>
+                        </section>
+                    )}
+                    {review !== null && (
+                        <p className="max-w-none rounded-card border border-rule bg-raised px-6 py-4 text-ui text-ink">
+                            You rated this {'★'.repeat(review.rating)}
+                            {review.body !== null && `: “${review.body}”`}
+                            {review.status === 'hidden' && ' (hidden after a report)'}
+                        </p>
                     )}
 
                     <ItemsTable order={order} />

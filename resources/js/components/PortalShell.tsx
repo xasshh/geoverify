@@ -25,6 +25,8 @@ type NavKey =
     | 'orders'
     | 'wallet'
     | 'inspections'
+    | 'hours'
+    | 'saved'
     | 'purchases'
     | 'verification'
     | 'profile'
@@ -39,6 +41,8 @@ const ICONS: Record<NavKey, string> = {
     home: 'M3 10.5 12 3l9 7.5M5.5 9v11h13V9',
     listings: 'M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9zM3.5 7.5 12 12l8.5-4.5M12 12v9.2',
     orders: 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4',
+    hours: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+    saved: 'M6 3h12v18l-6-4-6 4z',
     inspections: 'M4 7h11v11H4zM17 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.2 13.2l2.3 2.3',
     wallet: 'M3.5 7.5h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15zM3.5 7.5V6a2 2 0 0 1 2-2h11M16 14h2',
     purchases: 'M4 5h2l2 11h10l2-8H7.5M9.5 20a1 1 0 1 0 0-.1M17 20a1 1 0 1 0 0-.1',
@@ -157,6 +161,7 @@ export function PortalShell({
             ? [
                   { key: 'home', label: 'Home', href: '/portal' },
                   { key: 'purchases', label: 'My orders', href: '/portal/purchases' },
+                  { key: 'saved', label: 'Saved', href: '/portal/saved' },
                   { key: 'claim', label: 'Claim a business', href: '/portal/claim' },
                   { key: 'add', label: 'Add a business', href: '/portal/register-business' },
                   { key: 'settings', label: 'Settings', href: '/portal/settings' },
@@ -169,9 +174,11 @@ export function PortalShell({
                   { key: 'wallet', label: 'Wallet', href: '/portal/wallet' },
                   { key: 'verification', label: 'Verification', href: `${base}/verification` },
                   { key: 'profile', label: 'Business profile', href: base },
+                  { key: 'hours', label: 'Hours & delivery', href: `${base}/profile` },
                   { key: 'investors', label: 'Investors', href: `${base}/investors` },
                   { key: 'team', label: 'Team & roles', href: '/portal/team' },
                   { key: 'purchases', label: 'My orders', href: '/portal/purchases' },
+                  { key: 'saved', label: 'Saved', href: '/portal/saved' },
                   { key: 'settings', label: 'Settings', href: '/portal/settings' },
               ];
 

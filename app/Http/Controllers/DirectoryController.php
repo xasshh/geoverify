@@ -13,6 +13,7 @@ use App\Domain\Registry\Models\Enterprise;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -44,6 +45,14 @@ final class DirectoryController extends Controller
             'verifiedOnly' => $request->boolean('verified'),
             'withPhotos' => $request->boolean('photos'),
             'withProducts' => $request->boolean('products'),
+            'openNow' => $request->boolean('open'),
+            'payable' => $request->boolean('pays'),
+            'inspection' => $request->boolean('inspection'),
+            'delivers' => $request->boolean('delivers'),
+            // The reader's own position, for "nearest": used for this search
+            // and not kept anywhere.
+            'near' => $this->pair($request->query('near')),
+            'box' => $this->box($request->query('box')),
         ];
         $sort = $this->stringOrNull($request->query('sort')) ?? 'relevance';
 
@@ -57,6 +66,12 @@ final class DirectoryController extends Controller
             withPhotos: $filters['withPhotos'],
             withProducts: $filters['withProducts'],
             sort: $sort,
+            openNow: $filters['openNow'],
+            payable: $filters['payable'],
+            inspection: $filters['inspection'],
+            delivers: $filters['delivers'],
+            near: $filters['near'],
+            box: $filters['box'],
         );
 
         return Inertia::render('public/Directory', [
@@ -69,7 +84,16 @@ final class DirectoryController extends Controller
                 'photos' => $filters['withPhotos'],
                 'products' => $filters['withProducts'],
                 'sort' => $sort,
+                'open' => $filters['openNow'],
+                'pays' => $filters['payable'],
+                'inspection' => $filters['inspection'],
+                'delivers' => $filters['delivers'],
+                'near' => $filters['near'] === null ? null : implode(',', array_reverse($filters['near'])),
+                'box' => $filters['box'] === null ? null : implode(',', $filters['box']),
             ],
+            // The inspection chip is offered only once inspections have a price.
+            'inspectionOffered' => Protection::Inspection->isOffered(),
+            'saved' => $this->savedIds($request),
             'map' => $search->mapFor($filters),
             'places' => $search->places(),
             'results' => $page['results'],
@@ -100,7 +124,7 @@ final class DirectoryController extends Controller
      * something the list would have withheld, which is the failure this is
      * arranged to make impossible rather than merely unlikely.
      */
-    public function show(Enterprise $enterprise, SearchDirectory $search): Response
+    public function show(Request $request, Enterprise $enterprise, SearchDirectory $search): Response
     {
         $match = $search->listing($enterprise);
 
@@ -109,6 +133,8 @@ final class DirectoryController extends Controller
         return Inertia::render('public/DirectoryListing', [
             'listing' => $match,
             'products' => $search->productsFor($match),
+            'reviews' => $match['depth'] === 'reduced' ? [] : $this->reviewsFor($enterprise->id),
+            'saved' => in_array($enterprise->id, $this->savedIds($request), true),
             // What a buyer can add at checkout, and for how much, so the page
             // never promises a service that has no price yet.
             'services' => array_map(static fn (Protection $p): array => [
@@ -139,6 +165,29 @@ final class DirectoryController extends Controller
             'currentMonths' => (int) config('geoverify.tier_freshness.current_months'),
             'staleMonths' => (int) config('geoverify.tier_freshness.stale_months'),
         ])->withViewData(['robots' => 'index, follow']);
+    }
+
+    /**
+     * Published reviews, newest first. A reviewer is shown by first name only:
+     * a review is public and the rest of their name is not ours to publish.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function reviewsFor(int $enterpriseId): array
+    {
+        return array_map(static fn (object $r): array => [
+            'id' => (int) $r->id,
+            'rating' => (int) $r->rating,
+            'body' => $r->body,
+            'by' => explode(' ', trim((string) $r->name))[0] ?: 'A buyer',
+            'on' => Carbon::parse((string) $r->created_at)->toDateString(),
+        ], DB::select(
+            "SELECT r.id, r.rating, r.body, r.created_at, pa.name
+               FROM reviews r JOIN portal_accounts pa ON pa.id = r.buyer_account_id
+              WHERE r.enterprise_id = ? AND r.status = 'published'
+              ORDER BY r.created_at DESC LIMIT 50",
+            [$enterpriseId],
+        ));
     }
 
     /** Every sector the directory holds something in. */
@@ -211,6 +260,56 @@ final class DirectoryController extends Controller
                 ? 'This listing has been taken out of the directory.'
                 : 'The owner of this listing published it themselves, so we have passed your request to a reviewer rather than removing it.',
         );
+    }
+
+    /**
+     * "lat,lng" as the page sends it, into [lng, lat], or null.
+     *
+     * @return array{0: float, 1: float}|null
+     */
+    private function pair(mixed $value): ?array
+    {
+        if (! is_string($value) || preg_match('/^(-?\d{1,2}(\.\d+)?),(-?\d{1,3}(\.\d+)?)$/', $value, $m) !== 1) {
+            return null;
+        }
+
+        return [(float) $m[3], (float) $m[1]];
+    }
+
+    /**
+     * "west,south,east,north", bounded to a sensible span, or null.
+     *
+     * @return array{0: float, 1: float, 2: float, 3: float}|null
+     */
+    private function box(mixed $value): ?array
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $parts = array_map(static fn (string $p): mixed => filter_var($p, FILTER_VALIDATE_FLOAT), explode(',', $value));
+
+        if (count($parts) !== 4 || in_array(false, $parts, true)) {
+            return null;
+        }
+
+        /** @var array{0: float, 1: float, 2: float, 3: float} $parts */
+        [$w, $south, $e, $n] = $parts;
+
+        return $e > $w && $n > $south && ($e - $w) < 5 && ($n - $south) < 5 ? [$w, $south, $e, $n] : null;
+    }
+
+    /** @return list<int> */
+    private function savedIds(Request $request): array
+    {
+        $account = $request->user('portal');
+
+        if ($account === null) {
+            return [];
+        }
+
+        return DB::table('saved_listings')->where('portal_account_id', $account->getAuthIdentifier())->whereNull('removed_at')
+            ->pluck('enterprise_id')->map(static fn ($id): int => (int) $id)->all();
     }
 
     private function stringOrNull(mixed $value): ?string

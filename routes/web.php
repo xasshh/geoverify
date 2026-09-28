@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\EscalationController;
 use App\Http\Controllers\Admin\InvestorController as AdminInvestorController;
 use App\Http\Controllers\Admin\MandateController;
 use App\Http\Controllers\Admin\PeopleController;
+use App\Http\Controllers\Admin\ReviewModerationController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
 use App\Http\Controllers\Client\SignInController as ClientSignInController;
 use App\Http\Controllers\ConsentReceiptController;
@@ -40,6 +41,7 @@ use App\Http\Controllers\Invest\SignInController as InvestSignInController;
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\Payments\PaystackWebhookController;
 use App\Http\Controllers\Portal\AccountSettingsController;
+use App\Http\Controllers\Portal\BusinessProfileController;
 use App\Http\Controllers\Portal\CatalogueController;
 use App\Http\Controllers\Portal\CertificateController;
 use App\Http\Controllers\Portal\CheckoutController;
@@ -52,7 +54,9 @@ use App\Http\Controllers\Portal\OrderController;
 use App\Http\Controllers\Portal\OrdersIndexController;
 use App\Http\Controllers\Portal\PurchaseController;
 use App\Http\Controllers\Portal\RegisterBusinessController;
+use App\Http\Controllers\Portal\ReviewController as PortalReviewController;
 use App\Http\Controllers\Portal\SaleController;
+use App\Http\Controllers\Portal\SavedListingController;
 use App\Http\Controllers\Portal\SignInController;
 use App\Http\Controllers\Portal\StorefrontPhotoController;
 use App\Http\Controllers\Portal\TeamController;
@@ -163,6 +167,10 @@ Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->gro
     // A buyer's issue with an order, and the ruling that moves the money.
     Route::get('disputes', [DisputeController::class, 'index'])->name('disputes');
     Route::post('disputes/{order}', [DisputeController::class, 'rule'])->name('disputes.rule');
+
+    // Reviews buyers wrote, reported ones first. Hidden or restored, never deleted.
+    Route::get('reviews', [ReviewModerationController::class, 'index'])->name('reviews');
+    Route::post('reviews/{review}', [ReviewModerationController::class, 'moderate'])->name('reviews.moderate');
 
     Route::get('mandates', [MandateController::class, 'index'])->name('mandates');
     Route::post('mandates', [MandateController::class, 'store'])->name('mandates.store');
@@ -460,6 +468,15 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
             ->middleware('throttle:10,1')->name('purchases.issue');
         Route::post('purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
         Route::post('purchases/{order}/inspection', [PurchaseController::class, 'inspection'])->name('purchases.inspection');
+        Route::post('purchases/{order}/review', [PortalReviewController::class, 'store'])
+            ->middleware('throttle:10,1')->name('purchases.review');
+        Route::post('reviews/{review}/report', [PortalReviewController::class, 'report'])
+            ->middleware('throttle:10,1')->name('reviews.report');
+        Route::get('saved', [SavedListingController::class, 'index'])->name('saved');
+        Route::post('saved/{enterprise}', [SavedListingController::class, 'toggle'])
+            ->middleware('throttle:60,1')->name('saved.toggle');
+        Route::get('businesses/{enterprise}/profile', [BusinessProfileController::class, 'show'])->name('profile');
+        Route::post('businesses/{enterprise}/profile', [BusinessProfileController::class, 'save'])->name('profile.save');
 
         // Buying verification. The order is placed here, but it is only ever
         // paid by the provider's signed webhook: nothing on this guard, and

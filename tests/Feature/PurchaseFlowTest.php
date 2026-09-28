@@ -47,11 +47,12 @@ beforeEach(function () {
  * A claimed, published shop with two priced products, and a buyer who is
  * nobody at the shop.
  *
+ * @param  ArrayObject<string, mixed>|null  $ground
  * @return array{seller: array<string, mixed>, rice: Product, oil: Product, buyer: PortalAccount}
  */
-function shopWithCatalogue(): array
+function shopWithCatalogue(?ArrayObject $ground = null): array
 {
-    $seller = buyerWithShop('Amaka Okafor', '08031110001');
+    $seller = buyerWithShop('Amaka Okafor', '08031110001', $ground);
 
     EnterpriseObservation::query()->where('enterprise_id', $seller['shop']->id)->update(['signage_observed' => true]);
     app(SetPublicationState::class)($seller['party'], $seller['account'], $seller['shop']->refresh(), PublicationState::OptedIn);

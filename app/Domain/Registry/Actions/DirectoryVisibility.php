@@ -34,6 +34,7 @@ final class DirectoryVisibility
         LEFT JOIN isic_classes isic ON isic.code = e.sector_code
         LEFT JOIN party_businesses pb
                ON pb.enterprise_id = e.id AND pb.status = 'active'
+        LEFT JOIN business_profiles bp ON bp.enterprise_id = e.id
         LEFT JOIN LATERAL (
             SELECT o.opening_hours, o.signage_observed
             FROM enterprise_observations o

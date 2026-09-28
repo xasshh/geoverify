@@ -112,7 +112,18 @@ it('shows a business that put its name on the street, and nothing more of it', f
     expect(array_keys($row))->toEqualCanonicalizing([
         'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
         'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
+        // M4: the owner's statements and what buyers said. Present on every
+        // row so the shape never varies, empty at the reduced depth.
+        'establishedOn', 'cell', 'distanceKm', 'openNow', 'hours', 'delivers', 'address',
+        'payable', 'rating', 'reviewCount', 'ordersCompleted',
     ]);
+
+    // A reduced row carries none of what an owner states or buyers said.
+    expect([$row['establishedOn'], $row['cell'], $row['distanceKm'], $row['openNow'], $row['hours'], $row['delivers'], $row['address'], $row['rating']])
+        ->each->toBeNull()
+        ->and($row['payable'])->toBeFalse()
+        ->and($row['reviewCount'])->toBe(0)
+        ->and($row['ordersCompleted'])->toBe(0);
 
     // And the things that must never appear, whatever the state.
     $encoded = json_encode($row, JSON_THROW_ON_ERROR);
@@ -263,6 +274,10 @@ it('filters by sector without widening what a row says', function () {
             ->and(array_keys($row))->toEqualCanonicalizing([
                 'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
                 'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
+                // M4: the owner's statements and what buyers said. Present on every
+                // row so the shape never varies, empty at the reduced depth.
+                'establishedOn', 'cell', 'distanceKm', 'openNow', 'hours', 'delivers', 'address',
+                'payable', 'rating', 'reviewCount', 'ordersCompleted',
             ]);
     }
 });
@@ -501,6 +516,10 @@ it('suggests other businesses of the same trade nearby', function () {
     expect(array_keys($similar[0]))->toEqualCanonicalizing([
         'id', 'depth', 'tradingName', 'sector', 'sectorCode', 'structureType',
         'ward', 'lga', 'tier', 'verified', 'openingHours', 'photos',
+        // M4: the owner's statements and what buyers said. Present on every
+        // row so the shape never varies, empty at the reduced depth.
+        'establishedOn', 'cell', 'distanceKm', 'openNow', 'hours', 'delivers', 'address',
+        'payable', 'rating', 'reviewCount', 'ordersCompleted',
     ]);
 });
 
@@ -576,7 +595,7 @@ it('pins a published business to its cell, never to where it stands', function (
     $pin = $pins[0];
 
     // The whole pin, named, as the rows are.
-    expect(array_keys($pin))->toEqualCanonicalizing(['id', 'name', 'sector', 'ward', 'cell', 'lng', 'lat', 'state'])
+    expect(array_keys($pin))->toEqualCanonicalizing(['id', 'name', 'sector', 'ward', 'cell', 'lng', 'lat', 'state', 'openNow'])
         ->and($pin['id'])->toBe($shop->id);
 
     $where = DB::selectOne('

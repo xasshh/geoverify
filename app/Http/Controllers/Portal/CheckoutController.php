@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Portal;
 
+use App\Domain\Catalogue\Models\BusinessProfile;
 use App\Domain\Commerce\Actions\InitialisePurchasePayment;
 use App\Domain\Commerce\Actions\PlacePurchase;
 use App\Domain\Commerce\Enums\PayChannel;
@@ -50,7 +51,10 @@ final class CheckoutController
                 $directory->productsFor($listing),
                 static fn (array $p): bool => $p['priceNaira'] !== null && $p['priceNaira'] > 0,
             )),
-            'deliveryNaira' => intdiv((int) config('geoverify.commerce.delivery_fee_minor', 0), 100),
+            'collection' => BusinessProfile::query()->where('enterprise_id', $enterprise->id)->value('delivers') === false,
+            'deliveryNaira' => BusinessProfile::query()->where('enterprise_id', $enterprise->id)->value('delivers') === false
+                ? 0
+                : intdiv((int) config('geoverify.commerce.delivery_fee_minor', 0), 100),
             'protections' => array_map(static fn (Protection $p): array => [
                 'value' => $p->value,
                 'label' => $p->label(),
@@ -73,7 +77,8 @@ final class CheckoutController
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
             'delivery.name' => ['required', 'string', 'max:120'],
             'delivery.phone' => ['required', 'string', 'max:24'],
-            'delivery.address' => ['required', 'string', 'max:240'],
+            // Not needed for a business that only does collection.
+            'delivery.address' => ['nullable', 'string', 'max:240'],
             'delivery.note' => ['nullable', 'string', 'max:280'],
             'protection' => ['required', Rule::enum(Protection::class)],
             'channel' => ['required', Rule::enum(PayChannel::class)],

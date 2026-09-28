@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Registry\Actions;
 
 use App\Domain\Catalogue\Models\Product;
+use App\Domain\Commerce\Enums\Protection;
 use App\Domain\Media\Models\Media;
 use App\Domain\Registry\Models\Enterprise;
 use Illuminate\Support\Carbon;
@@ -46,25 +47,17 @@ final class SearchDirectory
 
     private const PER_PAGE = 24;
 
-    /** The filters baseQuery takes, all off, for callers that set none of them. */
     /** Pins and density on the directory map: about 0.7 km² a cell. */
     public const MAP_RESOLUTION = 8;
 
     /** A density cell with fewer than this many businesses is not drawn. */
     public const MAP_FLOOR = 3;
 
-    private const NO_FILTERS = [
-        'ward' => null,
-        'has_ward' => false,
-        'verified_only' => false,
-        'with_photos' => false,
-        'with_products' => false,
-        'enterprise_type' => Enterprise::class,
-    ];
-
     public function __construct(private readonly ResolveListingTier $tiers) {}
 
     /**
+     * @param  array{0: float, 1: float}|null  $near  The reader's position, [lng, lat], for "nearest".
+     * @param  array{0: float, 1: float, 2: float, 3: float}|null  $box  The map on screen, west, south, east, north.
      * @return array{results: list<array<string, mixed>>, total: int, page: int, pages: int}
      */
     public function run(
@@ -77,33 +70,42 @@ final class SearchDirectory
         bool $withPhotos = false,
         bool $withProducts = false,
         string $sort = 'relevance',
+        bool $openNow = false,
+        bool $payable = false,
+        bool $inspection = false,
+        bool $delivers = false,
+        ?array $near = null,
+        ?array $box = null,
     ): array {
         $term = trim($term);
         $page = max(1, $page);
 
         DB::statement('SELECT set_limit(?)', [self::SIMILARITY_FLOOR]);
 
-        $bindings = [
+        $bindings = $this->bindings([
             'term' => $term,
-            'has_term' => $term !== '',
             'sector' => $sector,
-            'has_sector' => $sector !== null && $sector !== '',
             'lga' => $lga,
-            'has_lga' => $lga !== null && $lga !== '',
             'ward' => $ward,
-            'has_ward' => $ward !== null && $ward !== '',
-            'verified_only' => $verifiedOnly,
-            'with_photos' => $withPhotos,
-            'with_products' => $withProducts,
-            'enterprise_type' => (new Enterprise)->getMorphClass(),
-        ];
+            'verifiedOnly' => $verifiedOnly,
+            'withPhotos' => $withPhotos,
+            'withProducts' => $withProducts,
+            'openNow' => $openNow,
+            'payable' => $payable,
+            'inspection' => $inspection,
+            'delivers' => $delivers,
+            'near' => $near,
+            'box' => $box,
+        ]);
 
-        // The orders a reader can ask for. Nearest first needs a position
-        // for every row, and an unclaimed row has none it may show, so the
-        // directory does not offer it.
-        $order = match ($sort) {
-            'name' => 'trading_name ASC',
-            'newest' => 'established_at DESC, trading_name ASC',
+        // The orders a reader can ask for. Nearest first measures to each
+        // published business's cell centre, from the ward searched or the
+        // reader's own position; an unclaimed row has no position it may
+        // show, so it sorts after every row that does.
+        $order = match (true) {
+            $sort === 'name' => 'trading_name ASC',
+            $sort === 'newest' => 'established_at DESC, trading_name ASC',
+            $sort === 'nearest' && $bindings['has_origin'] => 'distance_m ASC NULLS LAST, depth_rank ASC, trading_name ASC',
             default => 'CASE WHEN :has_term2 THEN similarity(trading_name, :term2) ELSE 0 END DESC, depth_rank ASC, trading_name ASC',
         };
 
@@ -116,7 +118,7 @@ final class SearchDirectory
             $this->baseQuery().'
             ORDER BY '.$order.'
             LIMIT :limit OFFSET :offset',
-            $bindings + ($order === 'trading_name ASC' || str_starts_with($order, 'established_at') ? [] : [
+            $bindings + (! str_contains($order, ':term2') ? [] : [
                 'term2' => $term,
                 'has_term2' => $term !== '',
             ]) + [
@@ -141,6 +143,76 @@ final class SearchDirectory
      * opted in. There is no branch in which a private, unsignposted record is
      * returned.
      */
+    /**
+     * Every parameter the one SELECT takes, from one set of filters, so the
+     * list, its count and the map can never be asked slightly different
+     * questions. Named once per use: PostgreSQL's driver does not reuse a
+     * named parameter.
+     *
+     * @param  array{term?: string, sector?: string|null, lga?: string|null, ward?: string|null, verifiedOnly?: bool, withPhotos?: bool, withProducts?: bool, openNow?: bool, payable?: bool, inspection?: bool, delivers?: bool, near?: array{0: float, 1: float}|null, box?: array{0: float, 1: float, 2: float, 3: float}|null}  $f
+     * @return array<string, mixed>
+     */
+    private function bindings(array $f): array
+    {
+        $term = trim($f['term'] ?? '');
+        $ward = $f['ward'] ?? null;
+        $near = $f['near'] ?? null;
+        $box = $f['box'] ?? null;
+        $inspectionOffered = Protection::Inspection->isOffered();
+        $local = Carbon::now('Africa/Lagos');
+
+        // Where "nearest" is measured from: the reader's own position if they
+        // gave it, else the middle of the ward they searched.
+        if ($near === null && $ward !== null && $ward !== '') {
+            $centre = DB::selectOne(
+                "SELECT ST_X(ST_PointOnSurface(boundary)) AS lng, ST_Y(ST_PointOnSurface(boundary)) AS lat FROM admin_boundaries WHERE name = ? AND level = 'ward' LIMIT 1",
+                [$ward],
+            );
+            $near = $centre === null ? null : [(float) $centre->lng, (float) $centre->lat];
+        }
+
+        return [
+            'term' => $term,
+            'has_term' => $term !== '',
+            'sector' => $f['sector'] ?? null,
+            'has_sector' => ($f['sector'] ?? null) !== null && $f['sector'] !== '',
+            'lga' => $f['lga'] ?? null,
+            'has_lga' => ($f['lga'] ?? null) !== null && $f['lga'] !== '',
+            'ward' => $ward,
+            'has_ward' => $ward !== null && $ward !== '',
+            'verified_only' => $f['verifiedOnly'] ?? false,
+            'with_photos' => $f['withPhotos'] ?? false,
+            'with_products' => $f['withProducts'] ?? false,
+            'enterprise_type' => (new Enterprise)->getMorphClass(),
+            'open_now' => $f['openNow'] ?? false,
+            'today' => strtolower($local->format('D')),
+            'today2' => strtolower($local->format('D')),
+            'today3' => strtolower($local->format('D')),
+            'now_hm' => $local->format('H:i'),
+            'now_hm2' => $local->format('H:i'),
+            'today_f' => strtolower($local->format('D')),
+            'today_f2' => strtolower($local->format('D')),
+            'today_f3' => strtolower($local->format('D')),
+            'now_hm_f' => $local->format('H:i'),
+            'now_hm_f2' => $local->format('H:i'),
+            'payable_only' => ($f['payable'] ?? false) || ($f['inspection'] ?? false),
+            'inspection_blocked' => ($f['inspection'] ?? false) && ! $inspectionOffered,
+            'delivers_only' => $f['delivers'] ?? false,
+            'has_origin' => $near !== null,
+            'olng' => $near[0] ?? 0.0,
+            'olat' => $near[1] ?? 0.0,
+            'has_box' => $box !== null,
+            'bw' => $box[0] ?? 0.0,
+            'bs' => $box[1] ?? 0.0,
+            'be' => $box[2] ?? 0.0,
+            'bn' => $box[3] ?? 0.0,
+            'bw2' => $box[0] ?? 0.0,
+            'bs2' => $box[1] ?? 0.0,
+            'be2' => $box[2] ?? 0.0,
+            'bn2' => $box[3] ?? 0.0,
+        ];
+    }
+
     private function baseQuery(): string
     {
         return '
@@ -163,7 +235,27 @@ final class SearchDirectory
                 END                         AS depth_rank,
                 latest.opening_hours        AS opening_hours,
                 latest.signage_observed     AS signage_observed,
-                s.h3_index                  AS h3_index
+                s.h3_index                  AS h3_index,
+                -- What the owner states. Read for every row, projected only
+                -- for a claimed and published one (see project()).
+                bp.weekly_hours::text       AS weekly_hours,
+                bp.delivers                 AS delivers,
+                bp.street_address           AS street_address,
+                h3_cell_to_parent(s.h3_index::h3index, '.self::MAP_RESOLUTION.')::text AS cell,
+                EXISTS (SELECT 1 FROM products p WHERE p.enterprise_id = e.id AND p.status = \'active\' AND p.price_minor > 0) AS payable,
+                (SELECT round(avg(r.rating)::numeric, 1) FROM reviews r WHERE r.enterprise_id = e.id AND r.status = \'published\') AS rating,
+                (SELECT count(*) FROM reviews r WHERE r.enterprise_id = e.id AND r.status = \'published\') AS review_count,
+                (SELECT count(*) FROM purchase_orders po WHERE po.enterprise_id = e.id AND po.status = \'released\') AS orders_completed,
+                CASE WHEN :has_origin AND pb.id IS NOT NULL AND e.publication_state = \'opted_in\'
+                     THEN ST_Distance(
+                            ST_SetSRID(ST_MakePoint(:olng, :olat), 4326)::geography,
+                            h3_cell_to_geometry(h3_cell_to_parent(s.h3_index::h3index, '.self::MAP_RESOLUTION.'))::geography)
+                END                         AS distance_m,
+                COALESCE(
+                    jsonb_typeof(bp.weekly_hours -> :today) = \'object\'
+                    AND :now_hm >= (bp.weekly_hours -> :today2 ->> \'opens\')
+                    AND :now_hm2 < (bp.weekly_hours -> :today3 ->> \'closes\'),
+                    false)                  AS open_now
             '.DirectoryVisibility::FROM.'
             WHERE '.DirectoryVisibility::WHERE.'
               AND (NOT :has_term OR e.trading_name % :term)
@@ -184,6 +276,32 @@ final class SearchDirectory
                           AND m.uploaded_by_party_id IS NOT NULL
                           AND m.status = \'stored\'
                     )
+              ))
+              -- Owner statements, so they match a published listing only.
+              AND (NOT :open_now OR (
+                    pb.id IS NOT NULL AND e.publication_state = \'opted_in\'
+                    AND jsonb_typeof(bp.weekly_hours -> :today_f) = \'object\'
+                    AND :now_hm_f >= (bp.weekly_hours -> :today_f2 ->> \'opens\')
+                    AND :now_hm_f2 < (bp.weekly_hours -> :today_f3 ->> \'closes\')
+              ))
+              AND (NOT :payable_only OR (
+                    pb.id IS NOT NULL AND e.publication_state = \'opted_in\'
+                    AND EXISTS (SELECT 1 FROM products p WHERE p.enterprise_id = e.id AND p.status = \'active\' AND p.price_minor > 0)
+              ))
+              AND NOT :inspection_blocked
+              AND (NOT :delivers_only OR (
+                    pb.id IS NOT NULL AND e.publication_state = \'opted_in\' AND bp.delivers IS TRUE
+              ))
+              -- Search as I move the map. A published business by its cell
+              -- centre, as its pin; an unclaimed one only by its ward, the
+              -- finest place it may be named at, so a tight box can never
+              -- narrow it further than the ward.
+              AND (NOT :has_box OR (
+                    (pb.id IS NOT NULL AND e.publication_state = \'opted_in\'
+                     AND ST_Intersects(ST_MakeEnvelope(:bw, :bs, :be, :bn, 4326),
+                         h3_cell_to_geometry(h3_cell_to_parent(s.h3_index::h3index, '.self::MAP_RESOLUTION.'))))
+                 OR ((pb.id IS NULL OR e.publication_state <> \'opted_in\')
+                     AND ST_Intersects(ST_MakeEnvelope(:bw2, :bs2, :be2, :bn2, 4326), ward.boundary))
               ))
               AND (NOT :with_products OR (
                     pb.id IS NOT NULL AND e.publication_state = \'opted_in\'
@@ -219,14 +337,7 @@ final class SearchDirectory
               AND e.id <> :exclude
             ORDER BY depth_rank ASC, trading_name ASC
             LIMIT :limit',
-            [
-                'term' => '',
-                'has_term' => false,
-                'sector' => $sector,
-                'has_sector' => $sector !== null,
-                'lga' => $lga,
-                'has_lga' => $lga !== null,
-                ...self::NO_FILTERS,
+            $this->bindings(['sector' => $sector, 'lga' => $lga]) + [
                 'exclude' => $excludeId,
                 'limit' => $limit,
             ],
@@ -350,6 +461,22 @@ final class SearchDirectory
             // with a party author rather than asking for everything and
             // dropping the evidence afterwards.
             'photos' => $claimed ? $this->photosFor((int) $row->enterprise_id) : [],
+
+            // What the owner states and what buyers have said, for a claimed
+            // and published listing only. Distance is to the cell centre the
+            // pin sits on, never to the building, and rounded; the cell is the
+            // one the pin already shows.
+            'establishedOn' => $claimed ? Carbon::parse((string) $row->established_at)->toDateString() : null,
+            'cell' => $claimed ? (string) $row->cell : null,
+            'distanceKm' => $claimed && $row->distance_m !== null ? round((float) $row->distance_m / 1000, 1) : null,
+            'openNow' => $claimed && $row->weekly_hours !== null ? (bool) $row->open_now : null,
+            'hours' => $claimed && $row->weekly_hours !== null ? json_decode((string) $row->weekly_hours, true) : null,
+            'delivers' => $claimed ? ($row->delivers === null ? null : (bool) $row->delivers) : null,
+            'address' => $claimed && $row->street_address !== null ? (string) $row->street_address : null,
+            'payable' => $claimed && (bool) $row->payable,
+            'rating' => $claimed && $row->rating !== null ? (float) $row->rating : null,
+            'reviewCount' => $claimed ? (int) $row->review_count : 0,
+            'ordersCompleted' => $claimed ? (int) $row->orders_completed : 0,
         ];
     }
 
@@ -422,28 +549,14 @@ final class SearchDirectory
      *            name, sector, ward and LGA and nothing else, so it has no pin.
      *            Nobody gets an exact position.
      *
-     * @param  array{term?: string, sector?: string|null, lga?: string|null, ward?: string|null, verifiedOnly?: bool, withPhotos?: bool, withProducts?: bool}  $filters
+     * @param  array{term?: string, sector?: string|null, lga?: string|null, ward?: string|null, verifiedOnly?: bool, withPhotos?: bool, withProducts?: bool, openNow?: bool, payable?: bool, inspection?: bool, delivers?: bool, near?: array{0: float, 1: float}|null, box?: array{0: float, 1: float, 2: float, 3: float}|null}  $filters
      * @return array<string, mixed>
      */
     public function mapFor(array $filters): array
     {
         DB::statement('SELECT set_limit(?)', [self::SIMILARITY_FLOOR]);
 
-        $term = trim($filters['term'] ?? '');
-        $bindings = [
-            'term' => $term,
-            'has_term' => $term !== '',
-            'sector' => $filters['sector'] ?? null,
-            'has_sector' => ($filters['sector'] ?? null) !== null && $filters['sector'] !== '',
-            'lga' => $filters['lga'] ?? null,
-            'has_lga' => ($filters['lga'] ?? null) !== null && $filters['lga'] !== '',
-            'ward' => $filters['ward'] ?? null,
-            'has_ward' => ($filters['ward'] ?? null) !== null && $filters['ward'] !== '',
-            'verified_only' => $filters['verifiedOnly'] ?? false,
-            'with_photos' => $filters['withPhotos'] ?? false,
-            'with_products' => $filters['withProducts'] ?? false,
-            'enterprise_type' => (new Enterprise)->getMorphClass(),
-        ];
+        $bindings = $this->bindings($filters);
 
         $density = DB::select('
             SELECT cell::text AS cell, n, ST_AsGeoJSON(h3_cell_to_boundary_geometry(cell)) AS geometry
@@ -457,7 +570,7 @@ final class SearchDirectory
         ', $bindings);
 
         $pins = DB::select('
-            SELECT enterprise_id, trading_name, sector_name, ward, origin, structure_status, established_at,
+            SELECT enterprise_id, trading_name, sector_name, ward, origin, structure_status, established_at, open_now,
                    h3_cell_to_parent(h3_index::h3index, '.self::MAP_RESOLUTION.')::text AS cell,
                    ST_X(h3_cell_to_geometry(h3_cell_to_parent(h3_index::h3index, '.self::MAP_RESOLUTION.'))) AS lng,
                    ST_Y(h3_cell_to_geometry(h3_cell_to_parent(h3_index::h3index, '.self::MAP_RESOLUTION.'))) AS lat
@@ -498,6 +611,7 @@ final class SearchDirectory
                     'lng' => round((float) $r->lng, 5),
                     'lat' => round((float) $r->lat, 5),
                     'state' => $listed ? 'published' : ($fresh === 'current' ? 'verified' : 'due'),
+                    'openNow' => (bool) $r->open_now,
                 ];
             }, $pins),
             'bounds' => $extent === null || $extent->w === null

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Commerce\Actions;
 
+use App\Domain\Catalogue\Models\BusinessProfile;
 use App\Domain\Catalogue\Models\Product;
 use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Commerce\Enums\PayChannel;
@@ -43,7 +44,7 @@ final class PlacePurchase
 
     /**
      * @param  array<int, int>  $quantities  Product id to quantity.
-     * @param  array{name: string, phone: string, address: string, note?: string|null}  $delivery
+     * @param  array{name: string, phone: string, address?: string|null, note?: string|null}  $delivery
      */
     public function __invoke(
         PortalAccount $buyer,
@@ -140,7 +141,16 @@ final class PlacePurchase
             }
 
             $items = array_sum(array_column($lines, 'line_minor'));
-            $deliveryFee = (int) config('geoverify.commerce.delivery_fee_minor', 0);
+
+            // The business says whether it delivers. One that said no is a
+            // collection: no delivery fee and no address to send to. Read here
+            // from the owner's own statement, never from the browser.
+            $collection = BusinessProfile::query()->where('enterprise_id', $enterprise->id)->value('delivers') === false;
+            $deliveryFee = $collection ? 0 : (int) config('geoverify.commerce.delivery_fee_minor', 0);
+
+            if (! $collection && trim((string) ($delivery['address'] ?? '')) === '') {
+                throw new RuntimeException('Tell us where to deliver it.');
+            }
             $serviceFee = $protection->feeMinor() ?? throw new RuntimeException("{$protection->label()} has no price yet.");
 
             $order = PurchaseOrder::query()->create([
@@ -151,6 +161,7 @@ final class PlacePurchase
                 'status' => PurchaseStatus::AwaitingPayment,
                 'protection' => $protection,
                 'channel' => $channel,
+                'fulfilment' => $collection ? 'collection' : 'delivery',
                 'items_minor' => $items,
                 'delivery_minor' => $deliveryFee,
                 'service_fee_minor' => $serviceFee,
@@ -158,7 +169,7 @@ final class PlacePurchase
                 'currency' => 'NGN',
                 'delivery_name' => trim($delivery['name']),
                 'delivery_phone' => trim($delivery['phone']),
-                'delivery_address' => trim($delivery['address']),
+                'delivery_address' => $collection ? 'Collection from the shop' : trim((string) $delivery['address']),
                 'delivery_note' => isset($delivery['note']) && trim($delivery['note']) !== '' ? trim($delivery['note']) : null,
             ]);
 

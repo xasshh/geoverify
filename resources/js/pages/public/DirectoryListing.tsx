@@ -7,6 +7,7 @@ import {
     type DirectoryEntry,
 } from "@/components/DirectoryChrome";
 import { addToCart, useCart } from "@/lib/cart";
+import { directionsUrl } from "@/lib/directions";
 
 interface Listing {
     id: number;
@@ -20,7 +21,33 @@ interface Listing {
     verified: boolean;
     openingHours: string | null;
     photos: { url: string }[];
+    openNow: boolean | null;
+    hours: Record<string, { opens: string; closes: string } | null> | null;
+    delivers: boolean | null;
+    address: string | null;
+    payable: boolean;
+    rating: number | null;
+    reviewCount: number;
+    ordersCompleted: number;
 }
+
+interface Review {
+    id: number;
+    rating: number;
+    body: string | null;
+    by: string;
+    on: string;
+}
+
+const DAYS: [string, string][] = [
+    ['mon', 'Monday'],
+    ['tue', 'Tuesday'],
+    ['wed', 'Wednesday'],
+    ['thu', 'Thursday'],
+    ['fri', 'Friday'],
+    ['sat', 'Saturday'],
+    ['sun', 'Sunday'],
+];
 
 /**
  * One business, to a stranger.
@@ -47,15 +74,26 @@ export default function DirectoryListing({
     listing,
     products,
     services,
+    reviews,
+    saved,
     similar,
 }: {
     listing: Listing;
     products: ListedProduct[];
     services: { value: 'inspection' | 'site_visit'; feeNaira: number | null }[];
+    reviews: Review[];
+    saved: boolean;
     similar: DirectoryEntry[];
 }) {
     const flash = usePage().props.flash.status;
-    const [tab, setTab] = useState<"products" | "about">(
+    const page = usePage();
+    const signedIn = page.props.auth.portal !== null;
+    const visitAsked = page.url.includes("visit=1");
+    const offered = (value: "inspection" | "site_visit") =>
+        services.find((x) => x.value === value)?.feeNaira != null;
+    const [reporting, setReporting] = useState<number | null>(null);
+    const [reportReason, setReportReason] = useState("");
+    const [tab, setTab] = useState<"products" | "about" | "reviews">(
         products.length > 0 ? "products" : "about",
     );
     const [asking, setAsking] = useState(false);
@@ -146,8 +184,75 @@ export default function DirectoryListing({
                                 </>
                             )}
                         </p>
+                        {listing.depth !== "reduced" && (
+                            <p className="mt-1 flex flex-wrap items-center gap-x-3 text-ui text-muted">
+                                {listing.rating !== null && (
+                                    <span className="font-bold text-ink">
+                                        ★ {listing.rating.toFixed(1)} · {listing.reviewCount}{" "}
+                                        {listing.reviewCount === 1 ? "review" : "reviews"}
+                                    </span>
+                                )}
+                                {listing.ordersCompleted > 0 && (
+                                    <span>{listing.ordersCompleted} orders completed on GeoVerify</span>
+                                )}
+                                {listing.openNow === true && <span className="font-bold text-green">Open now</span>}
+                                {listing.openNow === false && <span>Closed now</span>}
+                            </p>
+                        )}
                     </div>
+                    {listing.depth !== "reduced" && (
+                        <div className="flex flex-wrap gap-2 lg:ml-auto">
+                            {signedIn ? (
+                                <button
+                                    type="button"
+                                    aria-pressed={saved}
+                                    onClick={() => {
+                                        router.post(`/portal/saved/${String(listing.id)}`, {}, { preserveScroll: true });
+                                    }}
+                                    className={`inline-flex min-h-touch items-center rounded-sm border px-4 text-ui font-bold ${saved ? "border-gold bg-gold-soft text-gold-dark" : "border-rule-strong bg-raised text-ink hover:bg-sunken"}`}
+                                >
+                                    {saved ? "Saved" : "Save"}
+                                </button>
+                            ) : (
+                                <Link href="/portal/sign-in" className="inline-flex min-h-touch items-center rounded-sm border border-rule-strong bg-raised px-4 text-ui font-bold text-ink hover:bg-sunken">
+                                    Save
+                                </Link>
+                            )}
+                            <a
+                                href={directionsUrl({ name: listing.tradingName, address: listing.address, ward: listing.ward, lga: listing.lga })}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex min-h-touch items-center rounded-sm border border-rule-strong bg-raised px-4 text-ui font-bold text-ink hover:bg-sunken"
+                            >
+                                Directions
+                            </a>
+                            {buyable && offered("site_visit") && (
+                                <Link
+                                    href={`/portal/checkout/${String(listing.id)}?service=site_visit`}
+                                    className="inline-flex min-h-touch items-center rounded-sm border border-rule-strong bg-raised px-4 text-ui font-bold text-ink hover:bg-sunken"
+                                >
+                                    Book a visit
+                                </Link>
+                            )}
+                            {buyable && offered("inspection") && (
+                                <Link
+                                    href={`/portal/checkout/${String(listing.id)}?service=inspection`}
+                                    className="inline-flex min-h-touch items-center rounded-sm bg-gold px-4 text-ui font-extrabold text-on-accent hover:bg-gold-dark"
+                                >
+                                    Request inspection
+                                </Link>
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {visitAsked && (
+                    <p className="mt-5 max-w-none rounded-sm bg-held-soft px-4 py-3 text-ui text-ink">
+                        {offered("site_visit")
+                            ? "Add what you want to see to your cart, then choose Book a site visit at checkout and pick a time."
+                            : "Site visits are not offered yet. You can still order, and your money is held until you confirm delivery."}
+                    </p>
+                )}
 
                 <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
                     <div>
@@ -180,9 +285,69 @@ export default function DirectoryListing({
                             >
                                 About
                             </button>
+                            {listing.depth !== "reduced" && (
+                                <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={tab === "reviews"}
+                                    onClick={() => {
+                                        setTab("reviews");
+                                    }}
+                                    className={`-mb-px border-b-[3px] px-1 pb-3 text-body font-bold ${tab === "reviews" ? "border-gold text-gold-dark" : "border-transparent text-muted hover:text-ink"}`}
+                                >
+                                    Reviews ({reviews.length})
+                                </button>
+                            )}
                         </div>
 
-                        {tab === "products" ? (
+                        {tab === "reviews" ? (
+                            reviews.length === 0 ? (
+                                <p className="max-w-none rounded-card border border-rule bg-raised px-6 py-8 text-center text-ui text-muted">
+                                    No reviews yet. Reviews come only from buyers whose order was completed.
+                                </p>
+                            ) : (
+                                <ul className="flex list-none flex-col gap-3 p-0">
+                                    {reviews.map((r) => (
+                                        <li key={r.id} className="rounded-card border border-rule bg-raised px-5 py-4">
+                                            <p className="flex flex-wrap items-center justify-between gap-2 text-ui">
+                                                <span className="font-bold text-ink">
+                                                    <span aria-label={`${String(r.rating)} of 5`}>{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</span> · {r.by}
+                                                </span>
+                                                <span className="text-table text-muted">{new Date(r.on).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                                            </p>
+                                            {r.body !== null && <p className="mt-2 text-ui text-ink">{r.body}</p>}
+                                            {signedIn && (
+                                                reporting === r.id ? (
+                                                    <form
+                                                        className="mt-3 flex gap-2"
+                                                        onSubmit={(e) => {
+                                                            e.preventDefault();
+                                                            router.post(`/portal/reviews/${String(r.id)}/report`, { reason: reportReason }, { preserveScroll: true, onSuccess: () => { setReporting(null); setReportReason(""); } });
+                                                        }}
+                                                    >
+                                                        <input
+                                                            value={reportReason}
+                                                            aria-label="What is wrong with this review"
+                                                            onChange={(e) => {
+                                                                setReportReason(e.target.value);
+                                                            }}
+                                                            className="h-10 min-w-0 flex-1 rounded-sm border border-rule-strong bg-raised px-3 text-ui text-ink"
+                                                        />
+                                                        <button type="submit" className="rounded-sm border border-rule-strong px-3 text-table font-bold text-ink">
+                                                            Report
+                                                        </button>
+                                                    </form>
+                                                ) : (
+                                                    <button type="button" onClick={() => { setReporting(r.id); }} className="mt-2 text-table text-muted underline underline-offset-2">
+                                                        Report this review
+                                                    </button>
+                                                )
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )
+                        ) : tab === "products" ? (
                             <ul className="grid list-none gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                 {products.map((p) => (
                                     <li
@@ -258,10 +423,30 @@ export default function DirectoryListing({
                             <Fact term="Local government">
                                 {listing.lga ?? "Not resolved"}
                             </Fact>
-                            {listing.openingHours !== null && (
+                            {listing.hours !== null ? (
                                 <Fact term="Opening hours">
-                                    {listing.openingHours}
+                                    <span className="flex flex-col">
+                                        {DAYS.map(([key, name]) => {
+                                            const day = listing.hours?.[key] ?? null;
+
+                                            return (
+                                                <span key={key}>
+                                                    {name}: {day === null ? "Closed" : `${day.opens} to ${day.closes}`}
+                                                </span>
+                                            );
+                                        })}
+                                    </span>
                                 </Fact>
+                            ) : (
+                                listing.openingHours !== null && (
+                                    <Fact term="Opening hours">
+                                        {listing.openingHours}
+                                    </Fact>
+                                )
+                            )}
+                            {listing.address !== null && <Fact term="Address">{listing.address}</Fact>}
+                            {listing.delivers !== null && (
+                                <Fact term="Delivery">{listing.delivers ? "Delivers" : "Collection from the shop only"}</Fact>
                             )}
                         </dl>
 

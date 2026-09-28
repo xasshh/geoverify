@@ -16,6 +16,18 @@ export interface DirectoryEntry {
     verified: boolean;
     openingHours: string | null;
     photos: { url: string }[];
+    // Owner statements and buyers' ratings: null or empty at the reduced depth.
+    establishedOn: string | null;
+    cell: string | null;
+    distanceKm: number | null;
+    openNow: boolean | null;
+    hours: Record<string, { opens: string; closes: string } | null> | null;
+    delivers: boolean | null;
+    address: string | null;
+    payable: boolean;
+    rating: number | null;
+    reviewCount: number;
+    ordersCompleted: number;
 }
 
 /**
@@ -108,7 +120,31 @@ export function DirectoryChrome({
 
             {children}
 
-            <footer className="mt-16 border-t border-rule bg-raised">
+            {/* Phone: the directory's four tabs, as the phone board. */}
+            <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-rule bg-raised pb-[env(safe-area-inset-bottom)] sm:hidden" aria-label="Directory">
+                {(
+                    [
+                        ['/directory', 'Explore', 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+                        ['/portal/saved', 'Saved', 'M6 3h12v18l-6-4-6 4z'],
+                        ['/portal/purchases', 'Orders', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
+                        [signedIn ? '/portal' : '/portal/sign-in', 'Account', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7'],
+                    ] as const
+                ).map(([href, label, icon]) => (
+                    <Link
+                        key={label}
+                        href={href}
+                        aria-current={path === href ? 'page' : undefined}
+                        className={`flex min-h-[60px] flex-col items-center justify-center gap-1 text-table font-bold ${path === href ? 'text-gold-dark' : 'text-muted'}`}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+                            <path d={icon} />
+                        </svg>
+                        {label}
+                    </Link>
+                ))}
+            </nav>
+
+            <footer className="mt-16 border-t border-rule bg-raised pb-20 sm:pb-0">
                 <div className={`mx-auto ${inner} px-5 py-6 text-table text-faint`}>
                     A register of businesses, not a licence or an endorsement. Nothing here says a
                     business is solvent, lawful or good, only what has been established about it and

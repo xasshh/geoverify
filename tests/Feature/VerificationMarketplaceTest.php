@@ -60,11 +60,12 @@ beforeEach(function () {
 /**
  * A claimed shop, its party, and the account acting for it.
  *
+ * @param  ArrayObject<string, mixed>|null  $ground  Shared ground, for a test that needs a second shop beside it.
  * @return array{party: Party, account: PortalAccount, membership: PartyUser, shop: Enterprise}
  */
-function buyerWithShop(string $name = 'Chidi Okonkwo', string $phone = '08039990001'): array
+function buyerWithShop(string $name = 'Chidi Okonkwo', string $phone = '08039990001', ?ArrayObject $ground = null): array
 {
-    $shop = enumeratedShop('Okonkwo Hardware');
+    $shop = enumeratedShop('Okonkwo Hardware', '0803 123 4567', $ground);
     $who = claimant($name, $phone);
 
     app(GrantControl::class)->grant(submitClaimFor($who, $shop));

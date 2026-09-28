@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "@/lib/maplibre";
 import { useEffect, useRef, useState } from "react";
 import { cx } from "@/lib/cx";
+import { directionsUrl } from "@/lib/directions";
 
 export interface DirectoryPin {
     id: number;
@@ -14,6 +15,7 @@ export interface DirectoryPin {
     lng: number;
     lat: number;
     state: "verified" | "due" | "published";
+    openNow: boolean;
 }
 
 export interface DirectoryMapData {
@@ -50,14 +52,23 @@ export function DirectoryMap({
     data,
     focus,
     onSelect,
+    onBox,
+    boxActive = false,
 }: {
     data: DirectoryMapData;
     /** A business to fly to and open, from a list card. */
     focus: number | null;
     onSelect?: (id: number | null) => void;
+    /** "Search as I move the map": the box on screen after the reader moves it, or null to stop. */
+    onBox?: (box: string | null) => void;
+    boxActive?: boolean;
 }) {
     const container = useRef<HTMLDivElement>(null);
     const map = useRef<MapLibreMap | null>(null);
+    const [showCells, setShowCells] = useState(true);
+    const [followMap, setFollowMap] = useState(boxActive);
+    const followRef = useRef(boxActive);
+    const onBoxRef = useRef(onBox);
     const [selected, setSelected] = useState<DirectoryPin | null>(null);
     const [ready, setReady] = useState(false);
 
@@ -229,6 +240,20 @@ export function DirectoryMap({
             }
 
             instance.on("moveend", loadRoads);
+            // Only a move the reader made: a search refitting the map must not
+            // start another search.
+            instance.on("moveend", (event) => {
+                if (!followRef.current || event.originalEvent === undefined) {
+                    return;
+                }
+
+                const b = instance.getBounds();
+                onBoxRef.current?.(
+                    [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
+                        .map((n) => n.toFixed(5))
+                        .join(","),
+                );
+            });
             loadRoads();
             setReady(true);
         });
@@ -239,6 +264,23 @@ export function DirectoryMap({
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps -- the map is built once; new data arrives through the effect below
     }, []);
+
+    useEffect(() => {
+        onBoxRef.current = onBox;
+    }, [onBox]);
+
+    // The H3 shading on or off, without touching the pins.
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || !ready) {
+            return;
+        }
+
+        for (const layer of ["density-fill", "density-line"]) {
+            instance.setLayoutProperty(layer, "visibility", showCells ? "visible" : "none");
+        }
+    }, [showCells, ready]);
 
     // A new search replaces the layers' data rather than rebuilding the map.
     useEffect(() => {
@@ -255,7 +297,8 @@ export function DirectoryMap({
             .getSource<GeoJSONSource>("pins")
             ?.setData(pinsToGeoJSON(data.pins));
 
-        if (data.bounds !== null) {
+        // Searching the box on screen keeps the reader's view where it is.
+        if (data.bounds !== null && !followRef.current) {
             instance.fitBounds(data.bounds, { padding: 40, maxZoom: 15 });
         }
 
@@ -278,7 +321,7 @@ export function DirectoryMap({
     }, [focus, data.pins]);
 
     return (
-        <div className="relative h-full min-h-[520px] overflow-hidden rounded-card border border-rule bg-[#EEF1EC]">
+        <div className="relative h-full min-h-[300px] overflow-hidden rounded-card border border-rule bg-[#EEF1EC] lg:min-h-[520px]">
             <div
                 ref={container}
                 className="h-full w-full"
@@ -286,21 +329,41 @@ export function DirectoryMap({
                 aria-label="Map of the businesses in this search"
             />
 
-            <div className="pointer-events-none absolute top-4 left-4 flex gap-2">
-                <span className="flex items-center gap-2 rounded-sm bg-raised px-3.5 py-2 text-table font-bold text-ink shadow-card">
-                    <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                    >
+            <div className="absolute top-4 left-4 flex flex-wrap gap-2 pr-16">
+                <button
+                    type="button"
+                    aria-pressed={showCells}
+                    onClick={() => {
+                        setShowCells((v) => !v);
+                    }}
+                    className={cx(
+                        "flex items-center gap-2 rounded-sm px-3.5 py-2 text-table font-bold shadow-card",
+                        showCells ? "bg-raised text-ink" : "bg-sunken text-muted",
+                    )}
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M12 2.8 20.5 7.5v9L12 21.2 3.5 16.5v-9z" />
                     </svg>
                     H3 cells · res {data.resolution}
-                </span>
+                </button>
+                {onBox !== undefined && (
+                    <label className="flex cursor-pointer items-center gap-2 rounded-sm bg-raised px-3.5 py-2 text-table font-bold text-ink shadow-card">
+                        <input
+                            type="checkbox"
+                            checked={followMap}
+                            onChange={(e) => {
+                                followRef.current = e.target.checked;
+                                setFollowMap(e.target.checked);
+
+                                if (!e.target.checked) {
+                                    onBox(null);
+                                }
+                            }}
+                            className="size-4 accent-[var(--color-gold)]"
+                        />
+                        Search as I move the map
+                    </label>
+                )}
             </div>
 
             <div className="absolute top-4 right-4 flex flex-col overflow-hidden rounded-sm bg-raised shadow-card">
@@ -348,17 +411,28 @@ export function DirectoryMap({
                     </p>
                     <p className="mt-1 numeric-mono text-[0.75rem] text-muted">
                         cell {selected.cell}
+                        {selected.openNow && <span className="ml-2 font-sans font-bold text-green">Open now</span>}
                     </p>
-                    <Link
-                        href={`/directory/${String(selected.id)}`}
-                        className="mt-4 flex min-h-touch items-center justify-center rounded-sm bg-gold text-ui font-extrabold text-on-accent hover:bg-gold-dark"
-                    >
-                        View profile
-                    </Link>
+                    <div className="mt-4 flex gap-2">
+                        <Link
+                            href={`/directory/${String(selected.id)}`}
+                            className="flex min-h-touch flex-1 items-center justify-center rounded-sm bg-gold text-ui font-extrabold text-on-accent hover:bg-gold-dark"
+                        >
+                            View profile
+                        </Link>
+                        <a
+                            href={directionsUrl({ name: selected.name, ward: selected.ward })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex min-h-touch items-center justify-center rounded-sm bg-sunken px-4 text-ui font-bold text-ink hover:bg-rule"
+                        >
+                            Directions
+                        </a>
+                    </div>
                 </div>
             )}
 
-            <div className="pointer-events-none absolute bottom-4 left-4 rounded-sm bg-raised/95 px-4 py-3 shadow-float">
+            <div className="pointer-events-none absolute bottom-4 left-4 hidden rounded-sm bg-raised/95 px-4 py-3 shadow-float sm:block">
                 <p className="text-table font-bold text-ink">
                     Businesses per cell
                 </p>

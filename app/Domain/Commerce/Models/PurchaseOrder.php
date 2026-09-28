@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property PurchaseStatus $status
  * @property Protection $protection
  * @property PayChannel $channel
+ * @property string $fulfilment
  * @property int $items_minor
  * @property int $delivery_minor
  * @property int $service_fee_minor
@@ -63,7 +64,7 @@ final class PurchaseOrder extends Model
     public const RELEASED_BY_RULING = 'ruling';
 
     protected $fillable = [
-        'reference', 'enterprise_id', 'seller_party_id', 'buyer_account_id', 'status', 'protection', 'channel',
+        'reference', 'enterprise_id', 'seller_party_id', 'buyer_account_id', 'status', 'protection', 'channel', 'fulfilment',
         'items_minor', 'delivery_minor', 'service_fee_minor', 'amount_minor', 'currency', 'commission_minor',
         'delivery_name', 'delivery_phone', 'delivery_address', 'delivery_note',
         'paid_at', 'dispatched_at', 'released_at', 'released_by', 'disputed_at', 'dispute_reason',
