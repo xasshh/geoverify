@@ -278,6 +278,7 @@ it('says how long ago in words a reader does not have to convert', function () {
 
     expect($elapsed(now()->toDateString()))->toBe('this month')
         ->and($elapsed(now()->subMonth()->toDateString()))->toBe('1 month')
-        ->and($elapsed(now()->subMonths(7)->toDateString()))->toBe('7 months')
+        // Without overflow: seven months before 29 September is not 1 March.
+        ->and($elapsed(now()->subMonthsNoOverflow(7)->toDateString()))->toBe('7 months')
         ->and($elapsed(now()->subMonths(30)->toDateString()))->toBe('2 years');
 });
