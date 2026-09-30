@@ -4,16 +4,27 @@
 # without it, so the extension is compiled here against the same PostgreSQL the
 # image ships. Pinned to an exact commit: the register has to be reproducible,
 # and "whatever main was that day" is not a version.
+#
+# Built on the official PostgreSQL image for Debian bookworm, with PostGIS from
+# the PostgreSQL project's own apt repository (already configured in that
+# image). The postgis/postgis images are still built on bullseye, whose
+# security archive has gone, so their apt-get fails with 404s and nothing can
+# be compiled on top of them.
 ARG POSTGRES_VERSION=17
-ARG POSTGIS_VERSION=3.5
 
-FROM postgis/postgis:${POSTGRES_VERSION}-${POSTGIS_VERSION}
+FROM postgres:${POSTGRES_VERSION}-bookworm
 
 ARG POSTGRES_VERSION=17
+# PostGIS 3, whichever 3.x the PostgreSQL apt repository carries for this
+# major. Kept as an argument so docker-compose's value still reads naturally.
+ARG POSTGIS_VERSION=3
 ARG H3PG_COMMIT=04227cb62a7338eb2a655fff875b125de2f043f4
 
 RUN set -eux; \
     apt-get update; \
+    apt-get install -y --no-install-recommends \
+        postgresql-${POSTGRES_VERSION}-postgis-${POSTGIS_VERSION%%.*} \
+        postgresql-${POSTGRES_VERSION}-postgis-${POSTGIS_VERSION%%.*}-scripts; \
     apt-get install -y --no-install-recommends \
         build-essential cmake git ca-certificates \
         postgresql-server-dev-${POSTGRES_VERSION}; \
