@@ -42,9 +42,14 @@ final class LedgerEntry extends Model
 
     public const REASON_PAYOUT_RETURNED = 'payout_returned';
 
+    /** A requester's wallet spent on a verification request. */
+    public const REASON_WALLET_SPENT = 'wallet_spent';
+
     protected $fillable = [
         'transaction_uuid', 'ledger_account_id', 'amount_minor', 'currency',
-        'verification_order_id', 'purchase_order_id', 'payout_id', 'reason', 'narrative', 'occurred_at',
+        'verification_order_id', 'purchase_order_id', 'payout_id',
+        'enumerate_request_id', 'wallet_funding_id', 'wallet_id',
+        'reason', 'narrative', 'occurred_at',
     ];
 
     protected function casts(): array

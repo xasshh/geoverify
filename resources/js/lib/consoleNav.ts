@@ -20,6 +20,10 @@ export type ConsoleView =
     | 'claims'
     | 'corrections'
     | 'orders'
+    | 'deskChecks'
+    | 'enumerateVisits'
+    | 'support'
+    | 'enumerateOrganisations'
     | 'live'
     | 'exports'
     | 'escalations'
@@ -32,7 +36,7 @@ export type ConsoleView =
     | 'reviews';
 
 /** Which waiting count belongs against a view, where one does. */
-export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections';
+export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections' | 'deskChecks' | 'enumerateVisits' | 'support' | 'organisations';
 
 export interface ConsoleNavItem {
     key: ConsoleView;
@@ -142,6 +146,33 @@ const REGISTRY_VIEWS: ConsoleNavItem[] = [
         icon: 'M8 2.4a5.6 5.6 0 1 0 0 11.2A5.6 5.6 0 1 0 8 2.4M8 5.2v3.4l2.2 1.4',
         queue: 'orders',
     },
+    {
+        key: 'deskChecks',
+        label: 'Desk checks',
+        href: '/console/desk-checks',
+        caption: 'Enumerate: CAC and TIN to read',
+        // A register page with a tick.
+        icon: 'M3.4 1.8h7.2v12.4H3.4zM5.4 4.6h3.2M5.4 7h3.2M9.8 10.6l1.4 1.4 2.8-3.2',
+        queue: 'deskChecks',
+    },
+    {
+        key: 'enumerateVisits',
+        label: 'Verification visits',
+        href: '/console/enumerate-visits',
+        caption: 'Enumerate: pin, send, review',
+        // A pin over a ground line.
+        icon: 'M8 9.8s-3.2-2.8-3.2-5.3a3.2 3.2 0 0 1 6.4 0c0 2.5-3.2 5.3-3.2 5.3zM8 5.6a1 1 0 1 0 0-2 1 1 0 0 0 0 2M2.6 13.4h10.8',
+        queue: 'enumerateVisits',
+    },
+    {
+        key: 'support',
+        label: 'Support',
+        href: '/console/support',
+        caption: 'Enumerate: complaints to answer',
+        // Two speech boxes.
+        icon: 'M2.4 2.8h8v5.6H5.6L3.4 10.2V8.4h-1zM6.4 10.4h3.8l2.2 1.8v-1.8h1.2V5.2h-2.2',
+        queue: 'support',
+    },
 ];
 
 export function registryNav(): ConsoleNavItem[] {
@@ -198,6 +229,15 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'Organisations awaiting KYC',
         // A briefcase.
         icon: 'M2.4 5.2h11.2v7.6H2.4zM5.8 5.2V3.4h4.4v1.8M2.4 8.4h11.2',
+    },
+    {
+        key: 'enumerateOrganisations',
+        label: 'Organisations',
+        href: '/admin/enumerate-organisations',
+        caption: 'Enumerate: approve, assign, projects',
+        // Three seats around a table.
+        icon: 'M2.6 12.8h10.8M4.2 12.8V9.6h7.6v3.2M5.2 6.4a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8M10.8 6.4a1.4 1.4 0 1 0 0-2.8 1.4 1.4 0 0 0 0 2.8',
+        queue: 'organisations',
     },
     {
         key: 'disputes',

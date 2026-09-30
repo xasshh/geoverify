@@ -49,3 +49,16 @@ Schedule::command('geoverify:reconcile-ledger')
     ->dailyAt('07:30')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
+
+/*
+| Tier 3's daily visits, before officers head out.
+|
+| Six in the morning so the day's visit is on the officer's Today screen when
+| they open it, and after midnight so yesterday's unfiled visits are
+| yesterday's. Idempotent, so an overlap would open nothing twice; the guard
+| is for the missed-day events, which should be written once.
+*/
+Schedule::command('enumerate:schedule-monitoring')
+    ->dailyAt('06:00')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();

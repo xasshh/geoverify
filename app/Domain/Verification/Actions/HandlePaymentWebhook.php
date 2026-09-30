@@ -8,6 +8,8 @@ use App\Domain\Commerce\Actions\ManagePayouts;
 use App\Domain\Commerce\Actions\RecordPurchasePayment;
 use App\Domain\Commerce\Models\Payout;
 use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Enumerate\Actions\RecordWalletFunding;
+use App\Domain\Enumerate\Models\WalletFunding;
 use App\Domain\Verification\Models\PaymentWebhookEvent;
 use App\Domain\Verification\Models\VerificationOrder;
 use Illuminate\Database\Eloquent\Model;
@@ -32,9 +34,10 @@ use RuntimeException;
  * twice. And RecordPayment refuses a second payment on its own account, so even
  * a provider that changes its event ids cannot double post.
  *
- * Three kinds of thing arrive here and each goes to its own recorder, found by
+ * Four kinds of thing arrive here and each goes to its own recorder, found by
  * the reference: a verification order (GV-2026-000123) to RecordPayment, a
- * product order (GV-10482) to RecordPurchasePayment, and a merchant withdrawal
+ * product order (GV-10482) to RecordPurchasePayment, an Enumerate wallet
+ * top-up (FND-20260923-7H2Q) to RecordWalletFunding, and a merchant withdrawal
  * (gvpo-...) to ManagePayouts::settle on transfer.success, transfer.failed or
  * transfer.reversed. One door, so the signature and the replay defence cannot
  * be forgotten on a second one.
@@ -51,6 +54,7 @@ final class HandlePaymentWebhook
         private readonly RecordPayment $payments,
         private readonly RecordPurchasePayment $purchases,
         private readonly ManagePayouts $payouts,
+        private readonly RecordWalletFunding $fundings,
     ) {}
 
     /**
@@ -96,6 +100,23 @@ final class HandlePaymentWebhook
         $purchase = $order === null && $reference !== null
             ? PurchaseOrder::query()->where('reference', $reference)->first()
             : null;
+
+        $funding = $order === null && $purchase === null && $reference !== null
+            ? WalletFunding::query()->where('reference', $reference)->first()
+            : null;
+
+        if ($funding instanceof WalletFunding) {
+            $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+            $funded = ($this->fundings)($funding, $reference, (int) ($data['amount'] ?? 0), $this->paidAt($payload));
+
+            $event->update([
+                'processed_at' => now(),
+                'payment_reference' => $reference,
+                'processing_note' => "Applied to wallet funding {$funding->reference}.",
+            ]);
+
+            return $funded;
+        }
 
         if ($purchase instanceof PurchaseOrder) {
             $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];

@@ -201,20 +201,23 @@ final class ReconcileWithProvider
      */
     private function ledger(Carbon $from, Carbon $to): array
     {
-        // Both kinds of order the provider collects for, by the reference it
-        // knows them by. A product order left out of this would show every
-        // buyer's payment as money we never recorded.
+        // Every kind of thing the provider collects for, by the reference it
+        // knows it by. A product order or a wallet top-up left out of this
+        // would show every such payment as money we never recorded.
+        $reference = 'COALESCE(verification_orders.reference, purchase_orders.reference, wallet_fundings.reference)';
+
         /** @var array<string, int> $rows */
         $rows = LedgerEntry::query()
             ->join('ledger_accounts', 'ledger_accounts.id', '=', 'ledger_entries.ledger_account_id')
             ->leftJoin('verification_orders', 'verification_orders.id', '=', 'ledger_entries.verification_order_id')
             ->leftJoin('purchase_orders', 'purchase_orders.id', '=', 'ledger_entries.purchase_order_id')
+            ->leftJoin('wallet_fundings', 'wallet_fundings.id', '=', 'ledger_entries.wallet_funding_id')
             ->where('ledger_accounts.code', LedgerAccount::CASH)
             ->where('ledger_entries.reason', LedgerEntry::REASON_PAYMENT_RECEIVED)
             ->whereBetween('ledger_entries.occurred_at', [$from, $to])
-            ->whereRaw('COALESCE(verification_orders.reference, purchase_orders.reference) IS NOT NULL')
-            ->groupByRaw('COALESCE(verification_orders.reference, purchase_orders.reference)')
-            ->selectRaw('COALESCE(verification_orders.reference, purchase_orders.reference) AS reference')
+            ->whereRaw("{$reference} IS NOT NULL")
+            ->groupByRaw($reference)
+            ->selectRaw("{$reference} AS reference")
             ->selectRaw('SUM(ledger_entries.amount_minor) AS amount_minor')
             ->pluck('amount_minor', 'reference')
             ->map(static fn ($amount): int => (int) $amount)

@@ -118,7 +118,7 @@ export function FieldShell({
         '/field/brief',
         '/field/device',
         ...day.cells.next.map((cell) => `/field/assignments/${String(cell.assignmentId)}/capture`),
-        ...day.jobs.map((job) => `/field/jobs/${String(job.id)}`),
+        ...day.jobs.map((job) => job.href),
     ].join('|');
 
     useEffect(() => {

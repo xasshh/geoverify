@@ -8,9 +8,11 @@ use App\Domain\Party\Models\Party;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
 use Illuminate\Support\Facades\Hash;
+use InvalidArgumentException;
 
 /**
- * The second way into the portal: a business ID or an email, and a password.
+ * The second way into the portal: a business ID, an email or a phone number,
+ * and a password.
  *
  * Phone and code stay the first way, and the only way to open an account. A
  * password exists only once somebody has set one from a session that already
@@ -37,6 +39,22 @@ final class SignInWithPassword
                 ->whereRaw('lower(email) = ?', [mb_strtolower($identifier)])
                 ->whereNotNull('password')
                 ->first();
+
+            return $account !== null && $this->usable($account) && Hash::check($password, (string) $account->password)
+                ? $account
+                : $this->spend($password);
+        }
+
+        // A phone number, as Enumerate's sign-in asks for it. Only digits and
+        // the usual separators, so a business ID never reaches the parser.
+        if (preg_match('/^\+?[\d\s\-()]{7,20}$/', $identifier) === 1) {
+            try {
+                $phone = (new NormalisePhone)($identifier);
+            } catch (InvalidArgumentException) {
+                return $this->spend($password);
+            }
+
+            $account = PortalAccount::query()->where('phone', $phone)->whereNotNull('password')->first();
 
             return $account !== null && $this->usable($account) && Hash::check($password, (string) $account->password)
                 ? $account

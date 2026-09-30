@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CampaignBuildController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\DisputeController;
+use App\Http\Controllers\Admin\EnumerateOrganisationController as AdminEnumerateOrganisationController;
 use App\Http\Controllers\Admin\EscalationController;
 use App\Http\Controllers\Admin\InvestorController as AdminInvestorController;
 use App\Http\Controllers\Admin\MandateController;
@@ -19,20 +20,30 @@ use App\Http\Controllers\Console\AssignmentController;
 use App\Http\Controllers\Console\ClaimReviewController;
 use App\Http\Controllers\Console\CorrectionReviewController;
 use App\Http\Controllers\Console\CoverageController;
+use App\Http\Controllers\Console\DeskCheckController;
+use App\Http\Controllers\Console\EnumerateVisitController;
 use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\InspectionController as ConsoleInspectionController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\MessageController as ConsoleMessageController;
 use App\Http\Controllers\Console\ReviewController;
+use App\Http\Controllers\Console\SupportController as ConsoleSupportController;
 use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\DirectoryController;
+use App\Http\Controllers\Enumerate\EnumerateController;
+use App\Http\Controllers\Enumerate\OrganisationController as EnumerateOrganisationController;
+use App\Http\Controllers\Enumerate\ReportController as EnumerateReportController;
+use App\Http\Controllers\Enumerate\RequestController as EnumerateRequestController;
+use App\Http\Controllers\Enumerate\SupportController as EnumerateSupportController;
+use App\Http\Controllers\Enumerate\WalletController as EnumerateWalletController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\FieldHomeController;
 use App\Http\Controllers\Field\FieldJobController;
 use App\Http\Controllers\Field\FieldMessageController;
+use App\Http\Controllers\Field\FieldVisitController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
 use App\Http\Controllers\Invest\CommissionController as InvestCommissionController;
@@ -128,6 +139,30 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::post('orders/{order}/complete', [VerificationOrderController::class, 'complete'])->name('orders.complete');
     Route::post('orders/{order}/refund', [VerificationOrderController::class, 'refund'])->name('orders.refund');
 
+    // Enumerate's desk checks: what the registers said about a business
+    // somebody paid to have checked, and the supervisor's reading of it.
+    Route::get('desk-checks', [DeskCheckController::class, 'index'])->name('desk-checks');
+    Route::post('desk-checks/{reference}', [DeskCheckController::class, 'decide'])->name('desk-checks.decide');
+    Route::post('desk-checks/{reference}/rerun', [DeskCheckController::class, 'rerun'])
+        ->middleware('throttle:20,1')->name('desk-checks.rerun');
+
+    // Enumerate's site visits: pin the premises, send an officer, read the report.
+    Route::get('enumerate-visits', [EnumerateVisitController::class, 'index'])->name('enumerate-visits');
+    Route::post('enumerate-visits/requests/{reference}/assign', [EnumerateVisitController::class, 'assign'])
+        ->name('enumerate-visits.assign');
+    Route::post('enumerate-visits/{visit}/decide', [EnumerateVisitController::class, 'decide'])
+        ->whereNumber('visit')->name('enumerate-visits.decide');
+    Route::post('enumerate-visits/requests/{reference}/monitoring-officer', [EnumerateVisitController::class, 'monitoringOfficer'])
+        ->name('enumerate-visits.monitoring-officer');
+    Route::post('enumerate-visits/requests/{reference}/close', [EnumerateVisitController::class, 'closeMonitoring'])
+        ->name('enumerate-visits.close');
+
+    // Enumerate support: complaints and questions. Refunds are checked for an
+    // administrator inside the action, not by the route.
+    Route::get('support', [ConsoleSupportController::class, 'index'])->name('support');
+    Route::post('support/{reference}/answer', [ConsoleSupportController::class, 'answer'])->name('support.answer');
+    Route::post('support/{reference}/refund', [ConsoleSupportController::class, 'refund'])->name('support.refund');
+
     // Live operations. Who is out, where they are, and what is going wrong now
     // rather than at the end of the week.
     Route::get('live', [LiveOperationsController::class, 'index'])->name('live');
@@ -160,6 +195,12 @@ Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->gro
     Route::post('people', [PeopleController::class, 'store'])->name('people.store');
     Route::post('people/{person}/status', [PeopleController::class, 'status'])->name('people.status');
     Route::post('devices/{device}/revoke', [PeopleController::class, 'revokeDevice'])->name('devices.revoke');
+
+    // Enumerate organisations: approval, account managers, and their projects.
+    Route::get('enumerate-organisations', [AdminEnumerateOrganisationController::class, 'index'])->name('enumerate-organisations');
+    Route::post('enumerate-organisations/{organisation}/decide', [AdminEnumerateOrganisationController::class, 'decide'])->name('enumerate-organisations.decide');
+    Route::post('enumerate-organisations/{organisation}/manager', [AdminEnumerateOrganisationController::class, 'manager'])->name('enumerate-organisations.manager');
+    Route::post('enumerate-projects/{project}', [AdminEnumerateOrganisationController::class, 'project'])->name('enumerate-projects.move');
 
     Route::get('investors', [AdminInvestorController::class, 'index'])->name('investors');
     Route::post('investors/{organisation}/decide', [AdminInvestorController::class, 'decide'])->name('investors.decide');
@@ -497,6 +538,80 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
 });
 
 /*
+| Enumerate. Individuals pay from a wallet to have any business checked.
+|
+| The same portal accounts and guard as the business portal (one person, one
+| wallet), behind its own front door. Signing in posts to the portal's
+| endpoints; the door only decides where the person lands afterwards.
+*/
+Route::prefix('enumerate')->name('enumerate.')->group(function (): void {
+    Route::get('sign-in', [EnumerateController::class, 'signIn'])->name('sign-in');
+
+    Route::middleware('portal')->group(function (): void {
+        Route::get('/', [EnumerateController::class, 'home'])->name('home');
+
+        // The register's candidates for the search box. Each call is a paid
+        // lookup at the provider, so it is limited per person.
+        Route::get('lookup', [EnumerateRequestController::class, 'lookup'])
+            ->middleware('throttle:30,1')->name('lookup');
+
+        Route::get('verify', [EnumerateRequestController::class, 'create'])->name('requests.create');
+        Route::post('verify', [EnumerateRequestController::class, 'store'])
+            ->middleware('throttle:20,1')->name('requests.store');
+        Route::get('verifications', [EnumerateRequestController::class, 'index'])->name('requests.index');
+        Route::get('verifications/{reference}', [EnumerateRequestController::class, 'show'])
+            ->where('reference', 'VRF-[0-9]{8}-[A-Z0-9]{4,8}')->name('requests.show');
+        Route::get('verifications/{reference}/report.pdf', [EnumerateReportController::class, 'download'])
+            ->where('reference', 'VRF-[0-9]{8}-[A-Z0-9]{4,8}')->middleware('throttle:10,1')->name('report');
+
+        // The wallet grows only on the provider's signed webhook. These start
+        // a top-up and welcome the person back; neither records anything.
+        // Acting as oneself or for an organisation (E5).
+        Route::post('switch', [EnumerateController::class, 'switch'])->name('switch');
+        Route::get('organisations/new', [EnumerateOrganisationController::class, 'create'])->name('organisations.create');
+        Route::post('organisations', [EnumerateOrganisationController::class, 'store'])
+            ->middleware('throttle:5,1')->name('organisations.store');
+        Route::post('invitations/{member}/accept', [EnumerateOrganisationController::class, 'accept'])->name('invitations.accept');
+
+        Route::prefix('organisation')->name('organisation')->group(function (): void {
+            Route::get('/', [EnumerateOrganisationController::class, 'overview']);
+            Route::get('team', [EnumerateOrganisationController::class, 'teamPage'])->name('.team');
+            Route::post('team', [EnumerateOrganisationController::class, 'invite'])->middleware('throttle:20,1')->name('.team.invite');
+            Route::post('team/{seat}/role', [EnumerateOrganisationController::class, 'role'])->name('.team.role');
+            Route::post('team/{seat}/revoke', [EnumerateOrganisationController::class, 'revoke'])->name('.team.revoke');
+
+            Route::get('bulk/template.csv', [EnumerateOrganisationController::class, 'template'])->name('.bulk.template');
+            Route::post('bulk', [EnumerateOrganisationController::class, 'bulk'])->middleware('throttle:10,1')->name('.bulk');
+            Route::get('bulk/{reference}', [EnumerateOrganisationController::class, 'batch'])->name('.batch');
+
+            Route::get('projects', [EnumerateOrganisationController::class, 'projectsPage'])->name('.projects');
+            Route::post('projects', [EnumerateOrganisationController::class, 'storeProject'])->middleware('throttle:10,1')->name('.projects.store');
+            Route::get('projects/{reference}', [EnumerateOrganisationController::class, 'project'])->name('.project');
+        });
+
+        // Support and complaints.
+        Route::get('support', [EnumerateSupportController::class, 'index'])->name('support');
+        Route::post('support', [EnumerateSupportController::class, 'store'])
+            ->middleware('throttle:10,1')->name('support.store');
+        Route::post('support/{reference}/reply', [EnumerateSupportController::class, 'reply'])
+            ->middleware('throttle:30,1')->name('support.reply');
+
+        Route::get('wallet', [EnumerateWalletController::class, 'show'])->name('wallet');
+        Route::post('wallet/fund', [EnumerateWalletController::class, 'fund'])
+            ->middleware('throttle:10,1')->name('wallet.fund');
+        Route::get('wallet/return', [EnumerateWalletController::class, 'return'])->name('wallet.return');
+    });
+});
+
+/*
+| The Enumerate report as HTML, for the browser that prints it. Outside the
+| portal group for the certificate's reason: the printing browser has no
+| session. Signed, short lived, and refused off the loopback interface.
+*/
+Route::get('enumerate/reports/{reference}/report.html', [EnumerateReportController::class, 'render'])
+    ->where('reference', 'VRF-[0-9]{8}-[A-Z0-9]{4,8}')->name('enumerate.report.render');
+
+/*
 | The field client. An officer sees their own work and nothing else.
 */
 Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(function (): void {
@@ -510,6 +625,8 @@ Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(fun
     Route::get('cells', [AssignmentBoardController::class, 'index'])->name('cells');
     // An inspection or site visit a buyer paid for (Phase 4 M3).
     Route::get('jobs/{inspection}', [FieldJobController::class, 'show'])->name('jobs.show');
+    // A site visit somebody paid for through Enumerate (E2).
+    Route::get('visits/{visit}', [FieldVisitController::class, 'show'])->name('visits.show');
     Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
 });
 
@@ -548,6 +665,12 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     Route::post('jobs/{inspection}/photos', [FieldJobController::class, 'photo'])
         ->middleware('throttle:60,1')->name('jobs.photos');
     Route::post('jobs/{inspection}/report', [FieldJobController::class, 'report'])->name('jobs.report');
+
+    // The same three for an Enumerate site visit.
+    Route::post('visits/{visit}/arrive', [FieldVisitController::class, 'arrive'])->name('visits.arrive');
+    Route::post('visits/{visit}/photos', [FieldVisitController::class, 'photo'])
+        ->middleware('throttle:60,1')->name('visits.photos');
+    Route::post('visits/{visit}/report', [FieldVisitController::class, 'report'])->name('visits.report');
 });
 
 /*

@@ -10,6 +10,12 @@ use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Commerce\Enums\PurchaseStatus;
 use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Enumerate\Enums\RequestStatus;
+use App\Domain\Enumerate\Models\EnumerateOrganisation;
+use App\Domain\Enumerate\Models\EnumerateProject;
+use App\Domain\Enumerate\Models\EnumerateRequest;
+use App\Domain\Enumerate\Models\EnumerateTicket;
+use App\Domain\Enumerate\Models\EnumerateVisit;
 use App\Domain\Field\Actions\FieldMessaging;
 use App\Domain\Field\Models\FieldMessage;
 use App\Domain\Investment\Models\InvestorUser;
@@ -121,6 +127,22 @@ class HandleInertiaRequests extends Middleware
                 ->where('status', Inspection::REQUESTED)
                 ->whereHas('order', static fn ($q) => $q->where('status', PurchaseStatus::Held->value))
                 ->count(),
+            // Enumerate requests whose registry answers wait on a supervisor.
+            'deskChecks' => EnumerateRequest::query()
+                ->whereIn('status', [RequestStatus::Paid->value, RequestStatus::RegistryCheck->value])
+                ->count(),
+            // Enumerate requests waiting for an officer, and visit reports
+            // waiting to be read: both are somebody's paid check standing still.
+            'enumerateVisits' => EnumerateRequest::query()->where('status', RequestStatus::AwaitingAgent->value)->count()
+                + EnumerateVisit::query()->where('status', EnumerateVisit::SUBMITTED)->count(),
+            // Enumerate organisations waiting for an admin's approval, and
+            // projects nobody has picked up; only an admin can act on them.
+            'organisations' => $user->administers()
+                ? EnumerateOrganisation::query()->where('status', EnumerateOrganisation::PENDING)->count()
+                    + EnumerateProject::query()->where('status', 'requested')->count()
+                : 0,
+            // Enumerate complaints waiting for the desk's answer.
+            'support' => EnumerateTicket::query()->where('status', EnumerateTicket::OPEN)->count(),
             // Replies from officers this supervisor has not read yet.
             'messages' => FieldMessage::query()
                 ->whereIn('officer_id', app(FieldMessaging::class)->teamOf($user)->pluck('id'))

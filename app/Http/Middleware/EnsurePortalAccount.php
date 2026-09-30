@@ -20,14 +20,26 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class EnsurePortalAccount
 {
+    /** Where a signed-out visitor to the portal was going. See SignInController::home(). */
+    public const INTENDED = 'portal.intended';
+
     public function handle(Request $request, Closure $next): Response
     {
         $account = Auth::guard('portal')->user();
 
         if (! $account instanceof PortalAccount) {
-            // guest() rather than route(): it remembers the page, so signing in
-            // returns somebody to the checkout they were sent from.
-            return redirect()->guest(route('portal.sign-in'));
+            // Remembered under the portal's own key, not Laravel's shared
+            // url.intended: the staff login writes that one too, and a buyer
+            // who had once opened /console would be sent there after their
+            // code and bounced to the staff sign-in. Only a page someone can
+            // land on is remembered, so a POST is never replayed as a GET.
+            if ($request->isMethod('GET') && ! $request->expectsJson()) {
+                $request->session()->put(self::INTENDED, $request->fullUrl());
+            }
+
+            // Enumerate shares these accounts but has its own front door, so
+            // somebody on their way to a verification signs in there.
+            return redirect()->route($request->is('enumerate', 'enumerate/*') ? 'enumerate.sign-in' : 'portal.sign-in');
         }
 
         if (! $account->canSignIn()) {

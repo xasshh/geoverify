@@ -18,6 +18,7 @@ use App\Domain\Ledger\Actions\ReconcileWithProvider;
 use App\Domain\Ledger\Models\LedgerAccount;
 use App\Domain\Party\Enums\PartyRole;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Party\Models\SignInCode;
 use App\Domain\Registry\Actions\SetPublicationState;
 use App\Domain\Registry\Enums\PublicationState;
 use App\Domain\Registry\Models\EnterpriseObservation;
@@ -25,6 +26,7 @@ use App\Enums\Role;
 use Database\Seeders\VerificationPricingSeeder;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -514,7 +516,41 @@ it('sends somebody signed out back to checkout once they have signed in', functi
 
     $this->get("/portal/checkout/{$it['seller']['shop']->id}")->assertRedirect('/portal/sign-in');
 
-    expect(session('url.intended'))->toEndWith("/portal/checkout/{$it['seller']['shop']->id}");
+    expect(session('portal.intended'))->toEndWith("/portal/checkout/{$it['seller']['shop']->id}");
+});
+
+/** A sign-in code that will verify, as RequestSignInCode would have stored it. */
+function knownCode(PortalAccount $account): string
+{
+    SignInCode::query()->create([
+        'phone' => $account->phone,
+        'code_hash' => Hash::make('123456'),
+        'expires_at' => now()->addMinutes(10),
+        'attempts' => 0,
+    ]);
+
+    return '123456';
+}
+
+it('never sends a portal sign-in to a page the staff login remembered', function () {
+    // Somebody opened the console while signed out: Laravel remembers /console
+    // for the staff login. Signing in to the portal must not go there.
+    $account = claimant('Tunde Bakare', '08032220002')['account'];
+
+    $this->withSession(['portal.phone' => $account->phone, 'portal.intent' => 'sign-in', 'url.intended' => url('/console')])
+        ->post('/portal/verify', ['code' => knownCode($account)])
+        ->assertRedirect(route('portal.dashboard'));
+});
+
+it('returns a portal sign-in to the portal page it was sent from', function () {
+    $it = shopWithCatalogue();
+    $checkout = url("/portal/checkout/{$it['seller']['shop']->id}");
+
+    $this->get($checkout)->assertRedirect('/portal/sign-in');
+
+    $this->withSession(['portal.phone' => $it['buyer']->phone, 'portal.intent' => 'sign-in', 'portal.intended' => $checkout])
+        ->post('/portal/verify', ['code' => knownCode($it['buyer'])])
+        ->assertRedirect($checkout);
 });
 
 it('shows an order only to its buyer and its seller', function () {

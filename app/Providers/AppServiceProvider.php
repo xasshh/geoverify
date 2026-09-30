@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Enumerate\Registry\DojahRegistry;
+use App\Domain\Enumerate\Registry\FakeRegistry;
+use App\Domain\Enumerate\Registry\RegistryLookup;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,7 +17,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Resolved when first asked for, so a server without registry keys
+        // still boots and only the lookup itself says what is missing.
+        $this->app->bind(RegistryLookup::class, fn (): RegistryLookup => match (config('services.registry.driver')) {
+            'dojah' => new DojahRegistry(
+                (string) config('services.dojah.base_url'),
+                (string) config('services.dojah.app_id'),
+                (string) config('services.dojah.secret'),
+            ),
+            default => new FakeRegistry($this->app->isProduction()),
+        });
     }
 
     /**

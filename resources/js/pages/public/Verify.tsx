@@ -26,7 +26,10 @@ interface Result {
     verified_on?: string;
     valid_until?: string | null;
     freshness?: Freshness;
-    officer_reference?: string;
+    officer_reference?: string | null;
+    kind?: "report";
+    final?: boolean;
+    score?: number;
 }
 
 interface Props {
@@ -77,7 +80,7 @@ export default function Verify({ result }: Props) {
                 title={
                     result.reference === undefined
                         ? "Certificate check"
-                        : `Certificate ${result.reference}`
+                        : `${result.kind === "report" ? "Report" : "Certificate"} ${result.reference}`
                 }
             />
 
@@ -118,7 +121,43 @@ export default function Verify({ result }: Props) {
                     </section>
                 )}
 
-                {found && (
+                {found && result.kind === "report" && (
+                    <>
+                        <section className="flex flex-col gap-2 border-l-2 border-green bg-raised px-5 py-5">
+                            <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
+                                This Enumerate report is genuine. {result.final === true ? "Its finding:" : "It is an interim report. So far:"}
+                            </p>
+                            <h1 className="font-display text-display-l text-ink">
+                                {result.finding}
+                                {result.score !== undefined && <span className="text-muted"> · {result.score}/100</span>}
+                            </h1>
+                            <p className="text-display-s font-display text-ink">{result.business}</p>
+                            {place !== "" && <p className="text-ui text-muted">{place}</p>}
+                        </section>
+
+                        <dl className="grid gap-x-6 sm:grid-cols-2">
+                            <Fact term="Check">{result.tier}</Fact>
+                            <Fact term="Reference" mono>{result.reference}</Fact>
+                            <Fact term={result.final === true ? "Completed on" : "Last updated"}>{on(result.verified_on)}</Fact>
+                            <Fact term="Attending officer" mono>{result.officer_reference ?? "No visit in this check"}</Fact>
+                        </dl>
+
+                        <section className="flex flex-col gap-3 border-t border-rule pt-5">
+                            <h2 className="text-label font-semibold tracking-[0.05em] text-muted uppercase">What this does and does not tell you</h2>
+                            <p className="text-ui text-muted">
+                                Somebody paid GeoVerify to check this business. We read its record at the Corporate Affairs Commission
+                                and FIRS{result.officer_reference ? ", and an officer went to the address and wrote down what they found" : ""}.
+                                The score summarises those findings; the printed report says what each part was for.
+                            </p>
+                            <p className="text-ui text-muted">
+                                <strong className="text-ink">This is not a government approval, a licence or a recommendation.</strong>{" "}
+                                A business can move, close or change hands after a check, and this page cannot know that.
+                            </p>
+                        </section>
+                    </>
+                )}
+
+                {found && result.kind !== "report" && (
                     <>
                         <section
                             className={`flex flex-col gap-2 border-l-2 bg-raised px-5 py-5 ${

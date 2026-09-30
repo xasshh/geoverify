@@ -940,7 +940,7 @@ export default function Design() {
                                 Backed up
                             </p>
                             <div className="w-[248px] rounded-card border border-rule py-3 bg-raised">
-                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4, inspections: 2 }} />
+                                <ConsoleNav current="review" counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4, inspections: 2, deskChecks: 3, enumerateVisits: 2, support: 1, organisations: 1 }} />
                             </div>
                         </div>
 
@@ -949,7 +949,7 @@ export default function Design() {
                                 All clear
                             </p>
                             <div className="w-[248px] rounded-card border border-rule py-3 bg-raised">
-                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0, orders: 0, messages: 0, inspections: 0 }} />
+                                <ConsoleNav current="coverage" counts={{ review: 0, claims: 0, corrections: 0, escalations: 0, orders: 0, messages: 0, inspections: 0, deskChecks: 0, enumerateVisits: 0, support: 0, organisations: 0 }} />
                             </div>
                         </div>
 
@@ -961,7 +961,7 @@ export default function Design() {
                                 <div className="flex gap-1 px-2 [&>a]:shrink-0">
                                     <ConsoleNav
                                         current="claims"
-                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4, inspections: 2 }}
+                                        counts={{ review: 20, claims: 2, corrections: 4, escalations: 3, orders: 6, messages: 4, inspections: 2, deskChecks: 3, enumerateVisits: 2, support: 1, organisations: 1 }}
                                         dense
                                     />
                                 </div>

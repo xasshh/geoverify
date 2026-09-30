@@ -75,6 +75,28 @@ final class Media extends Model
      */
     public const KIND_INSPECTION = 'inspection';
 
+    /**
+     * An officer's photographs on an Enumerate site visit (E2), attached to
+     * the visit and never to a building. Four kinds rather than one with a
+     * label, so what the requester sees is asked for by name: the storefront
+     * and the signage, which the business already shows the street. The
+     * interior and anything else stay with staff, who score the visit on them.
+     */
+    public const KIND_VISIT_STOREFRONT = 'visit_storefront';
+
+    public const KIND_VISIT_SIGNAGE = 'visit_signage';
+
+    public const KIND_VISIT_INTERIOR = 'visit_interior';
+
+    public const KIND_VISIT_OTHER = 'visit_other';
+
+    public const VISIT_KINDS = [
+        self::KIND_VISIT_STOREFRONT,
+        self::KIND_VISIT_SIGNAGE,
+        self::KIND_VISIT_INTERIOR,
+        self::KIND_VISIT_OTHER,
+    ];
+
     /** Held and published. */
     public const STATUS_STORED = 'stored';
 

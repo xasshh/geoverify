@@ -46,6 +46,8 @@ final class VerificationPricingSeeder extends Seeder
             [LedgerAccount::MERCHANT_BALANCES, 'Merchant balances available to withdraw', AccountType::Liability],
             [LedgerAccount::PAYOUTS_IN_TRANSIT, 'Merchant withdrawals in transit', AccountType::Liability],
             [LedgerAccount::COMMERCE_INCOME, 'Commission and service fees', AccountType::Income],
+            // Enumerate requesters' prepaid wallets.
+            [LedgerAccount::REQUESTER_WALLETS, 'Requester wallets, prepaid credit for verifications', AccountType::Liability],
         ];
 
         foreach ($accounts as [$code, $name, $type]) {

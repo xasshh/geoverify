@@ -74,6 +74,24 @@ return [
         'public' => env('PAYSTACK_PUBLIC_KEY'),
     ],
 
+    /*
+     * The official registers (CAC, FIRS), through a licensed provider.
+     *
+     * `fake` answers from a fixed list and refuses to start in production, so
+     * a server nobody configured fails loudly rather than issuing reports from
+     * made-up records. Dojah's sandbox and production differ only in the base
+     * URL and the keys.
+     */
+    'registry' => [
+        'driver' => env('REGISTRY_DRIVER', 'fake'),
+    ],
+
+    'dojah' => [
+        'base_url' => env('DOJAH_BASE_URL', 'https://sandbox.dojah.io'),
+        'app_id' => env('DOJAH_APP_ID', ''),
+        'secret' => env('DOJAH_SECRET_KEY', ''),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

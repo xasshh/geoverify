@@ -4,7 +4,7 @@ import { csrfToken, uuid7 } from '@/lib/capture';
 import { db, type JobAction } from '@/lib/offline/db';
 
 /**
- * An inspection job's outbox.
+ * A field job's outbox: an inspection's, or an Enumerate visit's (`base`).
  *
  * Everything the agent does is written here first and sent in order when
  * there is signal. A refusal from the server (a 4xx with a reason) is kept
@@ -13,7 +13,7 @@ import { db, type JobAction } from '@/lib/offline/db';
  * one arrival, one photograph, one report.
  */
 async function send(action: JobAction): Promise<'done' | 'refused' | 'offline'> {
-    const base = `/api/field/jobs/${String(action.inspectionId)}`;
+    const base = action.base ?? `/api/field/jobs/${String(action.inspectionId)}`;
     let response: Response;
 
     try {
@@ -80,26 +80,37 @@ export async function flushJobs(): Promise<void> {
     }
 }
 
-export async function recordJobAction(inspectionId: number, type: JobAction['type'], payload: Record<string, unknown>, blob: Blob | null = null): Promise<void> {
+/** Whether an action belongs to this job: ids are only unique within a kind of job. */
+function sameJob(action: JobAction, base: string | undefined): boolean {
+    return action.base === base;
+}
+
+export async function recordJobAction(
+    inspectionId: number,
+    type: JobAction['type'],
+    payload: Record<string, unknown>,
+    blob: Blob | null = null,
+    base?: string,
+): Promise<void> {
     const uuid = uuid7();
     const withKey = type === 'report' ? { ...payload, report_uuid: uuid } : payload;
 
-    await db.jobActions.add({ uuid, inspectionId, type, payload: withKey, blob, state: 'queued', error: null });
+    await db.jobActions.add({ uuid, inspectionId, ...(base === undefined ? {} : { base }), type, payload: withKey, blob, state: 'queued', error: null });
     void flushJobs();
 }
 
 /** Retry the refused ones after the agent has fixed what was wrong. */
-export async function retryJob(inspectionId: number): Promise<void> {
-    const failed = await db.jobActions.where('inspectionId').equals(inspectionId).filter((a) => a.state === 'failed').toArray();
+export async function retryJob(inspectionId: number, base?: string): Promise<void> {
+    const failed = await db.jobActions.where('inspectionId').equals(inspectionId).filter((a) => a.state === 'failed' && sameJob(a, base)).toArray();
     await Promise.all(failed.map((a) => db.jobActions.update(a.seq ?? 0, { state: 'queued', error: null })));
     void flushJobs();
 }
 
-export function useJobActions(inspectionId: number): JobAction[] {
+export function useJobActions(inspectionId: number, base?: string): JobAction[] {
     const [actions, setActions] = useState<JobAction[]>([]);
 
     useEffect(() => {
-        const subscription = liveQuery(() => db.jobActions.where('inspectionId').equals(inspectionId).sortBy('seq')).subscribe({
+        const subscription = liveQuery(() => db.jobActions.where('inspectionId').equals(inspectionId).filter((a) => sameJob(a, base)).sortBy('seq')).subscribe({
             next: setActions,
             error: () => undefined,
         });
@@ -116,7 +127,7 @@ export function useJobActions(inspectionId: number): JobAction[] {
             window.removeEventListener('online', retry);
             window.clearInterval(timer);
         };
-    }, [inspectionId]);
+    }, [inspectionId, base]);
 
     return actions;
 }

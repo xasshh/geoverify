@@ -255,13 +255,13 @@ export default function Today({ day }: { day: OfficerDay }) {
                 <section className="mt-5 flex flex-col gap-2" aria-label="Inspections and visits">
                     {day.jobs.map((job) => (
                         <Link
-                            key={job.id}
-                            href={`/field/jobs/${String(job.id)}`}
+                            key={job.href}
+                            href={job.href}
                             className="flex items-center justify-between gap-3 rounded-card border border-held/30 bg-held-soft px-4 py-3"
                         >
                             <span className="min-w-0">
                                 <span className="block text-label font-extrabold tracking-[0.05em] text-held-ink uppercase">
-                                    {job.kind === 'site_visit' ? 'Site visit' : 'Product inspection'} · {job.orderRef}
+                                    {job.kind === 'daily' ? 'Daily visit' : job.kind === 'verification' ? 'Verification visit' : job.kind === 'site_visit' ? 'Site visit' : 'Product inspection'} · {job.orderRef}
                                 </span>
                                 <span className="block truncate text-ui font-bold text-ink">{job.business}</span>
                             </span>

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Actions;
 
+use App\Domain\Enumerate\Actions\ScoreEnumerateRequest;
+use App\Domain\Enumerate\Models\EnumerateRequest;
+use App\Domain\Enumerate\Models\EnumerateVisit;
 use App\Domain\Registry\Actions\ResolveListingTier;
 use App\Domain\Verification\Models\PublicVerification;
 
@@ -31,7 +34,10 @@ use App\Domain\Verification\Models\PublicVerification;
  */
 final class ResolvePublicVerification
 {
-    public function __construct(private readonly ResolveListingTier $tiers) {}
+    public function __construct(
+        private readonly ResolveListingTier $tiers,
+        private readonly ScoreEnumerateRequest $score,
+    ) {}
 
     /**
      * @return array{
@@ -59,7 +65,9 @@ final class ResolvePublicVerification
         // One answer for "no such token" and for a malformed one. Telling the
         // difference would let somebody probe the shape of a valid token.
         if (! $verification instanceof PublicVerification) {
-            return ['state' => 'unknown'];
+            $report = EnumerateRequest::query()->where('report_token', $token)->first();
+
+            return $report === null ? ['state' => 'unknown'] : $this->report($report);
         }
 
         if ($verification->revoked()) {
@@ -102,6 +110,47 @@ final class ResolvePublicVerification
      * who does not already have our secrets, and truncated because it is a
      * reference for a support conversation rather than a credential.
      */
+    /**
+     * An Enumerate report, checked by whoever the requester handed it to.
+     *
+     * The narrowest answer that proves the paper genuine: the business as CAC
+     * names it, the tier, the finding and score, when, the ward and LGA, and
+     * whether the report was final. Nothing the report itself withholds, and
+     * less than it shows: no registry detail, no daily log, no photographs.
+     *
+     * @return array<string, mixed>
+     */
+    private function report(EnumerateRequest $request): array
+    {
+        $result = ($this->score)($request);
+        $site = $request->visits()
+            ->where('kind', EnumerateVisit::KIND_SITE)
+            ->where('status', EnumerateVisit::ACCEPTED)
+            ->with(['ward', 'lga'])
+            ->latest('id')
+            ->first();
+
+        $finished = $request->status->finished();
+        $on = $request->completed_at ?? $request->desk_checked_at ?? $request->paid_at;
+
+        return [
+            'state' => 'valid',
+            'kind' => 'report',
+            'final' => $finished,
+            'reference' => $request->reference,
+            'business' => $request->subject_name,
+            'ward' => $site?->ward?->name,
+            'lga' => $site?->lga?->name,
+            'state_name' => null,
+            'finding' => $result['finding'],
+            'score' => $result['score'],
+            'tier' => $request->tier->short(),
+            'verified_on' => $on->toDateString(),
+            'freshness' => $finished ? ($this->tiers->freshness($on)['state'] ?? 'current') : 'current',
+            'officer_reference' => $site === null ? null : $this->officerReference($site->agent_id),
+        ];
+    }
+
     private function officerReference(int $userId): string
     {
         if ($userId === 0) {

@@ -28,6 +28,9 @@ final class PostTransaction
      * @param  array<string, int>  $legs  Account code to signed minor units.
      * @param  int|null  $purchaseOrderId  A product order this movement is about, instead of a verification order.
      * @param  int|null  $payoutId  A merchant withdrawal this movement is about.
+     * @param  int|null  $enumerateRequestId  An Enumerate verification request this movement is about.
+     * @param  int|null  $walletFundingId  A top-up of a requester's wallet this movement is about.
+     * @param  int|null  $walletId  Whose wallet it moved: an owner beside the subject, written on every leg.
      */
     public function __invoke(
         array $legs,
@@ -37,6 +40,9 @@ final class PostTransaction
         ?Carbon $occurredAt = null,
         ?int $purchaseOrderId = null,
         ?int $payoutId = null,
+        ?int $enumerateRequestId = null,
+        ?int $walletFundingId = null,
+        ?int $walletId = null,
     ): string {
         if (count($legs) < 2) {
             throw new RuntimeException('A movement has at least two sides.');
@@ -58,7 +64,7 @@ final class PostTransaction
         $uuid = (string) Str::uuid7();
         $when = $occurredAt ?? Carbon::now(config('app.timezone'));
 
-        return DB::transaction(function () use ($legs, $reason, $orderId, $narrative, $uuid, $when, $purchaseOrderId, $payoutId): string {
+        return DB::transaction(function () use ($legs, $reason, $orderId, $narrative, $uuid, $when, $purchaseOrderId, $payoutId, $enumerateRequestId, $walletFundingId, $walletId): string {
             foreach ($legs as $code => $amount) {
                 $account = LedgerAccount::query()->where('code', $code)->first();
 
@@ -74,6 +80,9 @@ final class PostTransaction
                     'verification_order_id' => $orderId,
                     'purchase_order_id' => $purchaseOrderId,
                     'payout_id' => $payoutId,
+                    'enumerate_request_id' => $enumerateRequestId,
+                    'wallet_funding_id' => $walletFundingId,
+                    'wallet_id' => $walletId,
                     'reason' => $reason,
                     'narrative' => $narrative,
                     'occurred_at' => $when,

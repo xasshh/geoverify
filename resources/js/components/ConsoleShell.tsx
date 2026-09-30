@@ -126,6 +126,10 @@ export type QueueCounts = {
     orders: number;
     messages: number;
     inspections: number;
+    deskChecks: number;
+    enumerateVisits: number;
+    support: number;
+    organisations: number;
 };
 
 export function ConsoleNav({

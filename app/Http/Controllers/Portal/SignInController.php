@@ -12,6 +12,7 @@ use App\Domain\Party\Actions\SignInWithPassword;
 use App\Domain\Party\Actions\VerifySignInCode;
 use App\Domain\Party\Enums\PartyKind;
 use App\Domain\Party\Models\PortalAccount;
+use App\Http\Middleware\EnsurePortalAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -154,7 +155,7 @@ final class SignInController
 
             // Back to where they were going: a buyer sent here from checkout
             // should land on their cart, not on a dashboard about nothing.
-            return redirect()->intended(route('portal.dashboard'));
+            return $this->home($request);
         }
 
         // Proved, but nobody here yet. Carry the number forward and ask who
@@ -199,7 +200,7 @@ final class SignInController
             $request->session()->regenerate();
             $request->session()->forget([self::PENDING_PHONE, self::AUDIENCE]);
 
-            return redirect()->intended(route('portal.dashboard'))->with('status', 'Welcome. Your account is ready.');
+            return $this->home($request)->with('status', 'Welcome. Your account is ready.');
         }
 
         $validated = $request->validate([
@@ -229,8 +230,7 @@ final class SignInController
         $request->session()->regenerate();
         $request->session()->forget(self::PENDING_PHONE);
 
-        return redirect()
-            ->intended(route('portal.dashboard'))
+        return $this->home($request)
             ->with('status', "Registered. Your code is {$party->code}.");
     }
 
@@ -254,7 +254,7 @@ final class SignInController
         $request->session()->regenerate();
         $account->forceFill(['last_signed_in_at' => now()])->save();
 
-        return redirect()->intended(route('portal.dashboard'));
+        return $this->home($request);
     }
 
     public function forgotForm(): Response
@@ -300,5 +300,26 @@ final class SignInController
         $request->session()->regenerateToken();
 
         return redirect()->route('portal.sign-in');
+    }
+
+    /**
+     * After signing in: the portal page the person was on their way to, if
+     * any, else the dashboard. Only a page inside the portal or Enumerate (the
+     * same accounts, another front door) is honoured, so nothing another
+     * sign-in remembered can send a portal account elsewhere.
+     */
+    private function home(Request $request): RedirectResponse
+    {
+        $intended = $request->session()->pull(EnsurePortalAccount::INTENDED);
+        $path = is_string($intended) ? (string) parse_url($intended, PHP_URL_PATH) : '';
+        $host = is_string($intended) ? parse_url($intended, PHP_URL_HOST) : null;
+
+        $ours = str_starts_with($path, '/portal') || $path === '/enumerate' || str_starts_with($path, '/enumerate/');
+
+        if ($ours && ($host === null || $host === $request->getHost())) {
+            return redirect()->to($intended);
+        }
+
+        return redirect()->route('portal.dashboard');
     }
 }

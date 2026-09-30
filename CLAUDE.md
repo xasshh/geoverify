@@ -52,7 +52,16 @@ for it yet.
   the building, are shown to that order's buyer and merchant on the order page
   through links that expire in minutes. Nowhere else: not the directory, not
   the investor portal, not an export. `InspectionFlowTest` holds it ("shows the
-  agent photographs to the two parties and on no other surface").
+  agent photographs to the two parties and on no other surface"). A second,
+  decided on 2026-09-29 for Enumerate (decision 1 of the flow document): on a
+  site visit the officer files photographs as `visit_storefront`,
+  `visit_signage`, `visit_interior` or `visit_other`, attached to the
+  `enumerate_visits` row. The requester who paid sees the storefront and
+  signage kinds only, asked for by name (`EnumerateVisit::exteriorPhotos`), only
+  once a supervisor has accepted the visit, through links that expire. The
+  interior is counted and never shown. Nor is any coordinate: the requester is
+  told how far the premises are from the registered address, and the ward and
+  LGA. `EnumerateVisitTest` holds it.
 
 - **A field-enumerated record is private until its party opts in.** Enumeration
   is not consent to publication. `enterprises.publication_state` defaults to
@@ -137,7 +146,8 @@ there are four rather than one table with a wider `Role`.
 
 Six surfaces, six middleware aliases, all registered in `bootstrap/app.php`:
 `field` (`/field`), `supervises` (`/console`), `administers` (`/admin`),
-`portal` (`/portal`), `client` (`/client`) and `investor` (`/invest`).
+`portal` (`/portal`, and Enumerate's `/enumerate` on the same guard), `client`
+(`/client`) and `investor` (`/invest`).
 `investor:verified` additionally requires the organisation to have passed KYC,
 which an admin rules on at `/admin/investors`; everything that names a business
 sits behind it. Per record access is `AssignmentPolicy` and `DevicePolicy`.
@@ -164,7 +174,11 @@ the presigned object storage link it replaces. `verify/{token}` is how the
 holder of a printed certificate checks it without an account, so the token is
 forty random characters rather than anything derivable from the reference
 printed next to it, and what may be disclosed is decided in
-`ResolvePublicVerification` rather than in the controller.
+`ResolvePublicVerification` rather than in the controller. The same route
+answers an Enumerate report's QR code (`enumerate_requests.report_token`,
+minted on the first print) with less than the report itself says: the
+business, tier, finding, score, date and ward, and nothing from the registry
+or the daily log.
 `receipts/{token}` is a person's copy of the consent they gave, open on a
 forty-eight character token because somebody asked at their door may never have
 had an account here. The print routes below are signed, short lived and refused
@@ -183,7 +197,45 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Field,Identity,Investment,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Investment,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
+`Enumerate` is the verification portal at `/enumerate` (flow document:
+"Enumerate Platform: How the Three Portals Work Together"): anybody pays from a
+prepaid wallet to have any business checked by its CAC number. The same portal
+accounts and `portal` guard, behind its own door. The subject is a CAC record,
+not a row of `enterprises`, and nothing is written to the register on a
+stranger's say-so. `RegistryLookup` is the one way to CAC and FIRS: `dojah` in
+anything real, `fake` (a fixed list that refuses production) in development and
+tests, chosen by `REGISTRY_DRIVER`. Drivers report what the register said;
+`RunRegistryChecks` alone decides what matches, and directors are kept to a name
+and a role. A supervisor reads the answers at `/console/desk-checks`
+(`DecideDeskCheck`): a desk check that ends the job earns `registry_fee_minor`
+and returns the rest of the price to the wallet. Wallet balances are sums over
+`liability.requester_wallets`, attributed by `ledger_entries.wallet_id` (an
+owner beside the one subject); a top-up (`FND-...`) grows only on the signed
+webhook, and spending held credit is a ledger movement that needs none.
+Tier 2 and 3 visits are `enumerate_visits` rows, never `assignments`: a
+supervisor pins the premises at `/console/enumerate-visits`, the officer files
+from `field/Visit` through the same job outbox as an inspection, and a site
+visit is earned when a supervisor accepts it. A Tier 3 then runs daily visits
+(`kind = monitoring`, `ManageMonitoring`) on trading days, Monday to Saturday
+less public holidays, opened each morning by `enumerate:schedule-monitoring`.
+A day nobody filed is `missed`; closing pays back the missed trading days'
+share of the price. `ScoreEnumerateRequest` gives the score (registry 30,
+location 40, activity 30, out of what the tier checks) live while a request
+runs and stamps it when the request finishes; a stamped score never moves.
+Support threads (`enumerate_tickets`, append-only messages) are answered at
+`/console/support`, and a refund there is an administrator's ruling only.
+Organisations (E5) are sets of the same portal accounts with roles (admin,
+project lead, requester, viewer, asked through `EnumerateMember::may`) and a
+wallet of their own; a wallet has exactly one owner. `EnumerateContext` says
+whether a person is acting for themselves or an organisation, from the
+session, rechecked on every read, and every controller that spends or lists
+money asks it for the wallet. An admin approves an organisation at
+`/admin/enumerate-organisations` before bulk verification
+(`ImportBulkVerification`: every line read first, the batch paid in full or not
+at all) and projects open. A project runs as a campaign, linked by
+`enumerate_projects.campaign_id`, and the organisation sees it through
+`AssembleCampaignDossier`, so never the commercials.
 `Party` and `Claim` are Phase 2: parties, portal accounts, the access between
 them, and the claim and dispute flow. `Investment` is Phase 4 (plan in
 `_plan/phase-4/`): investor organisations, the opportunities a business
@@ -200,7 +252,8 @@ at the reduced depth.
 from the catalogue, paid through the same signed webhook (it routes by
 reference: `GV-2026-000123` verification, `GV-10482` product, `gvpo-...`
 withdrawal), held in `BUYER_FUNDS_HELD`, released to `MERCHANT_BALANCES` on the
-buyer's word, a ruling, or `orders:release-delivered`. Wallet balances are sums
+buyer's word, a ruling, or `orders:release-delivered`. Enumerate wallet
+top-ups (`FND-20260923-7H2Q`) arrive through the same webhook. Wallet balances are sums
 over the ledger, never a column. Field messaging lives in `Field`
 (`FieldMessaging`, `field_messages`): an officer's supervisor is whoever
 assigned their newest open cell, so there is no team table; it is its own
@@ -250,9 +303,13 @@ decides an order is late.
 
 ## Documents a browser prints
 
-Four documents leave the system as PDF: the evidence pack, the campaign brief,
-the verification certificate and the consent receipt. All four take one path,
-and a fifth should join it rather than grow a second pipeline. A Blade view in
+Five documents leave the system as PDF: the evidence pack, the campaign brief,
+the verification certificate, the consent receipt and the Enumerate Business
+Verification Report. All five take one path, and a sixth should join it rather
+than grow a second pipeline. The report is assembled only from
+`PresentEnumerateRequest::page`, so it can never print what the requester's
+page withholds; its photographs are embedded as data URIs because the printing
+browser has no session to fetch a link with. A Blade view in
 `resources/views/exports` is served by a signed, short lived HTML route
 registered outside the guard group that owns the feature, because the headless
 browser fetching it has no session. `PdfRenderer` drives Chromium over that URL
@@ -381,6 +438,7 @@ php artisan geoverify:pack-build <area>                 # the offline PMTiles pa
 php artisan geoverify:score                             # confidence over captures
 php artisan orders:sweep-sla --dry-run                  # SLA refunds, daily at 07:00
 php artisan geoverify:reconcile-ledger --from= --to=    # provider drift, daily at 07:30
+php artisan enumerate:schedule-monitoring --date=       # Tier 3 daily visits, daily at 06:00
 ```
 
 `geoverify:reconcile-ledger` exits non-zero when the ledger and the payment

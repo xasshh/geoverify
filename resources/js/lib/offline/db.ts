@@ -165,6 +165,13 @@ export interface JobAction {
     seq?: number;
     uuid: string;
     inspectionId: number;
+    /**
+     * Where the job's endpoints live, for a job that is not an inspection:
+     * `/api/field/visits/12` for an Enumerate visit. Absent on everything
+     * written before E2, which are all inspections. Not indexed, so no schema
+     * version: jobs are found by id and told apart by this.
+     */
+    base?: string;
     type: 'arrive' | 'photo' | 'report';
     payload: Record<string, unknown>;
     blob: Blob | null;

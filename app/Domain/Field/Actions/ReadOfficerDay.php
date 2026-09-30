@@ -58,18 +58,21 @@ final class ReadOfficerDay
     }
 
     /**
-     * Inspections and site visits given to this officer and not yet reported.
+     * Inspections, site visits and Enumerate visits given to this officer and
+     * not yet reported. Each carries the page it opens, which is also the page
+     * the field shell stores for offline use.
      *
      * @return list<array<string, mixed>>
      */
     private function jobs(User $officer): array
     {
-        return array_map(static fn (object $r): array => [
+        $inspections = array_map(static fn (object $r): array => [
             'id' => (int) $r->id,
             'kind' => (string) $r->kind,
             'business' => (string) $r->trading_name,
             'orderRef' => (string) $r->reference,
             'requestedFor' => $r->requested_for === null ? null : Carbon::parse((string) $r->requested_for)->toIso8601String(),
+            'href' => '/field/jobs/'.(int) $r->id,
         ], DB::select(<<<'SQL'
             SELECT i.id, i.kind, i.requested_for, e.trading_name, po.reference
               FROM inspections i
@@ -78,6 +81,25 @@ final class ReadOfficerDay
              WHERE i.agent_id = ? AND i.status = 'assigned'
              ORDER BY i.requested_for NULLS FIRST, i.assigned_at
         SQL, [$officer->id]));
+
+        $visits = array_map(static fn (object $r): array => [
+            'id' => (int) $r->id,
+            'kind' => $r->kind === 'monitoring' ? 'daily' : 'verification',
+            'business' => (string) $r->subject_name,
+            'orderRef' => $r->kind === 'monitoring'
+                ? sprintf('%s · day %d of %d', $r->reference, (int) $r->day_number, (int) $r->monitoring_days)
+                : (string) $r->reference,
+            'requestedFor' => null,
+            'href' => '/field/visits/'.(int) $r->id,
+        ], DB::select(<<<'SQL'
+            SELECT v.id, v.kind, v.day_number, r.subject_name, r.reference, r.monitoring_days
+              FROM enumerate_visits v
+              JOIN enumerate_requests r ON r.id = v.enumerate_request_id
+             WHERE v.agent_id = ? AND v.status = 'assigned'
+             ORDER BY v.assigned_at
+        SQL, [$officer->id]));
+
+        return [...$inspections, ...$visits];
     }
 
     /** @return array{name: string, code: string, area: string|null, day: int|null, days: int|null}|null */

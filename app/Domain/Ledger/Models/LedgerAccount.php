@@ -54,6 +54,15 @@ final class LedgerAccount extends Model
     /** Commission and service fees on a released order. */
     public const COMMERCE_INCOME = 'income.commerce_fees';
 
+    /**
+     * Prepaid credit Enumerate requesters hold with us (E1).
+     *
+     * Theirs until spent on a request, when it moves to CUSTOMER_FUNDS_HELD
+     * like any other payment for work not yet done. Each entry names the
+     * wallet, and a wallet's balance is the negated sum of its entries here.
+     */
+    public const REQUESTER_WALLETS = 'liability.requester_wallets';
+
     protected $fillable = ['code', 'name', 'type', 'currency'];
 
     protected function casts(): array
