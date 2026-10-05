@@ -197,7 +197,7 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Investment,Ledger,Media,Party,Registry,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Investment,Ledger,Media,Party,Registry,Sms,Staff,Sync,Verification}`.
 `Enumerate` is the verification portal at `/enumerate` (flow document:
 "Enumerate Platform: How the Three Portals Work Together"): anybody pays from a
 prepaid wallet to have any business checked by its CAC number. The same portal
@@ -259,7 +259,11 @@ over the ledger, never a column. Field messaging lives in `Field`
 assigned their newest open cell, so there is no team table; it is its own
 channel beside the sync contract, never part of it.
 `Staff` is the in-house side: creating, suspending and reinstating the people
-who work this system. `Ledger` is the
+who work this system. `Sms` is the one way a text reaches a phone: `SmsGateway`,
+chosen by `SMS_DRIVER`, is `termii` (the `dnd` channel, which reaches numbers on
+the do-not-disturb list) anywhere real and `log` on a developer machine only,
+where the browser specs read codes back from `SMS to +234...` lines. Only codes
+are sent, synchronously, so a refusal reaches the person waiting on the screen. `Ledger` is the
 double-entry record behind paid verification: one signed `amount_minor` column,
 append-only by database trigger, and `PostTransaction` is the only writer.
 Business rules go in action classes, not in controllers and not in models.

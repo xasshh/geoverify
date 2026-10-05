@@ -197,6 +197,16 @@ MAIL_SCHEME=smtps
 MAIL_USERNAME=no-reply@field.example.ng
 MAIL_PASSWORD=...
 MAIL_FROM_ADDRESS=no-reply@field.example.ng
+
+# Sign-in and claim codes by text. Without this nobody new can sign in to the
+# portal or Enumerate: the log driver refuses to run in production. From the
+# Termii dashboard: the API key, your account's base URL, and a sender ID
+# approved for the dnd channel (approval takes a few working days).
+SMS_DRIVER=termii
+TERMII_BASE_URL=https://v3.api.termii.com
+TERMII_API_KEY=...
+TERMII_SENDER_ID=GeoVerify
+TERMII_CHANNEL=dnd
 ```
 
 Then:

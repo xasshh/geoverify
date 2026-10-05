@@ -7,6 +7,9 @@ namespace App\Providers;
 use App\Domain\Enumerate\Registry\DojahRegistry;
 use App\Domain\Enumerate\Registry\FakeRegistry;
 use App\Domain\Enumerate\Registry\RegistryLookup;
+use App\Domain\Sms\LogSms;
+use App\Domain\Sms\SmsGateway;
+use App\Domain\Sms\TermiiSms;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +29,19 @@ class AppServiceProvider extends ServiceProvider
                 (string) config('services.dojah.secret'),
             ),
             default => new FakeRegistry($this->app->isProduction()),
+        });
+
+        // The same shape: a server nobody configured fails on the first code
+        // it tries to send, saying which keys are missing, and never falls
+        // back to writing live codes into its log.
+        $this->app->bind(SmsGateway::class, fn (): SmsGateway => match (config('services.sms.driver')) {
+            'termii' => new TermiiSms(
+                (string) config('services.termii.base_url'),
+                (string) config('services.termii.api_key'),
+                (string) config('services.termii.sender_id'),
+                (string) config('services.termii.channel'),
+            ),
+            default => new LogSms($this->app->environment(['local', 'testing'])),
         });
     }
 

@@ -60,7 +60,7 @@ async function signInAsParty(page: Page, phone: string): Promise<void> {
     await page.getByRole('button', { name: 'Send me a code' }).click();
 
     await expect(page).toHaveURL(/\/portal\/verify/);
-    await page.getByLabel('Code').fill(lastLoggedCode(/Portal sign-in code for \+\d+: (\d{6})/g));
+    await page.getByLabel('Code').fill(lastLoggedCode(/SMS to \+\d+: GeoVerify: (\d{6}) is your sign-in code/g));
     await page.getByRole('button', { name: /confirm|continue|sign in/i }).click();
     await expect(page).toHaveURL(/\/portal$/);
 }

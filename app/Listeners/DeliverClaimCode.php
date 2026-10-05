@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Domain\Claim\Events\ClaimCodeIssued;
-use Illuminate\Support\Facades\Log;
-use RuntimeException;
+use App\Domain\Sms\SmsGateway;
 
 final class DeliverClaimCode
 {
+    public function __construct(private readonly SmsGateway $sms) {}
+
     /**
      * The message a stranger might receive.
      *
@@ -24,17 +25,6 @@ final class DeliverClaimCode
             ."{$event->tradingName}. If you did not ask for this, ignore it and "
             .'tell nobody the code.';
 
-        if (app()->isLocal()) {
-            Log::info("Claim code to {$event->phone}: {$body}");
-
-            return;
-        }
-
-        Log::error('No SMS gateway is configured, so a claim code could not be delivered.', [
-            'phone' => $event->maskedPhone,
-            'claim_id' => $event->claimId,
-        ]);
-
-        throw new RuntimeException('We cannot send a code right now. Please try again shortly.');
+        $this->sms->send($event->phone, $body);
     }
 }

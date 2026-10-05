@@ -38,7 +38,7 @@ async function registerParty(page: Page, phone: string, name: string) {
     await page.getByRole('button', { name: 'Send me a code' }).click();
 
     await expect(page).toHaveURL(/\/portal\/verify/);
-    const signInCode = lastLoggedCode(/Portal sign-in code for \+\d+: (\d{6})/g);
+    const signInCode = lastLoggedCode(/SMS to \+\d+: GeoVerify: (\d{6}) is your sign-in code/g);
     await page.getByLabel('Code').fill(signInCode);
     await page.getByRole('button', { name: /confirm|continue|sign in/i }).click();
 
@@ -107,7 +107,7 @@ test('a shop owner finds their shop, proves it by phone, and manages it', async 
     await page.getByRole('button', { name: /send the code/i }).click();
     await expect(page.getByText(/we sent a code/i)).toBeVisible();
 
-    const claimCode = lastLoggedCode(/Claim code to \+\d+: GeoVerify: (\d{6})/g);
+    const claimCode = lastLoggedCode(/SMS to \+\d+: GeoVerify: (\d{6}) is the code to confirm/g);
     await page.getByLabel(/six digit code/i).fill(claimCode);
     await page.getByRole('button', { name: 'Confirm' }).click();
 

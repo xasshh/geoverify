@@ -92,6 +92,24 @@ return [
         'secret' => env('DOJAH_SECRET_KEY', ''),
     ],
 
+    /*
+     * Text messages: sign-in and claim codes, nothing else.
+     *
+     * `log` writes the message to the log and refuses to run anywhere but a
+     * developer machine. `termii` sends on the dnd channel, which reaches
+     * numbers on the do-not-disturb list and needs an approved sender ID.
+     */
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
+    'termii' => [
+        'base_url' => env('TERMII_BASE_URL', 'https://v3.api.termii.com'),
+        'api_key' => env('TERMII_API_KEY', ''),
+        'sender_id' => env('TERMII_SENDER_ID', ''),
+        'channel' => env('TERMII_CHANNEL', 'dnd'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
