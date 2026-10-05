@@ -20,6 +20,10 @@ ARG POSTGRES_VERSION=17
 ARG POSTGIS_VERSION=3
 ARG H3PG_COMMIT=04227cb62a7338eb2a655fff875b125de2f043f4
 
+# PostgreSQL_INDENT=OFF: the server-dev package ships pgindent, and h3-pg makes
+# its library depend on running it over the sources when it is found. On
+# bookworm that step fails (no typedefs file) and takes the build with it.
+# Formatting someone else's sources is no part of building them.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -31,7 +35,7 @@ RUN set -eux; \
     git clone https://github.com/zachasme/h3-pg.git /tmp/h3-pg; \
     cd /tmp/h3-pg; \
     git checkout ${H3PG_COMMIT}; \
-    cmake -B build -DCMAKE_BUILD_TYPE=Release; \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DPostgreSQL_INDENT=OFF; \
     cmake --build build --parallel "$(nproc)"; \
     cmake --install build; \
     cd /; rm -rf /tmp/h3-pg; \
