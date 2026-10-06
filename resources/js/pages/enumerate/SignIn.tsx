@@ -1,6 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { AuthFooter, HexField } from '@/components/AuthLayouts';
+import { HexField } from '@/components/AuthLayouts';
 import { Button } from '@/components/Button';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
@@ -203,8 +203,6 @@ export default function SignIn({ prices }: { prices: Prices }) {
                         )}
                     </div>
                 </div>
-
-                <AuthFooter className="mt-10" />
             </main>
         </div>
     );

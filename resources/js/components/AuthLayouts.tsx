@@ -33,14 +33,6 @@ export function HexField({ className }: { className?: string }) {
     );
 }
 
-export function AuthFooter({ className }: { className?: string }) {
-    return (
-        <footer className={cx('flex flex-wrap items-center justify-between gap-3 text-table text-faint', className)}>
-            <span>© {new Date().getFullYear()} Iconect Consult Limited</span>
-        </footer>
-    );
-}
-
 /**
  * The business portal's door. Showcase on the left from lg up; below it, a dark
  * band carries the mark and the greeting and the form sits on a white sheet.
@@ -103,7 +95,6 @@ export function BusinessAuthLayout({
                 <div className="flex flex-1 flex-col lg:items-center lg:justify-center">
                     <div className="w-full lg:max-w-[460px]">{children}</div>
                 </div>
-                <AuthFooter className="mt-10 hidden lg:flex" />
             </main>
         </div>
     );
@@ -191,7 +182,6 @@ export function InvestorAuthLayout({ panel, children }: { panel: ReactNode; chil
                 <div className="flex flex-1 flex-col justify-center py-10">
                     <div className="w-full max-w-[460px] lg:ml-20">{children}</div>
                 </div>
-                <AuthFooter />
             </main>
 
             <aside className="relative m-4 hidden overflow-hidden rounded-[28px] bg-[#0F1A17] text-inverse lg:block">
