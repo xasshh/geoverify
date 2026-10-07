@@ -14,6 +14,8 @@ import { floorOptions } from '@/lib/floors';
 import { useTrace } from '@/lib/geolocation';
 import { PhotoCapture } from '@/components/PhotoCapture';
 import { FieldMap, type CapturedPoint } from '@/components/FieldMap';
+import { BasemapSwitch } from '@/components/BasemapSwitch';
+import { useImagery } from '@/lib/offline/useImagery';
 import { PackDownload } from '@/components/PackDownload';
 import { usePack } from '@/lib/offline/usePack';
 import { sendFixes, startSession, uuid7 } from '@/lib/capture';
@@ -95,6 +97,9 @@ export default function Capture({
     const sessionUuid = useRef(uuid7());
     const queue = useOfflineQueue();
     const pack = usePack(cell.coverageAreaId);
+    // Optional satellite view. Absent unless imagery of this mandate is on the
+    // phone, in which case the map is exactly what it always was.
+    const imagery = useImagery(cell.coverageAreaId);
 
     /**
      * The building the officer tapped on the map.
@@ -287,7 +292,18 @@ export default function Capture({
                                 selectedFootprintId={selectedFootprint}
                                 onSelectFootprint={setSelectedFootprint}
                                 onStreetChange={setStreet}
+                                imagery={imagery.image}
+                                basemap={imagery.choice}
                             />
+
+                            {imagery.image !== null && (
+                                <BasemapSwitch
+                                    choice={imagery.choice}
+                                    captured={imagery.image.captured}
+                                    onChange={imagery.choose}
+                                    className="absolute top-12 right-2.5 w-[11.5rem]"
+                                />
+                            )}
 
                             {/* Where the officer is, in words. The map answers
                                 where, this answers where by name, which is what

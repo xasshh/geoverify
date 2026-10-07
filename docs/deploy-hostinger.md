@@ -330,8 +330,38 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
+Satellite imagery for area capture is built on its own connection
+(`redis-long`, queue `imagery`), because one build can take most of an hour
+and the default connection would hand it to a second worker after 90 seconds.
+It needs GDAL and the pmtiles CLI:
+
 ```bash
-sudo systemctl daemon-reload && sudo systemctl enable --now geoverify-queue
+sudo apt install -y gdal-bin
+curl -sL -o /tmp/pm.tgz https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz
+tar -xzf /tmp/pm.tgz -C /tmp pmtiles && sudo install -m 0755 /tmp/pmtiles /usr/local/bin/pmtiles
+```
+
+`/etc/systemd/system/geoverify-imagery.service`:
+
+```ini
+[Unit]
+Description=GeoVerify imagery worker
+After=network.target docker.service
+
+[Service]
+User=deploy
+Group=www-data
+WorkingDirectory=/var/www/geoverify
+ExecStart=/usr/bin/php artisan queue:work redis-long --queue=imagery --sleep=3 --tries=1 --timeout=3700 --max-time=7200
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now geoverify-queue geoverify-imagery
 ( crontab -l 2>/dev/null; echo "* * * * * cd /var/www/geoverify && php artisan schedule:run >> /dev/null 2>&1" ) | crontab -
 ```
 

@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Field;
 
 use App\Domain\Coverage\Models\MapPack;
 use App\Domain\Field\Models\Assignment;
+use App\Domain\Imagery\Models\BasemapLayer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -85,6 +87,86 @@ final class MapPackController
             'ETag' => '"'.$pack->checksum.'"',
             'Cache-Control' => 'private, max-age=604800',
         ]);
+    }
+
+    /**
+     * Satellite imagery for the mandates this officer is working.
+     *
+     * Its own listing rather than more entries in index(): a handset already in
+     * the field reads that one as "the map pack for each mandate", and two per
+     * mandate would be a question it was never built to answer.
+     */
+    public function imagery(Request $request): JsonResponse
+    {
+        $layers = BasemapLayer::query()
+            ->whereIn('coverage_area_id', $this->areaIds($request))
+            ->current()
+            ->with('coverageArea:id,name')
+            ->get();
+
+        return response()->json([
+            'imagery' => $layers->map(static fn (BasemapLayer $layer): array => [
+                'id' => $layer->id,
+                'coverageAreaId' => $layer->coverage_area_id,
+                'mandate' => $layer->coverageArea->name,
+                'name' => $layer->name,
+                'source' => $layer->source,
+                'captured' => $layer->capturedLabel(),
+                'capturedFrom' => $layer->captured_from?->toDateString(),
+                'capturedTo' => $layer->captured_to?->toDateString(),
+                'resolutionCm' => $layer->resolution_cm,
+                'licence' => $layer->licence_note,
+                'bytes' => (int) $layer->bytes,
+                'megabytes' => $layer->megabytes(),
+                'checksum' => (string) $layer->checksum,
+                'minZoom' => (int) $layer->min_zoom,
+                'maxZoom' => (int) $layer->max_zoom,
+                'bounds' => [
+                    (float) $layer->west, (float) $layer->south,
+                    (float) $layer->east, (float) $layer->north,
+                ],
+                'url' => route('api.field.imagery.show', $layer),
+            ])->values()->all(),
+        ]);
+    }
+
+    /** The imagery archive, served with Range support like a map pack. */
+    public function imageryFile(Request $request, BasemapLayer $layer): BinaryFileResponse|RedirectResponse
+    {
+        abort_unless(
+            $layer->status === BasemapLayer::STATUS_READY
+                && $layer->path !== null
+                && $this->areaIds($request)->contains($layer->coverage_area_id),
+            403,
+        );
+
+        $disk = Storage::disk('media');
+
+        if (config('filesystems.disks.media.driver') !== 'local') {
+            return redirect()->away($disk->temporaryUrl($layer->path, now()->addHour()));
+        }
+
+        return response()->file($disk->path($layer->path), [
+            'Content-Type' => 'application/vnd.pmtiles',
+            'ETag' => '"'.$layer->checksum.'"',
+            'Cache-Control' => 'private, max-age=604800',
+        ]);
+    }
+
+    /**
+     * The mandates this officer holds open cells in.
+     *
+     * @return Collection<int, int>
+     */
+    private function areaIds(Request $request): Collection
+    {
+        return Assignment::query()
+            ->open()
+            ->where('assignments.user_id', $request->user()?->id)
+            ->join('grid_cells', 'grid_cells.id', '=', 'assignments.grid_cell_id')
+            ->distinct()
+            ->pluck('grid_cells.coverage_area_id')
+            ->map(static fn (mixed $id): int => (int) $id);
     }
 
     /**

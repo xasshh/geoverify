@@ -218,6 +218,8 @@ Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->gro
 
     Route::get('mandates', [MandateController::class, 'index'])->name('mandates');
     Route::post('mandates', [MandateController::class, 'store'])->name('mandates.store');
+    Route::post('mandates/from-boundary', [MandateController::class, 'storeFromBoundary'])->name('mandates.from-boundary');
+    Route::post('mandates/{area}/imagery', [MandateController::class, 'requestImagery'])->name('mandates.imagery');
 
     /*
     | Campaigns, from the inside. The only place commercials are reachable.
@@ -664,6 +666,10 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     // The offline map pack: what is available, and the bytes.
     Route::get('packs', [MapPackController::class, 'index'])->name('packs.index');
     Route::get('packs/{pack}', [MapPackController::class, 'show'])->name('packs.show');
+
+    // Satellite imagery for area capture, beside the packs and never in them.
+    Route::get('imagery', [MapPackController::class, 'imagery'])->name('imagery.index');
+    Route::get('imagery/{layer}', [MapPackController::class, 'imageryFile'])->name('imagery.show');
 
     // Where a handset that has been offline tells the server what happened.
     Route::post('sync', SyncController::class)->name('sync');

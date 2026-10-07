@@ -75,6 +75,22 @@ return [
             'after_commit' => false,
         ],
 
+        /*
+         * Long work: building satellite imagery for a mandate can take most of
+         * an hour. On the default connection retry_after (90 s) would hand a
+         * running build to a second worker, so it has its own connection and
+         * its own worker (geoverify-imagery), and never holds up the short jobs
+         * that score captures.
+         */
+        'redis-long' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'imagery',
+            'retry_after' => (int) env('REDIS_LONG_QUEUE_RETRY_AFTER', 4000),
+            'block_for' => null,
+            'after_commit' => true,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

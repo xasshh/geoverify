@@ -197,7 +197,7 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Investment,Ledger,Media,Party,Registry,Sms,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Imagery,Investment,Ledger,Media,Party,Registry,Sms,Staff,Sync,Verification}`.
 `Enumerate` is the verification portal at `/enumerate` (flow document:
 "Enumerate Platform: How the Three Portals Work Together"): anybody pays from a
 prepaid wallet to have any business checked by its CAC number. The same portal
@@ -258,6 +258,14 @@ over the ledger, never a column. Field messaging lives in `Field`
 (`FieldMessaging`, `field_messages`): an officer's supervisor is whoever
 assigned their newest open cell, so there is no team table; it is its own
 channel beside the sync contract, never part of it.
+`Imagery` is satellite imagery for area capture (`_plan/area-capture/`): a
+`BasemapLayer` per mandate, built by `BuildSatelliteBasemap` on the `redis-long`
+connection from the clearest free Sentinel-2 scene of each tile
+(`SentinelCatalogue`, Earth Search STAC) through GDAL and the pmtiles CLI
+(`ImageryPipeline`), and served to officers at `/api/field/imagery`, beside the
+vector packs and never inside `/api/field/packs`, whose answer a shipped
+handset depends on. A mandate can also come from an uploaded boundary file
+(`CreateCoverageAreaFromBoundary`, `coverage_areas.boundary_source`).
 `Staff` is the in-house side: creating, suspending and reinstating the people
 who work this system. `Sms` is the one way a text reaches a phone: `SmsGateway`,
 chosen by `SMS_DRIVER`, is `termii` (the `dnd` channel, which reaches numbers on

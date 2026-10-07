@@ -31,7 +31,7 @@ final class CoverageArea extends Model
         'client_name', 'contract_ref', 'name', 'state_code', 'lga_code',
         'admin_boundary_id', 'status', 'starts_on', 'ends_on',
         'accuracy_threshold_m', 'default_h3_resolution',
-        'campaign_id', 'target_record_count',
+        'campaign_id', 'target_record_count', 'boundary_source', 'boundary_file',
     ];
 
     protected function casts(): array

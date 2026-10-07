@@ -217,7 +217,7 @@ export async function discardPack(packId: number): Promise<void> {
  * Blob.slice does not copy, so a tile request reads a few kilobytes off disk
  * rather than pulling 67 MB through memory to find them.
  */
-class DeviceSource implements Source {
+export class DeviceSource implements Source {
     constructor(
         private readonly blob: Blob,
         private readonly key: string,

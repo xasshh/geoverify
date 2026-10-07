@@ -349,6 +349,16 @@ Tests:
 
 ### Stage 2: imagery ingestion and map switcher
 
+**Built 2026-10-07.** As decided: satellite, not uploads first.
+- `BasemapLayer` per mandate. The pipeline was proved on the production server
+  against Makurdi: 6 km square, 2.8 s, 112 KB, WEBP z12 to 14.
+- One archive per mandate rather than per zone. At 10 m a mandate is small:
+  an LGA is tens of megabytes.
+- Mandates from an uploaded boundary file.
+- A Street/Satellite switch with opacity and the image date. It appears on the
+  capture map only when imagery is on the phone.
+- An optional download row on the device page.
+
 - **`basemap_layers`:**
   - `campaign_id`, `name`
   - `kind` (raster_pmtiles or vector_pmtiles)

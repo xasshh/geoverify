@@ -103,4 +103,40 @@ return [
         'release_after_days' => (int) env('GEOVERIFY_RELEASE_AFTER_DAYS', 7),
         'minimum_payout_minor' => (int) env('GEOVERIFY_MINIMUM_PAYOUT_MINOR', 100_000),
     ],
+
+    /*
+     * Satellite imagery for area capture.
+     *
+     * Built from Sentinel-2 through the Earth Search STAC catalogue on AWS open
+     * data: no account, Copernicus licence (free, commercial use allowed,
+     * offline copies allowed, credit required). 10 m pixels, so the archive
+     * stops at zoom 14 and the map overzooms past it.
+     *
+     * The pipeline shells out to GDAL and to the pmtiles CLI, neither of which
+     * is a PHP dependency; their paths are here so a server that keeps them
+     * somewhere else says so in one place.
+     */
+    'imagery' => [
+        'stac_url' => env('GEOVERIFY_STAC_URL', 'https://earth-search.aws.element84.com/v1'),
+        'collection' => 'sentinel-2-l2a',
+        // A scene cloudier than this over the tile is not worth the download.
+        'max_cloud_pct' => (float) env('GEOVERIFY_IMAGERY_MAX_CLOUD', 10),
+        // How far back to look. Two years covers two dry seasons, which is
+        // when the Nigerian sky is clear enough to see the ground.
+        'lookback_days' => (int) env('GEOVERIFY_IMAGERY_LOOKBACK_DAYS', 730),
+        // A guard against asking for a whole state by accident: past this a
+        // pack is too large for a phone to hold.
+        'max_area_km2' => (int) env('GEOVERIFY_IMAGERY_MAX_AREA_KM2', 15_000),
+        'gdal_bin' => env('GDAL_BIN', ''),
+        'pmtiles_binary' => env('PMTILES_BINARY', 'pmtiles'),
+        'timeout_seconds' => (int) env('GEOVERIFY_IMAGERY_TIMEOUT', 3600),
+        'licence_note' => 'Contains modified Copernicus Sentinel data, processed by GeoVerify.',
+        // The long-running connection where the queue is Redis (production);
+        // whatever the application otherwise uses anywhere else, so a
+        // development machine or a test run needs no second worker.
+        'queue_connection' => env(
+            'GEOVERIFY_IMAGERY_QUEUE_CONNECTION',
+            env('QUEUE_CONNECTION') === 'redis' ? 'redis-long' : env('QUEUE_CONNECTION', 'database'),
+        ),
+    ],
 ];

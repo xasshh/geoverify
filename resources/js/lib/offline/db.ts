@@ -185,6 +185,36 @@ export interface PackChunk {
     blob: Blob;
 }
 
+/**
+ * Satellite imagery for a mandate, held like a pack but apart from it.
+ *
+ * Its own table rather than more rows in packs: packs are looked up as "the
+ * map pack for this mandate", and a second archive per mandate there would be
+ * read as the first.
+ */
+export interface LocalImagery {
+    layerId: number;
+    coverageAreaId: number;
+    mandate: string;
+    /** "19 Nov 2025", shown on the map so a field cleared since then is not a surprise. */
+    captured: string | null;
+    licence: string | null;
+    checksum: string;
+    bytes: number;
+    received: number;
+    minZoom: number;
+    maxZoom: number;
+    bounds: [number, number, number, number];
+    blob: Blob | null;
+    installedAt: string | null;
+}
+
+export interface ImageryChunk {
+    layerId: number;
+    index: number;
+    blob: Blob;
+}
+
 const db = new Dexie('geoverify') as Dexie & {
     structures: EntityTable<LocalStructure, 'clientUuid'>;
     enterprises: EntityTable<LocalEnterprise, 'clientUuid'>;
@@ -196,6 +226,8 @@ const db = new Dexie('geoverify') as Dexie & {
     packChunks: EntityTable<PackChunk, 'packId'>;
     messages: EntityTable<LocalMessage, 'uuid'>;
     jobActions: EntityTable<JobAction, 'seq'>;
+    imagery: EntityTable<LocalImagery, 'layerId'>;
+    imageryChunks: EntityTable<ImageryChunk, 'layerId'>;
 };
 
 db.version(1).stores({
@@ -224,6 +256,13 @@ db.version(3).stores({
 // Inspection jobs (Phase 4 M3). Its own version, for the same reason again.
 db.version(4).stores({
     jobActions: '++seq, uuid, inspectionId, state',
+});
+
+// Satellite imagery for area capture. Its own version, so an officer upgrading
+// mid deployment keeps every capture and every pack already on the device.
+db.version(5).stores({
+    imagery: 'layerId, coverageAreaId',
+    imageryChunks: '[layerId+index], layerId',
 });
 
 export { db };

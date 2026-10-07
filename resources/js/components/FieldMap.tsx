@@ -6,7 +6,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
 import { fieldStyle, readPalette } from '@/lib/mapStyle';
 import { openPack } from '@/lib/offline/pack';
-import type { LocalPack } from '@/lib/offline/db';
+import { openImagery, type BasemapChoice } from '@/lib/offline/imagery';
+import type { LocalImagery, LocalPack } from '@/lib/offline/db';
 import type { Fix } from '@/lib/geolocation';
 import { cx } from '@/lib/cx';
 
@@ -62,6 +63,13 @@ interface FieldMapProps {
     onSelectFootprint: (id: number | null) => void;
     /** The street under the officer, read off the map and shown in the chrome. */
     onStreetChange: (street: string | null) => void;
+    /**
+     * Satellite imagery of the mandate, when the officer has downloaded it.
+     * Drawn under the cells and footprints, so the work list stays readable on
+     * top of the ground.
+     */
+    imagery?: LocalImagery | null;
+    basemap?: BasemapChoice;
 }
 
 export function FieldMap({
@@ -75,6 +83,8 @@ export function FieldMap({
     selectedFootprintId,
     onSelectFootprint,
     onStreetChange,
+    imagery = null,
+    basemap = { basemap: 'street', opacity: 1 },
 }: FieldMapProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibre | null>(null);
@@ -174,6 +184,51 @@ export function FieldMap({
             setReady(false);
         };
     }, [opened, pack.maxZoom, pack.minZoom, pack.bounds, pack.layers, assignedH3, centre]);
+
+    const openedImagery = useMemo(() => (imagery === null ? null : openImagery(imagery)), [imagery]);
+
+    /**
+     * The satellite layer: added once the map is up, kept under everything
+     * drawn from the pack, and shown or hidden by the officer's choice.
+     *
+     * Its own effect, so a map without imagery is built exactly as before.
+     */
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || !ready || openedImagery === null || imagery === null) {
+            return;
+        }
+
+        if (instance.getSource('imagery') === undefined) {
+            registerProtocol().add(openedImagery.archive);
+            instance.addSource('imagery', {
+                type: 'raster',
+                url: `pmtiles://${openedImagery.url}`,
+                tileSize: 256,
+            });
+
+            // Directly above the background: the first layer after it is the
+            // lowest thing the pack draws.
+            const above = instance.getStyle().layers[1]?.id;
+
+            instance.addLayer(
+                {
+                    id: 'imagery',
+                    type: 'raster',
+                    source: 'imagery',
+                    // 10 m imagery is cut to zoom 14; past that it is enlarged
+                    // rather than missing.
+                    maxzoom: 24,
+                    paint: { 'raster-fade-duration': 0 },
+                },
+                above,
+            );
+        }
+
+        instance.setLayoutProperty('imagery', 'visibility', basemap.basemap === 'satellite' ? 'visible' : 'none');
+        instance.setPaintProperty('imagery', 'raster-opacity', basemap.opacity);
+    }, [ready, openedImagery, imagery, basemap.basemap, basemap.opacity]);
 
     /** The officer's position, the ring around it, and the path walked. */
     useEffect(() => {
