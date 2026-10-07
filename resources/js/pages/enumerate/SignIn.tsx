@@ -54,7 +54,7 @@ export default function SignIn({ prices }: { prices: Prices }) {
                     <ul className="mt-8 hidden max-w-[440px] flex-col gap-3 lg:flex">
                         {tiers.map(([tier, title, body, price]) => (
                             <li key={tier} className="flex items-center gap-4 rounded-card border border-white/10 bg-white/5 px-4 py-3.5">
-                                <span className="rounded-[6px] bg-gold-soft px-2 py-1 text-[0.6875rem] font-extrabold tracking-[0.04em] text-gold-dark uppercase">{tier}</span>
+                                <span className="shrink-0 rounded-[6px] bg-gold-soft px-2 py-1 text-[0.6875rem] font-extrabold tracking-[0.04em] whitespace-nowrap text-gold-dark uppercase">{tier}</span>
                                 <span className="flex min-w-0 flex-col">
                                     <span className="text-ui font-extrabold">{title}</span>
                                     <span className="text-table text-inverse/65">{body}</span>

@@ -239,7 +239,7 @@
 
     <footer>
         <span>This report records what GeoVerify agents and official registers showed on the dates stated. Scan the QR code or visit {{ $report['verifyUrl'] }} to confirm it is genuine.</span>
-        <span style="text-align:right;white-space:nowrap">Iconect Consult Limited<br>Generated {{ $report['issuedAt']->format('j M Y, H:i') }} WAT</span>
+        <span style="text-align:right;white-space:nowrap">Generated {{ $report['issuedAt']->format('j M Y, H:i') }} WAT</span>
     </footer>
 </body>
 </html>
