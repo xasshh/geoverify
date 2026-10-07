@@ -8,9 +8,12 @@ use App\Domain\Campaign\Actions\AcknowledgeCampaign;
 use App\Domain\Campaign\Actions\AssembleCampaignDossier;
 use App\Domain\Campaign\Actions\GenerateCampaignCode;
 use App\Domain\Campaign\Actions\TransitionCampaign;
+use App\Domain\Campaign\Enums\AttributeType;
 use App\Domain\Campaign\Enums\CampaignFieldType;
 use App\Domain\Campaign\Enums\CampaignStatus;
+use App\Domain\Campaign\Enums\CaptureMode;
 use App\Domain\Campaign\Enums\EngagementStatus;
+use App\Domain\Campaign\Enums\GeometryType;
 use App\Domain\Campaign\Enums\PaymentStatus;
 use App\Domain\Campaign\Enums\StakeholderCategory;
 use App\Domain\Campaign\Models\Campaign;
@@ -123,6 +126,9 @@ final class CampaignController
                 'categories' => StakeholderCategory::options(),
                 'engagement' => EngagementStatus::options(),
                 'payment' => PaymentStatus::options(),
+                'captureModes' => CaptureMode::options(),
+                'geometryTypes' => GeometryType::options(),
+                'attributeTypes' => AttributeType::options(),
             ],
         ]);
     }

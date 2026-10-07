@@ -31,6 +31,7 @@ export type ConsoleView =
     | 'people'
     | 'mandates'
     | 'campaigns'
+    | 'featureTemplates'
     | 'investors'
     | 'disputes'
     | 'reviews';
@@ -221,6 +222,14 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'What clients commissioned',
         // A contract, and the ground it covers.
         icon: 'M3.6 2.2h8.8v11.6H3.6zM6 5.2h4M6 7.6h4M6 10h2.4',
+    },
+    {
+        key: 'featureTemplates',
+        label: 'Feature classes',
+        href: '/admin/feature-templates',
+        caption: 'Templates for land and water',
+        // A leaf over a wave.
+        icon: 'M8 2.4c2.8 1.2 3.6 4 2 6.4-1.2 1.8-3.4 1.8-4.4.4-1.2-1.8-.2-4.8 2.4-6.8zM7.6 9.2V6.4M2.4 12.4c1.2-1 2.4-1 3.6 0s2.4 1 3.6 0 2.4-1 3.6 0',
     },
     {
         key: 'investors',

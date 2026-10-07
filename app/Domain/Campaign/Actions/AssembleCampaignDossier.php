@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Campaign\Actions;
 
+use App\Domain\Campaign\Enums\CaptureMode;
 use App\Domain\Campaign\Enums\StakeholderCategory;
 use App\Domain\Campaign\Models\Campaign;
 use App\Domain\Campaign\Models\CampaignField;
 use App\Domain\Campaign\Models\CampaignStakeholder;
+use App\Domain\Campaign\Models\FeatureClass;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -55,6 +57,7 @@ final class AssembleCampaignDossier
             'coverage' => $this->coverage($campaign),
             'deployment' => $this->deployment($campaign),
             'schema' => $this->schema($campaign),
+            'capture' => $this->capture($campaign, $includeInternal),
             'stakeholders' => $this->stakeholders($campaign, $includeInternal),
         ];
     }
@@ -237,6 +240,55 @@ final class AssembleCampaignDossier
                 'isRequired' => $field->is_required,
                 'options' => $field->options,
                 'helpText' => $field->help_text,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * What officers record, and the catalogue of feature classes for the land.
+     *
+     * A client sees the classes in use; the inside view also shows the ones
+     * deactivated, because a feature captured against one still exists.
+     *
+     * @return array<string, mixed>
+     */
+    private function capture(Campaign $campaign, bool $includeInternal): array
+    {
+        $classes = FeatureClass::query()
+            ->where('campaign_id', $campaign->id)
+            ->when(! $includeInternal, fn ($q) => $q->where('is_active', true))
+            ->with('latestVersion')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $modes = array_values(array_filter(
+            CaptureMode::cases(),
+            static fn (CaptureMode $mode): bool => $campaign->captures($mode),
+        ));
+
+        return [
+            'modes' => array_map(static fn (CaptureMode $m): array => ['value' => $m->value, 'label' => $m->label()], $modes),
+            'areaFeatures' => $campaign->captures(CaptureMode::AreaFeatures),
+            'settings' => [
+                'minMappingUnitHa' => $campaign->min_mapping_unit_ha === null ? null : (float) $campaign->min_mapping_unit_ha,
+                'fieldMaxAccuracyM' => $campaign->field_max_accuracy_m,
+                'verificationSamplePct' => $campaign->verification_sample_pct ?? 10,
+                'boundaryToleranceM' => $campaign->boundary_tolerance_m ?? 25,
+            ],
+            'classes' => $classes->map(static fn (FeatureClass $class): array => [
+                'id' => $class->id,
+                'key' => $class->key,
+                'label' => $class->label,
+                'geometryType' => $class->geometry_type->value,
+                'geometryLabel' => $class->geometry_type->label(),
+                'style' => $class->style,
+                'exclusivityGroup' => $class->exclusivity_group,
+                'description' => $class->description,
+                'isActive' => $class->is_active,
+                'sortOrder' => $class->sort_order,
+                'version' => $class->latestVersion?->version,
+                'attributes' => $class->latestVersion->attribute_schema ?? [],
             ])->values()->all(),
         ];
     }

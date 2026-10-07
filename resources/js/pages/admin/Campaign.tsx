@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Button } from '@/components/Button';
+import { FeatureClassList } from '@/components/FeatureClassEditor';
 import { ConsoleShell } from '@/components/ConsoleShell';
 import { SelectField, TextField } from '@/components/Field';
 import { StatusPill } from '@/components/StatusPill';
@@ -25,13 +26,16 @@ interface Props {
         categories: Array<{ value: string; label: string }>;
         engagement: Array<{ value: string; label: string }>;
         payment: Array<{ value: string; label: string }>;
+        captureModes: Array<{ value: string; label: string }>;
+        geometryTypes: Array<{ value: string; label: string }>;
+        attributeTypes: Array<{ value: string; label: string; takesOptions: boolean }>;
     };
 }
 
 /**
- * The seven sections a campaign is built from.
+ * The eight sections a campaign is built from.
  *
- * Tabs in the brief's order: definition, scope, schema, stakeholders,
+ * Tabs in the brief's order: definition, scope, schema, capture, stakeholders,
  * deployment, commercials, review. Not a wizard, deliberately. A wizard is right
  * the first time through and wrong every time after, and this screen is opened
  * far more often to change one stakeholder than to write a campaign from
@@ -45,6 +49,7 @@ const SECTIONS = [
     'Definition',
     'Scope & areas',
     'Data schema',
+    'Capture',
     'Stakeholders',
     'Deployment',
     'Commercials',
@@ -113,6 +118,14 @@ export default function Campaign({
     const deploy = useForm<{ user_ids: number[]; coverage_area_id: string }>({
         user_ids: [],
         coverage_area_id: '',
+    });
+
+    const capture = useForm({
+        capture_modes: campaign.capture.modes.map((m) => m.value),
+        min_mapping_unit_ha: campaign.capture.settings.minMappingUnitHa?.toString() ?? '',
+        field_max_accuracy_m: campaign.capture.settings.fieldMaxAccuracyM?.toString() ?? '',
+        verification_sample_pct: campaign.capture.settings.verificationSamplePct.toString(),
+        boundary_tolerance_m: campaign.capture.settings.boundaryToleranceM.toString(),
     });
 
     const base = `/admin/campaigns/${String(campaign.id)}`;
@@ -554,6 +567,128 @@ export default function Campaign({
                                 </li>
                             ))}
                         </ul>
+                    </Panel>
+                )}
+
+                {section === 'Capture' && (
+                    <Panel>
+                        <h3 className="text-ui font-semibold text-ink">What officers capture</h3>
+                        <div className="mt-2 flex flex-wrap gap-x-6">
+                            {vocabulary.captureModes.map((mode) => (
+                                <label key={mode.value} className="flex min-h-touch items-center gap-2 text-ui text-ink">
+                                    <input
+                                        type="checkbox"
+                                        checked={capture.data.capture_modes.includes(mode.value)}
+                                        onChange={(e) => {
+                                            capture.setData(
+                                                'capture_modes',
+                                                e.target.checked
+                                                    ? [...capture.data.capture_modes, mode.value]
+                                                    : capture.data.capture_modes.filter((m) => m !== mode.value),
+                                            );
+                                        }}
+                                        className="size-5 rounded-[2px] border-rule-strong accent-gold"
+                                    />
+                                    {mode.label}
+                                </label>
+                            ))}
+                        </div>
+
+                        {capture.data.capture_modes.includes('area_features') && (
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <TextField
+                                    label="Smallest area worth recording (ha)"
+                                    inputMode="decimal"
+                                    value={capture.data.min_mapping_unit_ha}
+                                    error={capture.errors.min_mapping_unit_ha}
+                                    hint="Blank for no minimum"
+                                    onChange={(e) => {
+                                        capture.setData('min_mapping_unit_ha', e.target.value);
+                                    }}
+                                />
+                                <TextField
+                                    label="Worst GPS accuracy allowed (m)"
+                                    inputMode="numeric"
+                                    value={capture.data.field_max_accuracy_m}
+                                    error={capture.errors.field_max_accuracy_m}
+                                    hint="Blank uses each mandate's threshold"
+                                    onChange={(e) => {
+                                        capture.setData('field_max_accuracy_m', e.target.value);
+                                    }}
+                                />
+                                <TextField
+                                    label="Desk features sent for checking (%)"
+                                    inputMode="numeric"
+                                    value={capture.data.verification_sample_pct}
+                                    error={capture.errors.verification_sample_pct}
+                                    onChange={(e) => {
+                                        capture.setData('verification_sample_pct', e.target.value);
+                                    }}
+                                />
+                                <TextField
+                                    label="Boundary tolerance (m)"
+                                    inputMode="numeric"
+                                    value={capture.data.boundary_tolerance_m}
+                                    error={capture.errors.boundary_tolerance_m}
+                                    onChange={(e) => {
+                                        capture.setData('boundary_tolerance_m', e.target.value);
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {capture.errors.capture_modes !== undefined && (
+                            <p className="mt-2 text-label text-alert">{capture.errors.capture_modes}</p>
+                        )}
+
+                        <div className="mt-4">
+                            <Button
+                                onClick={() => {
+                                    capture.transform((data) => ({
+                                        capture_modes: data.capture_modes,
+                                        min_mapping_unit_ha: data.min_mapping_unit_ha === '' ? null : data.min_mapping_unit_ha,
+                                        field_max_accuracy_m: data.field_max_accuracy_m === '' ? null : data.field_max_accuracy_m,
+                                        verification_sample_pct:
+                                            data.verification_sample_pct === '' ? null : data.verification_sample_pct,
+                                        boundary_tolerance_m: data.boundary_tolerance_m === '' ? null : data.boundary_tolerance_m,
+                                    }));
+                                    capture.put(`${base}/capture`, { preserveScroll: true });
+                                }}
+                                busy={capture.processing}
+                                disabled={capture.data.capture_modes.length === 0}
+                            >
+                                Save capture settings
+                            </Button>
+                        </div>
+
+                        {campaign.capture.areaFeatures && (
+                            <div className="mt-8 border-t border-rule pt-5">
+                                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                                    <h3 className="text-ui font-semibold text-ink">
+                                        Feature classes{' '}
+                                        <span className="text-label font-normal text-muted">
+                                            what an officer picks from when drawing the land
+                                        </span>
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            router.post(`${base}/feature-classes/copy-templates`, {}, { preserveScroll: true });
+                                        }}
+                                        className="text-label text-gold underline underline-offset-2"
+                                    >
+                                        Copy any missing templates
+                                    </button>
+                                </div>
+                                <div className="mt-3">
+                                    <FeatureClassList
+                                        classes={campaign.capture.classes}
+                                        vocabulary={vocabulary}
+                                        postUrl={`${base}/feature-classes`}
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </Panel>
                 )}
 

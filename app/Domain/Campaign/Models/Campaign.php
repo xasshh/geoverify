@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Campaign\Models;
 
 use App\Domain\Campaign\Enums\CampaignStatus;
+use App\Domain\Campaign\Enums\CaptureMode;
 use App\Domain\Coverage\Models\CoverageArea;
 use App\Models\User;
 use Database\Factories\Domain\Campaign\Models\CampaignFactory;
@@ -34,6 +35,11 @@ use Illuminate\Support\Carbon;
  * @property int|null $approved_by
  * @property Carbon|null $approved_at
  * @property Carbon|null $definition_revised_at
+ * @property list<string>|null $capture_modes
+ * @property string|null $min_mapping_unit_ha
+ * @property int|null $field_max_accuracy_m
+ * @property int $verification_sample_pct
+ * @property int $boundary_tolerance_m
  * @property-read ClientOrganisation|null $organisation
  */
 final class Campaign extends Model
@@ -45,6 +51,8 @@ final class Campaign extends Model
         'client_organisation_id', 'code', 'name', 'subject_type', 'about',
         'objective', 'status', 'starts_on', 'ends_on', 'target_record_count',
         'created_by', 'approved_by', 'approved_at', 'definition_revised_at',
+        'capture_modes', 'min_mapping_unit_ha', 'field_max_accuracy_m',
+        'verification_sample_pct', 'boundary_tolerance_m',
     ];
 
     /**
@@ -61,6 +69,11 @@ final class Campaign extends Model
             'approved_at' => 'datetime',
             'definition_revised_at' => 'datetime',
             'target_record_count' => 'integer',
+            'capture_modes' => 'array',
+            'min_mapping_unit_ha' => 'decimal:4',
+            'field_max_accuracy_m' => 'integer',
+            'verification_sample_pct' => 'integer',
+            'boundary_tolerance_m' => 'integer',
         ];
     }
 
@@ -94,6 +107,28 @@ final class Campaign extends Model
     public function fields(): HasMany
     {
         return $this->hasMany(CampaignField::class)->orderBy('sort_order');
+    }
+
+    /**
+     * The catalogue an officer picks from when capturing area features.
+     *
+     * @return HasMany<FeatureClass, $this>
+     */
+    public function featureClasses(): HasMany
+    {
+        return $this->hasMany(FeatureClass::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Whether officers on this campaign are given a capture mode.
+     *
+     * Read from the stored list rather than defaulted here: the column has a
+     * database default of buildings only, so a campaign that predates area
+     * capture answers exactly as it always did.
+     */
+    public function captures(CaptureMode $mode): bool
+    {
+        return in_array($mode->value, $this->capture_modes ?? [CaptureMode::Buildings->value], true);
     }
 
     /** @return HasMany<CampaignStakeholder, $this> */

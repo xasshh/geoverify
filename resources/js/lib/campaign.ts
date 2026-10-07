@@ -43,6 +43,35 @@ export interface StakeholderRow {
     visibleToClient: boolean;
 }
 
+/** One question a feature class asks, frozen in a version of its form. */
+export interface FeatureAttribute {
+    key: string;
+    label: string;
+    type: string;
+    options?: string[];
+    required: boolean;
+    help_text?: string;
+    unit?: string;
+    /** Answerable only on the ground, so a desk capture may leave it. */
+    field_only: boolean;
+}
+
+/** A kind of thing an officer draws: forest, a river, a water point. */
+export interface FeatureClassRow {
+    id: number;
+    key: string;
+    label: string;
+    geometryType: string;
+    geometryLabel: string;
+    style: { fill?: string; stroke?: string; icon?: string } | null;
+    exclusivityGroup: string | null;
+    description: string | null;
+    isActive: boolean;
+    sortOrder: number;
+    version: number | null;
+    attributes: FeatureAttribute[];
+}
+
 export interface CampaignDossier {
     id: number;
     code: string;
@@ -89,6 +118,17 @@ export interface CampaignDossier {
         fieldCount: number;
         requiredCount: number;
         fields: CampaignFieldRow[];
+    };
+    capture: {
+        modes: Array<{ value: string; label: string }>;
+        areaFeatures: boolean;
+        settings: {
+            minMappingUnitHa: number | null;
+            fieldMaxAccuracyM: number | null;
+            verificationSamplePct: number;
+            boundaryToleranceM: number;
+        };
+        classes: FeatureClassRow[];
     };
     stakeholders: {
         total: number;

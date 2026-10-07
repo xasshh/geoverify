@@ -5,7 +5,7 @@ import { cx } from '@/lib/cx';
 interface FieldShellProps {
     label: string;
     hint?: string;
-    error?: string;
+    error?: string | undefined;
     /** Machine values (coordinates, H3 indices, references) are set in mono. */
     machine?: boolean;
     children: (props: { id: string; describedBy: string | undefined; invalid: boolean }) => ReactNode;
@@ -65,7 +65,7 @@ interface TextFieldProps
     extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className' | 'id' | 'size'> {
     label: string;
     hint?: string;
-    error?: string;
+    error?: string | undefined;
     machine?: boolean;
     size?: 'console' | 'field';
 }
@@ -107,7 +107,7 @@ interface SelectFieldProps
     extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | 'id' | 'size'> {
     label: string;
     hint?: string;
-    error?: string;
+    error?: string | undefined;
     size?: 'console' | 'field';
     children: ReactNode;
 }

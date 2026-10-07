@@ -581,6 +581,36 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                 </table>
             </Section>
 
+            {campaign.capture.areaFeatures && (
+                <Section
+                    title="Land and water being mapped"
+                    caption={`${String(campaign.capture.classes.length)} feature classes`}
+                >
+                    <ul className="flex flex-col rounded-card border border-rule px-4 bg-raised">
+                        {campaign.capture.classes.map((featureClass) => (
+                            <li
+                                key={featureClass.id}
+                                className="flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-rule py-2 last:border-b-0"
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className="inline-block size-3 shrink-0 self-center rounded-[2px] border"
+                                    style={{
+                                        backgroundColor: featureClass.style?.fill ?? featureClass.style?.stroke,
+                                        borderColor: featureClass.style?.stroke,
+                                    }}
+                                />
+                                <span className="min-w-[180px] flex-1 text-ui text-ink">{featureClass.label}</span>
+                                <span className="text-label text-muted">{featureClass.geometryLabel}</span>
+                                <span className="text-label text-faint">
+                                    {featureClass.attributes.map((a) => a.label).join(', ')}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </Section>
+            )}
+
             <Section title="Stakeholders" caption={`${String(stakeholders.total)} recorded`}>
                 <div className="flex flex-col gap-5">
                     {stakeholders.byCategory.map((group) => (

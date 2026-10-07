@@ -188,3 +188,36 @@ internal, four officers deployed, both commercials populated. Existing mandates
 are backfilled onto the active campaign so nothing orphans.
 
 Client sign in: `client@nrs.test` / `password`.
+
+## Capture modes and feature classes
+
+`campaigns.capture_modes` says what officers record: `buildings` (the field
+platform as built) and/or `area_features` (land, water and the things on it).
+The column defaults to buildings only, so every campaign that predates area
+capture behaves exactly as before, and a check constraint refuses an empty or
+unknown list. Area capture also reads `min_mapping_unit_ha`,
+`field_max_accuracy_m` (null falls back to the mandate's threshold),
+`verification_sample_pct` and `boundary_tolerance_m`. All of it is set in one
+place, `ConfigureCapture`.
+
+`feature_classes` is the catalogue an officer picks from. A row with no
+campaign is a global template (`FeatureClassTemplateSeeder`, thirteen of them,
+managed at `/admin/feature-templates`). Switching area capture on gives the
+campaign its own copies, and a campaign only ever edits its copy, so changing a
+template reaches the next campaign that copies it and never one in the field.
+
+The attribute form is versioned in `feature_class_versions`, which the database
+refuses to update or delete. Revising a class's questions writes a new version
+(`ManageFeatureClasses::revise`, and only when the form actually changed); a
+feature records the version it was captured against, so old records keep their
+meaning. A class keeps its geometry type for life: a river that became a
+polygon would orphan every line already drawn. Classes sharing an
+`exclusivity_group` (the seven land cover polygons share `land_cover`) may not
+overlap. Nothing is deleted: a class nobody should pick is deactivated.
+
+`ValidateFeatureAttributes` judges answers against a version, not the class.
+Questions marked `field_only` cannot be answered from imagery, so a desk
+capture may leave them even when required; the officer who verifies fills them.
+
+The client dossier shows the active classes under "Land and water being
+mapped". It carries no commercial field, like the rest of the dossier.
