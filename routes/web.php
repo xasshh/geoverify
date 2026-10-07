@@ -110,6 +110,7 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::get('coverage/{coverageArea}/cells.geojson', [CoverageController::class, 'cells'])->name('coverage.cells');
     Route::get('coverage/{coverageArea}/boundary.geojson', [CoverageController::class, 'boundary'])->name('coverage.boundary');
     Route::get('coverage/{coverageArea}/roads.json', [CoverageController::class, 'roads'])->name('coverage.roads');
+    Route::get('coverage/{coverageArea}/imagery.pmtiles', [CoverageController::class, 'imagery'])->name('coverage.imagery');
 
     Route::get('coverage/{coverageArea}/assignments', [AssignmentController::class, 'index'])->name('assignments');
     Route::post('coverage/{coverageArea}/assignments', [AssignmentController::class, 'store'])->name('assignments.store');

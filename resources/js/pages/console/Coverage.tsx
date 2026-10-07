@@ -9,6 +9,8 @@ import {
     type GeoJSONSource,
     type MapLayerMouseEvent,
 } from 'maplibre-gl';
+import { addProtocol } from 'maplibre-gl';
+import { Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
 import { cx } from '@/lib/cx';
@@ -37,7 +39,12 @@ interface Area {
 interface CoverageProps {
     area: Area;
     summary: Summary;
+    /** The current satellite image of the mandate, when one has been built. */
+    imagery: { url: string; captured: string | null; maxZoom: number | null; licence: string | null } | null;
 }
+
+/** Registered once per tab: MapLibre keeps protocols in a module registry. */
+let pmtilesRegistered = false;
 
 /** What the cells endpoint puts on each feature. */
 interface CellProperties {
@@ -147,12 +154,14 @@ const SHADINGS = {
 
 type Shading = keyof typeof SHADINGS;
 
-export default function Coverage({ area, summary }: CoverageProps) {
+export default function Coverage({ area, summary, imagery }: CoverageProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibreMap | null>(null);
     const [loadedCells, setLoadedCells] = useState(0);
     const [hovered, setHovered] = useState<CellProperties | null>(null);
     const [shading, setShading] = useState<Shading>('density');
+    const [satellite, setSatellite] = useState(false);
+    const [imageryOpacity, setImageryOpacity] = useState(1);
 
     useEffect(() => {
         if (container.current === null || map.current !== null) {
@@ -204,6 +213,29 @@ export default function Coverage({ area, summary }: CoverageProps) {
                  * PostGIS is where the network comes from: no basemap, no
                  * billed tile provider.
                  */
+                // Satellite first, so the roads and the grid draw over it.
+                // Hidden until asked for: the grid on dark ground is still the
+                // view a supervisor reads progress from.
+                if (imagery !== null) {
+                    if (!pmtilesRegistered) {
+                        addProtocol('pmtiles', new Protocol().tile);
+                        pmtilesRegistered = true;
+                    }
+
+                    instance.addSource('imagery', {
+                        type: 'raster',
+                        url: `pmtiles://${new URL(imagery.url, window.location.href).toString()}`,
+                        tileSize: 256,
+                    });
+                    instance.addLayer({
+                        id: 'imagery',
+                        type: 'raster',
+                        source: 'imagery',
+                        layout: { visibility: 'none' },
+                        paint: { 'raster-fade-duration': 0 },
+                    });
+                }
+
                 instance.addSource('roads', {
                     type: 'geojson',
                     data: { type: 'FeatureCollection', features: [] },
@@ -301,7 +333,7 @@ export default function Coverage({ area, summary }: CoverageProps) {
             instance.remove();
             map.current = null;
         };
-    }, [area.id, summary.bounds]);
+    }, [area.id, summary.bounds, imagery]);
 
     // Repainted rather than rebuilt: a mandate is 18,337 cells and tearing the
     // map down to change a colour ramp would refetch every one of them.
@@ -314,6 +346,20 @@ export default function Coverage({ area, summary }: CoverageProps) {
 
         instance.setPaintProperty('cell-fill', 'fill-color', SHADINGS[shading].fill);
     }, [shading, loadedCells]);
+
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || instance.getLayer('imagery') === undefined) {
+            return;
+        }
+
+        instance.setLayoutProperty('imagery', 'visibility', satellite ? 'visible' : 'none');
+        instance.setPaintProperty('imagery', 'raster-opacity', imageryOpacity);
+        // The cells are filled on dark ground; over imagery they read better
+        // as outlines with a light wash.
+        instance.setPaintProperty('cell-fill', 'fill-opacity', satellite ? 0.35 : 1);
+    }, [satellite, imageryOpacity, loadedCells]);
 
     const stats: Array<[string, string]> = [
         ['Cells', summary.cells.toLocaleString()],
@@ -402,6 +448,39 @@ export default function Coverage({ area, summary }: CoverageProps) {
                             </button>
                         ))}
                     </div>
+
+                    {imagery !== null && (
+                        <div className="pointer-events-auto mt-3 flex flex-col gap-1.5 border-t border-rule pt-3">
+                            <label className="flex items-center gap-2 text-label text-ink">
+                                <input
+                                    type="checkbox"
+                                    checked={satellite}
+                                    onChange={(e) => {
+                                        setSatellite(e.target.checked);
+                                    }}
+                                    className="size-4 accent-gold"
+                                />
+                                Satellite view{imagery.captured !== null && `, ${imagery.captured}`}
+                            </label>
+                            {satellite && (
+                                <input
+                                    type="range"
+                                    min={20}
+                                    max={100}
+                                    step={10}
+                                    value={Math.round(imageryOpacity * 100)}
+                                    onChange={(e) => {
+                                        setImageryOpacity(Number(e.target.value) / 100);
+                                    }}
+                                    aria-label="Satellite opacity"
+                                    className="w-full accent-gold"
+                                />
+                            )}
+                            {satellite && imagery.licence !== null && (
+                                <p className="text-label text-faint">{imagery.licence}</p>
+                            )}
+                        </div>
+                    )}
 
                     <p className="mt-2 text-label text-faint">
                         {loadedCells.toLocaleString()} cells drawn. Outline only means no

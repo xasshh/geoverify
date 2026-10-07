@@ -281,3 +281,25 @@ it('offers an officer the imagery of their own mandate only, and leaves the pack
     $this->actingAs($stranger)->getJson('/api/field/imagery')->assertOk()->assertJsonCount(0, 'imagery');
     $this->actingAs($stranger)->get("/api/field/imagery/{$layer->id}")->assertForbidden();
 });
+
+it('shows a supervisor the current imagery on the console map, and nobody else', function () {
+    Http::fake(['*' => Http::response(stacAnswer([['S2C_32NMP_20251119_0_L2A', '32NMP', '2025-11-19', 0.23]]))]);
+    fakePipeline();
+    Bus::fake();
+    $area = mandateFor();
+    $layer = app(RequestSatelliteBasemap::class)($area, null);
+    (new BuildSatelliteBasemap($layer->id))->handle(app(SentinelCatalogue::class), app(ImageryPipeline::class));
+
+    $supervisor = person(Role::Supervisor);
+
+    $this->actingAs($supervisor)->get("/console/coverage/{$area->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('imagery.captured', '19 Nov 2025')->where('imagery.maxZoom', 14));
+
+    $this->actingAs($supervisor)->get("/console/coverage/{$area->id}/imagery.pmtiles")->assertOk();
+    $this->actingAs(person(Role::Officer))->get("/console/coverage/{$area->id}/imagery.pmtiles")->assertRedirect();
+
+    // A mandate with no imagery says so rather than offering a dead toggle.
+    $bare = mandateFor('POLYGON((8.60 7.71, 8.62 7.71, 8.62 7.73, 8.60 7.73, 8.60 7.71))');
+    $this->actingAs($supervisor)->get("/console/coverage/{$bare->id}")->assertInertia(fn ($page) => $page->where('imagery', null));
+});

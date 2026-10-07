@@ -6,11 +6,15 @@ namespace App\Http\Controllers\Console;
 
 use App\Domain\Coverage\Actions\ReadRoadNetwork;
 use App\Domain\Coverage\Models\CoverageArea;
+use App\Domain\Imagery\Models\BasemapLayer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * The coverage view: cells shaded by completion against the footprint denominator.
@@ -53,6 +57,14 @@ final class CoverageController
                 'resolution' => $coverageArea->default_h3_resolution,
             ],
             'summary' => $this->summary($coverageArea),
+            // The current satellite image, if one is built: shown under the
+            // grid in the browser, from the same archive officers carry.
+            'imagery' => ($layer = BasemapLayer::query()->where('coverage_area_id', $coverageArea->id)->current()->latest('built_at')->first()) === null ? null : [
+                'url' => route('console.coverage.imagery', $coverageArea),
+                'captured' => $layer->capturedLabel(),
+                'maxZoom' => $layer->max_zoom,
+                'licence' => $layer->licence_note,
+            ],
         ]);
     }
 
@@ -204,5 +216,32 @@ final class CoverageController
                 (float) ($box->maxx ?? 0), (float) ($box->maxy ?? 0),
             ],
         ];
+    }
+
+    /**
+     * The mandate's current satellite archive, for the console map.
+     *
+     * Served whole with Range support, so the browser reads only the tiles in
+     * view rather than the archive.
+     */
+    public function imagery(CoverageArea $coverageArea): BinaryFileResponse|RedirectResponse
+    {
+        $layer = BasemapLayer::query()
+            ->where('coverage_area_id', $coverageArea->id)
+            ->current()
+            ->latest('built_at')
+            ->firstOrFail();
+
+        $disk = Storage::disk('media');
+
+        if (config('filesystems.disks.media.driver') !== 'local') {
+            return redirect()->away($disk->temporaryUrl((string) $layer->path, now()->addHour()));
+        }
+
+        return response()->file($disk->path((string) $layer->path), [
+            'Content-Type' => 'application/vnd.pmtiles',
+            'ETag' => '"'.$layer->checksum.'"',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 }
