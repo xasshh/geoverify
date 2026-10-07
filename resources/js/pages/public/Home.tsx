@@ -108,13 +108,44 @@ function Hero() {
 function TwoViews() {
     return (
         <section className="bg-raised">
-            <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-4 py-20 sm:px-6 lg:grid-cols-2">
-                <SectionHeading eyebrow="One record, two views" title={<>A registered business and a verified place.</>} />
-                <p className="text-body text-muted">
-                    Most registries stop at paperwork. GeoVerify ties every registration to GPS-confirmed coordinates and
-                    a physically inspected site, with the date it was seen and the officer who saw it. A listing here
-                    means somebody stood at that gate.
-                </p>
+            <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
+                <div className="relative mx-auto w-full max-w-[420px]">
+                    <div aria-hidden="true" className="absolute -inset-4 -z-0 rounded-[32px] bg-green-soft/70" />
+                    <picture>
+                        <source srcSet="/media/registry-in-hand.webp" type="image/webp" />
+                        <img
+                            src="/media/registry-in-hand.jpg"
+                            alt="A woman holding up a phone showing the GeoVerify registry"
+                            width={900}
+                            height={1200}
+                            loading="lazy"
+                            className="relative aspect-[3/4] w-full rounded-[24px] object-cover shadow-card"
+                        />
+                    </picture>
+                    <span className="absolute bottom-5 left-5 flex items-center gap-2 rounded-full bg-raised/95 px-3 py-1.5 text-label font-extrabold text-ink shadow-card backdrop-blur">
+                        <Tick className="text-green" /> The registry, in your hand
+                    </span>
+                </div>
+                <div>
+                    <SectionHeading eyebrow="One record, two views" title={<>A registered business and a verified place.</>} />
+                    <p className="mt-4 text-body text-muted">
+                        Most registries stop at paperwork. GeoVerify ties every registration to GPS-confirmed coordinates
+                        and a physically inspected site, with the date it was seen and the officer who saw it. A listing
+                        here means somebody stood at that gate.
+                    </p>
+                    <p className="mt-3 text-body text-muted">
+                        And it is on the phone in your pocket: find a business, see where it really is, and check how
+                        deep its verification goes before you pay, partner or invest.
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        <Link href="/directory" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
+                            Explore the registry
+                        </Link>
+                        <Link href="/enumerate" className="rounded-full border border-rule-strong px-5 py-2.5 text-ui font-extrabold text-ink hover:border-ink">
+                            Verify a business
+                        </Link>
+                    </div>
+                </div>
             </div>
         </section>
     );
