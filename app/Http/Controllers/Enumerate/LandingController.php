@@ -47,7 +47,7 @@ final class LandingController
         ]);
     }
 
-    public function search(Request $request, RegistryLookup $registry): JsonResponse
+    public function search(Request $request): JsonResponse
     {
         $input = $request->validate([
             'by' => ['required', 'in:name,rc'],
@@ -74,6 +74,11 @@ final class LandingController
         RateLimiter::hit($daily, 86_400);
 
         try {
+            // Resolved here, not injected: a server with no registry keys
+            // refuses to build the lookup at all, and that refusal has to land
+            // in the catch below rather than escape as a bare 500.
+            $registry = app(RegistryLookup::class);
+
             $matches = array_map(
                 static fn (RegistryMatch $m): array => $m->toArray(),
                 array_slice($registry->search($input['by'], $input['q']), 0, 8),

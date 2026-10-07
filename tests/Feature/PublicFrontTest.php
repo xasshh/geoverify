@@ -135,6 +135,18 @@ it('says plainly when the register cannot answer, without a stack trace', functi
         ->assertJsonMissing(['message' => 'DOJAH_APP_ID and DOJAH_SECRET_KEY must both be set']);
 });
 
+it('answers politely on a server with no registry keys yet', function () {
+    // The real driver refuses to be built without its keys, as on a server
+    // that has not been given them.
+    config()->set('services.registry.driver', 'dojah');
+    config()->set('services.dojah.app_id', '');
+    app()->forgetInstance(RegistryLookup::class);
+
+    $this->getJson('/enumerate/search?by=name&q=Kora%20keys')
+        ->assertStatus(503)
+        ->assertJsonPath('message', 'Search is not available just now. Sign in to run a check.');
+});
+
 it('limits the free search per connection, by the minute', function () {
     countingRegistry();
 
