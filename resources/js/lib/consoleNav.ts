@@ -30,6 +30,7 @@ export type ConsoleView =
     | 'audit'
     | 'people'
     | 'mandates'
+    | 'clients'
     | 'campaigns'
     | 'featureTemplates'
     | 'investors'
@@ -214,6 +215,14 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'Staff, and their handsets',
         // A person, and a second behind them.
         icon: 'M6 7.4a2.1 2.1 0 1 0 0-4.2 2.1 1 0 1 0 0 4.2M2.4 13.2c0-2.2 1.6-3.6 3.6-3.6s3.6 1.4 3.6 3.6M10.8 3.6a2.1 2.1 0 0 1 0 4.1M11.4 9.8c1.4.3 2.2 1.5 2.2 3.4',
+    },
+    {
+        key: 'clients',
+        label: 'Clients',
+        href: '/admin/clients',
+        caption: 'Who commissions the work',
+        // A building with a flag: an institution.
+        icon: 'M2.4 13.6h11.2M3.6 13.6V7.2h8.8v6.4M6 13.6v-3.2h4v3.2M8 7.2V2.4l3.2 1.2L8 4.8',
     },
     {
         key: 'campaigns',

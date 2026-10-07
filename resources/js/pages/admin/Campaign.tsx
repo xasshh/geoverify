@@ -120,6 +120,10 @@ export default function Campaign({
         coverage_area_id: '',
     });
 
+    // A completed or archived campaign is frozen: the server refuses edits
+    // (CampaignPolicy::update), so the capture tab says so instead of offering
+    // a save that would be turned away.
+    const settled = campaign.status === 'completed' || campaign.status === 'archived';
     const capture = useForm({
         capture_modes: campaign.capture.modes.map((m) => m.value),
         min_mapping_unit_ha: campaign.capture.settings.minMappingUnitHa?.toString() ?? '',
@@ -573,12 +577,18 @@ export default function Campaign({
                 {section === 'Capture' && (
                     <Panel>
                         <h3 className="text-ui font-semibold text-ink">What officers capture</h3>
+                        {settled && (
+                            <p className="mt-1 text-ui text-muted">
+                                This campaign is {campaign.statusLabel.toLowerCase()}, so what it captured is fixed.
+                            </p>
+                        )}
                         <div className="mt-2 flex flex-wrap gap-x-6">
                             {vocabulary.captureModes.map((mode) => (
                                 <label key={mode.value} className="flex min-h-touch items-center gap-2 text-ui text-ink">
                                     <input
                                         type="checkbox"
                                         checked={capture.data.capture_modes.includes(mode.value)}
+                                        disabled={settled}
                                         onChange={(e) => {
                                             capture.setData(
                                                 'capture_modes',
@@ -641,7 +651,7 @@ export default function Campaign({
                             <p className="mt-2 text-label text-alert">{capture.errors.capture_modes}</p>
                         )}
 
-                        <div className="mt-4">
+                        <div className={cx('mt-4', settled && 'hidden')}>
                             <Button
                                 onClick={() => {
                                     capture.transform((data) => ({
@@ -670,21 +680,24 @@ export default function Campaign({
                                             what an officer picks from when drawing the land
                                         </span>
                                     </h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            router.post(`${base}/feature-classes/copy-templates`, {}, { preserveScroll: true });
-                                        }}
-                                        className="text-label text-gold underline underline-offset-2"
-                                    >
-                                        Copy any missing templates
-                                    </button>
+                                    {!settled && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                router.post(`${base}/feature-classes/copy-templates`, {}, { preserveScroll: true });
+                                            }}
+                                            className="text-label text-gold underline underline-offset-2"
+                                        >
+                                            Copy any missing templates
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="mt-3">
                                     <FeatureClassList
                                         classes={campaign.capture.classes}
                                         vocabulary={vocabulary}
                                         postUrl={`${base}/feature-classes`}
+                                        editable={!settled}
                                     />
                                 </div>
                             </div>

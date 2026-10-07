@@ -92,7 +92,10 @@ export default function Campaigns({ campaigns, filters, clients, statuses, state
                         <p className="mt-1 mb-3 max-w-[68ch] text-ui text-muted">
                             Starts as a draft, invisible to the client until it is approved. Scope,
                             schema, stakeholders, deployment and commercials are filled in
-                            afterwards, on the campaign itself.
+                            afterwards, on the campaign itself.{' '}
+                            <Link href="/admin/clients" className="text-gold underline underline-offset-2">
+                                {clients.length === 0 ? 'Add a client first.' : 'Manage clients.'}
+                            </Link>
                         </p>
 
                         <div className="flex flex-wrap items-end gap-3">
