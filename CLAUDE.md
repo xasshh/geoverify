@@ -288,7 +288,7 @@ Controllers render Inertia pages that mirror the route group:
 `resources/js/pages/{admin,auth,client,console,field,portal,public}/*.tsx`,
 resolved by name in `resources/js/app.tsx`. `Inertia::render('console/Review')`
 means `resources/js/pages/console/Review.tsx`, so a renamed page needs both
-sides. Two pages sit outside the groups: `Health.tsx` behind `/`, which reports
+sides. Two pages sit outside the groups: `Health.tsx` behind `/health`, which reports
 whatever `CheckSpatialStack` finds, and `Design.tsx` behind `/design`, the
 primitives gallery that is only routed when the application is local. Pages
 resolve lazily so an officer does not parse MapLibre and the whole console

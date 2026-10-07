@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Domain\Party\Models\PortalAccount;
+use App\Http\Controllers\Enumerate\LandingController;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,9 +24,19 @@ final class EnsurePortalAccount
     /** Where a signed-out visitor to the portal was going. See SignInController::home(). */
     public const INTENDED = 'portal.intended';
 
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * @param  string|null  $guests  `landing` on Enumerate's front door: a
+     *                               signed-out visitor there is shown what
+     *                               Enumerate is, not sent to a sign-in form
+     *                               for a product they have not heard of.
+     */
+    public function handle(Request $request, Closure $next, ?string $guests = null): Response
     {
         $account = Auth::guard('portal')->user();
+
+        if (! $account instanceof PortalAccount && $guests === 'landing') {
+            return app()->call([app(LandingController::class), 'show'])->toResponse($request);
+        }
 
         if (! $account instanceof PortalAccount) {
             // Remembered under the portal's own key, not Laravel's shared

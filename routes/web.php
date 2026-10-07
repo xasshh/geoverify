@@ -35,6 +35,7 @@ use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\Enumerate\EnumerateController;
+use App\Http\Controllers\Enumerate\LandingController as EnumerateLandingController;
 use App\Http\Controllers\Enumerate\OrganisationController as EnumerateOrganisationController;
 use App\Http\Controllers\Enumerate\ReportController as EnumerateReportController;
 use App\Http\Controllers\Enumerate\RequestController as EnumerateRequestController;
@@ -49,6 +50,7 @@ use App\Http\Controllers\Field\FieldMessageController;
 use App\Http\Controllers\Field\FieldVisitController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Invest\CommissionController as InvestCommissionController;
 use App\Http\Controllers\Invest\InvestorController as InvestorPortalController;
 use App\Http\Controllers\Invest\SignInController as InvestSignInController;
@@ -80,7 +82,11 @@ use App\Http\Controllers\PublicVerificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', fn (CheckSpatialStack $check) => Inertia::render('Health', $check()))
+Route::get('/', HomeController::class)->name('home');
+
+// The spatial stack check that used to sit behind /, kept where an operator
+// can still reach it.
+Route::get('health', fn (CheckSpatialStack $check) => Inertia::render('Health', $check()))
     ->name('health');
 
 // The design system gallery. Never routed in production: it exists so the
@@ -565,8 +571,16 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
 Route::prefix('enumerate')->name('enumerate.')->group(function (): void {
     Route::get('sign-in', [EnumerateController::class, 'signIn'])->name('sign-in');
 
+    // The front door. Signed in, it is the requester's home exactly as before;
+    // signed out, it is the landing page rather than a sign-in form.
+    Route::get('/', [EnumerateController::class, 'home'])->middleware('portal:landing')->name('home');
+
+    // The landing page's search: free to the visitor, a paid lookup to us, so
+    // limited by the minute here and by the day in the controller.
+    Route::get('search', [EnumerateLandingController::class, 'search'])
+        ->middleware('throttle:8,1')->name('search');
+
     Route::middleware('portal')->group(function (): void {
-        Route::get('/', [EnumerateController::class, 'home'])->name('home');
 
         // The register's candidates for the search box. Each call is a paid
         // lookup at the provider, so it is limited per person.

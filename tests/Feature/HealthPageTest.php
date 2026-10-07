@@ -6,7 +6,7 @@ use App\Domain\Coverage\Actions\CheckSpatialStack;
 use Inertia\Testing\AssertableInertia;
 
 it('renders the health page through Inertia', function () {
-    $this->get('/')
+    $this->get('/health')
         ->assertOk()
         ->assertInertia(
             fn (AssertableInertia $page) => $page
