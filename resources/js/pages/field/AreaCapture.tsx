@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { AreaMap, type DrawKind } from '@/components/AreaMap';
+import { AreaMap, type BaseArchive, type DrawKind, type MapArchive } from '@/components/AreaMap';
+import { openPack } from '@/lib/offline/pack';
+import { openImagery } from '@/lib/offline/imagery';
 import { BasemapSwitch } from '@/components/BasemapSwitch';
 import { Button } from '@/components/Button';
 import { SyncIndicator } from '@/components/SyncIndicator';
@@ -29,9 +31,21 @@ interface Props {
     campaign: { id: number; name: string; minMappingUnitHa: number | null; maxAccuracyM: number; buildings: boolean };
     classes: ClassOption[];
     features: GeoJSON.FeatureCollection;
+    tasks: CheckTask[];
 }
 
-type Step = 'pick' | 'draw' | 'answer';
+/** A feature drawn at the desk that this officer was sent to check. */
+interface CheckTask {
+    id: number;
+    featureUuid: string;
+    classId: number;
+    label: string;
+    method: string;
+    geometry: GeoJSON.Geometry;
+    at: [number, number];
+}
+
+type Step = 'pick' | 'check' | 'draw' | 'answer';
 type Answer = string | number | boolean | string[];
 
 /** In walk mode, a corner is dropped each time the officer has gone this far. */
@@ -93,14 +107,27 @@ function hectaresOf(vertices: Array<[number, number]>): number {
  * stand on it for a point), answer its questions, photograph it. It is queued
  * on the phone like a building and synced when there is signal.
  */
-export default function AreaCapture({ assignmentId, cell, campaign, classes, features }: Props) {
+export default function AreaCapture({ assignmentId, cell, campaign, classes, features, tasks }: Props) {
     const queue = useOfflineQueue();
     const pack = usePack(cell.coverageAreaId);
     const imagery = useImagery(cell.coverageAreaId);
     const trace = useTrace(true);
     const { takeFixes } = trace;
 
+    // The archives on the phone, opened for the map.
+    const base = useMemo<BaseArchive | null>(() => {
+        const local = pack.pack;
+        const open = local === null ? null : openPack(local);
+
+        return local === null || open === null ? null : { ...open, minZoom: local.minZoom, maxZoom: local.maxZoom, layers: local.layers };
+    }, [pack.pack]);
+    const satellite = useMemo<MapArchive | null>(() => (imagery.image === null ? null : openImagery(imagery.image)), [imagery.image]);
+
     const [step, setStep] = useState<Step>('pick');
+    // The check under way, and the ones finished on this phone today.
+    const [task, setTask] = useState<CheckTask | null>(null);
+    const [finished, setFinished] = useState<number[]>([]);
+    const openTasks = tasks.filter((t) => !finished.includes(t.id));
     const [chosen, setChosen] = useState<ClassOption | null>(null);
     const [vertices, setVertices] = useState<Array<[number, number]>>([]);
     const [walking, setWalking] = useState(false);
@@ -228,7 +255,44 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
         [features, saved],
     );
 
+    /** The desk's shape as corners the officer can adjust. */
+    const cornersOf = (geometry: GeoJSON.Geometry): Array<[number, number]> => {
+        if (geometry.type === 'Point') {
+            return [geometry.coordinates as [number, number]];
+        }
+
+        if (geometry.type === 'LineString') {
+            return geometry.coordinates as Array<[number, number]>;
+        }
+
+        const ring = (geometry.type === 'Polygon' ? geometry.coordinates[0] : geometry.type === 'MultiPolygon' ? geometry.coordinates[0]?.[0] : undefined) ?? [];
+
+        return (ring as Array<[number, number]>).slice(0, -1);
+    };
+
+    const startCheck = (next: CheckTask) => {
+        setTask(next);
+        setChosen(classes.find((c) => c.id === next.classId) ?? null);
+        setVertices(cornersOf(next.geometry));
+        setFlash(null);
+        setError(null);
+        setStep('check');
+    };
+
+    /** Not there, or not checkable today: no shape, so its own mutation. */
+    const recordOutcome = async (outcome: 'rejected' | 'needs_revisit'): Promise<void> => {
+        if (task === null) {
+            return;
+        }
+
+        await queue.record('area_feature_outcome', { client_uuid: uuid7(), feature_uuid: task.featureUuid, outcome, notes: notes.trim() === '' ? null : notes.trim() });
+        setFinished((current) => [...current, task.id]);
+        setFlash(outcome === 'rejected' ? `${task.label} marked as not there.` : `${task.label} marked to revisit.`);
+        reset();
+    };
+
     const reset = () => {
+        setTask(null);
         setStep('pick');
         setChosen(null);
         setVertices([]);
@@ -286,7 +350,7 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
         }
 
         const revisionUuid = uuid7();
-        const featureUuid = uuid7();
+        const featureUuid = task?.featureUuid ?? uuid7();
         const shape = geometry();
         const fix = trace.current;
 
@@ -297,7 +361,8 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
             feature_uuid: featureUuid,
             feature_class_id: chosen.id,
             class_version: chosen.version,
-            capture_method: usedWalk ? 'field_walked' : 'field_drawn',
+            // Checking a desk feature is a verification, however it was redrawn.
+            capture_method: task !== null ? 'field_verified' : usedWalk ? 'field_walked' : 'field_drawn',
             assignment_id: assignmentId,
             geometry: shape,
             answers,
@@ -320,7 +385,11 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
             ...current,
             { type: 'Feature', geometry: shape, properties: { uuid: featureUuid, label: chosen.label, colour, pending: true } },
         ]);
-        setFlash(`${chosen.label} saved on the phone. It syncs when there is signal.`);
+        if (task !== null) {
+            setFinished((current) => [...current, task.id]);
+        }
+
+        setFlash(`${chosen.label} ${task !== null ? 'checked' : 'saved'} on the phone. It syncs when there is signal.`);
         reset();
     };
 
@@ -366,10 +435,10 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
             )}
 
             <div className="relative min-h-0 flex-1">
-                {pack.state === 'installed' && pack.pack !== null ? (
+                {pack.state === 'installed' && base !== null ? (
                     <AreaMap
-                        pack={pack.pack}
-                        imagery={imagery.image}
+                        pack={base}
+                        imagery={satellite}
                         basemap={imagery.choice}
                         assignedH3={cell.h3}
                         centre={cell.centre}
@@ -379,6 +448,7 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
                         kind={kind}
                         colour={colour}
                         tapping={step === 'draw' && !walking && kind !== null}
+                        focus={task?.at ?? null}
                         onAddVertex={(at) => {
                             setVertices((current) => (kind === 'point' ? [at] : [...current, at]));
                         }}
@@ -416,6 +486,92 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
                     <p role="status" className="mb-3 rounded-sm bg-green-soft px-3 py-2 text-ui font-semibold text-green">
                         {flash}
                     </p>
+                )}
+
+                {step === 'pick' && openTasks.length > 0 && (
+                    <div className="mb-4">
+                        <p className="text-ui font-extrabold">Sent to check ({openTasks.length})</p>
+                        <ul className="mt-1.5 flex flex-col gap-1.5">
+                            {openTasks.map((t) => (
+                                <li key={t.id}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            startCheck(t);
+                                        }}
+                                        className="flex min-h-touch w-full items-center justify-between gap-3 rounded-sm border border-amber/50 bg-amber-soft px-3 text-left text-ui"
+                                    >
+                                        <span className="font-semibold text-ink">{t.label}</span>
+                                        <span className="text-label text-amber-ink">{t.method === 'imported' ? 'from land cover' : 'drawn at the desk'}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {step === 'check' && task !== null && (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-ui font-extrabold">Check: {task.label}</p>
+                        <p className="text-label text-muted">
+                            Go to it on the map. Confirm it as drawn, correct its shape or what it is, or say it is not there.
+                        </p>
+                        <Button
+                            variant="primary"
+                            size="field"
+                            fullWidth
+                            onClick={() => {
+                                setStep('draw');
+                            }}
+                        >
+                            It is here: check the shape
+                        </Button>
+                        <label className="flex flex-col gap-1 text-label font-semibold text-muted">
+                            It is something else
+                            <select
+                                value={chosen?.id ?? ''}
+                                onChange={(e) => {
+                                    const next = classes.find((c) => c.id === Number(e.target.value)) ?? null;
+                                    setChosen(next);
+
+                                    // A different kind of shape cannot keep the desk's corners.
+                                    if (next !== null && next.geometryType !== chosen?.geometryType) {
+                                        setVertices([]);
+                                    }
+
+                                    setStep('draw');
+                                }}
+                                className="min-h-touch rounded-sm border border-rule-strong px-3 text-ui font-normal text-ink"
+                            >
+                                {classes.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                size="field"
+                                onClick={() => {
+                                    void recordOutcome('rejected');
+                                }}
+                            >
+                                Not there
+                            </Button>
+                            <Button
+                                size="field"
+                                onClick={() => {
+                                    void recordOutcome('needs_revisit');
+                                }}
+                            >
+                                Cannot check today
+                            </Button>
+                        </div>
+                        <Button variant="quiet" size="field" onClick={reset}>
+                            Back
+                        </Button>
+                    </div>
                 )}
 
                 {step === 'pick' && (

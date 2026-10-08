@@ -12,6 +12,10 @@ enum Role: string
     case Officer = 'officer';
     case Supervisor = 'supervisor';
     case Admin = 'admin';
+    // Draws features of the land over imagery at a desk. Staff, so it lives
+    // here, but it supervises nothing, captures nothing in the field and
+    // administers nothing: every existing check answers false for it.
+    case DeskDigitiser = 'desk_digitiser';
 
     public function label(): string
     {
@@ -19,6 +23,7 @@ enum Role: string
             self::Officer => 'Field officer',
             self::Supervisor => 'Supervisor',
             self::Admin => 'Administrator',
+            self::DeskDigitiser => 'Desk digitiser',
         };
     }
 
@@ -46,5 +51,18 @@ enum Role: string
     public function administers(): bool
     {
         return $this === self::Admin;
+    }
+
+    /**
+     * Drawing and importing area features at the desk (/desk).
+     *
+     * An administrator can too, so a small team need not create a second
+     * account; a supervisor cannot, because a supervisor reviews officers'
+     * work and drawing the work list they then send officers to check is a
+     * different job.
+     */
+    public function digitises(): bool
+    {
+        return $this === self::DeskDigitiser || $this === self::Admin;
     }
 }

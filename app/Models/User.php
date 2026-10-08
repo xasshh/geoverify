@@ -104,6 +104,11 @@ final class User extends Authenticatable
         return $this->isActive() && $this->role->capturesInTheField();
     }
 
+    public function digitises(): bool
+    {
+        return $this->isActive() && $this->role->digitises();
+    }
+
     /** Whether this person can see the in-house admin views. */
     public function administers(): bool
     {

@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Map as MapLibre, type GeoJSONSource, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
 import { registerProtocol } from '@/lib/pmtilesProtocol';
 import { fieldStyle, readPalette } from '@/lib/mapStyle';
-import { openPack } from '@/lib/offline/pack';
-import { openImagery, type BasemapChoice } from '@/lib/offline/imagery';
-import type { LocalImagery, LocalPack } from '@/lib/offline/db';
+import type { PMTiles } from 'pmtiles';
+import type { BasemapChoice } from '@/lib/offline/imagery';
 import type { Fix } from '@/lib/geolocation';
 
 export type DrawKind = 'point' | 'line' | 'polygon';
@@ -14,9 +13,25 @@ export type DrawKind = 'point' | 'line' | 'polygon';
 /** Within this many screen pixels a tap lands on an existing corner instead. */
 const SNAP_PX = 14;
 
+/**
+ * A PMTiles archive to draw from: on the phone, one read out of IndexedDB
+ * (archive set, url a device:// key); at the desk, one fetched by range over
+ * HTTPS (archive null, url the address itself).
+ */
+export interface MapArchive {
+    url: string;
+    archive: PMTiles | null;
+}
+
+export interface BaseArchive extends MapArchive {
+    minZoom: number;
+    maxZoom: number;
+    layers: Record<string, number>;
+}
+
 interface AreaMapProps {
-    pack: LocalPack;
-    imagery: LocalImagery | null;
+    pack: BaseArchive | null;
+    imagery: MapArchive | null;
     basemap: BasemapChoice;
     assignedH3: string;
     centre: [number, number];
@@ -31,6 +46,10 @@ interface AreaMapProps {
     tapping: boolean;
     onAddVertex: (at: [number, number]) => void;
     onMoveVertex: (index: number, to: [number, number]) => void;
+    /** Somewhere to fly to: a feature the officer was sent to check. */
+    focus?: [number, number] | null;
+    /** When not drawing, a click on something recorded picks it. */
+    onPickFeature?: (properties: Record<string, unknown> | null) => void;
 }
 
 /**
@@ -55,6 +74,8 @@ export function AreaMap({
     tapping,
     onAddVertex,
     onMoveVertex,
+    onPickFeature,
+    focus = null,
 }: AreaMapProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibre | null>(null);
@@ -62,38 +83,48 @@ export function AreaMap({
     const [failed, setFailed] = useState<string | null>(null);
 
     // Read through refs inside map handlers, which are bound once.
-    const latest = useRef({ vertices, features, tapping, onAddVertex, onMoveVertex });
+    const latest = useRef({ vertices, features, tapping, onAddVertex, onMoveVertex, onPickFeature });
 
     useEffect(() => {
-        latest.current = { vertices, features, tapping, onAddVertex, onMoveVertex };
+        latest.current = { vertices, features, tapping, onAddVertex, onMoveVertex, onPickFeature };
     });
 
-    const opened = useMemo(() => openPack(pack), [pack]);
-    const openedImagery = useMemo(() => (imagery === null ? null : openImagery(imagery)), [imagery]);
+    const opened = pack;
+    const openedImagery = imagery;
 
     useEffect(() => {
         const element = container.current;
 
-        if (element === null || opened === null) {
+        if (element === null || (opened === null && openedImagery === null)) {
             return;
         }
 
-        registerProtocol().add(opened.archive);
+        if (opened?.archive != null) {
+            registerProtocol().add(opened.archive);
+        } else {
+            registerProtocol();
+        }
 
+        // With no street pack (ground nobody has built footprints for, as
+        // much rural land is) the map is the satellite image alone.
+        const palette = readPalette(element);
         const instance = new MapLibre({
             container: element,
-            style: fieldStyle({
-                packUrl: opened.url,
-                palette: readPalette(element),
-                assignedH3,
-                maxZoom: pack.maxZoom,
-                layers: pack.layers,
-                latitude: centre[1],
-            }),
+            style:
+                opened === null
+                    ? { version: 8, sources: {}, layers: [{ id: 'ground', type: 'background', paint: { 'background-color': palette.sunken } }] }
+                    : fieldStyle({
+                          packUrl: opened.url,
+                          palette,
+                          assignedH3,
+                          maxZoom: opened.maxZoom,
+                          layers: opened.layers,
+                          latitude: centre[1],
+                      }),
             center: centre,
-            zoom: 16,
-            maxZoom: Math.max(pack.maxZoom + 2, 19),
-            minZoom: Math.min(pack.minZoom, 10),
+            zoom: opened === null ? 14 : 16,
+            maxZoom: Math.max((opened?.maxZoom ?? 14) + 2, 19),
+            minZoom: Math.min(opened?.minZoom ?? 8, 10),
             attributionControl: false,
             dragRotate: false,
             pitchWithRotate: false,
@@ -161,7 +192,16 @@ export function AreaMap({
 
         // Tap: a new corner, snapped to any corner within a fingertip.
         instance.on('click', (event: MapMouseEvent) => {
-            if (!latest.current.tapping || dragging.current !== null) {
+            if (dragging.current !== null) {
+                return;
+            }
+
+            if (!latest.current.tapping) {
+                const hit = instance.queryRenderedFeatures(event.point, {
+                    layers: ['recorded-point', 'recorded-line', 'recorded-fill'].filter((id) => instance.getLayer(id) !== undefined),
+                })[0];
+                latest.current.onPickFeature?.(hit === undefined ? null : hit.properties);
+
                 return;
             }
 
@@ -217,7 +257,15 @@ export function AreaMap({
             map.current = null;
             setReady(false);
         };
-    }, [opened, pack.maxZoom, pack.minZoom, pack.layers, assignedH3, centre]);
+        // Built once per archive: the imagery is added by its own effect.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [opened, assignedH3, centre]);
+
+    useEffect(() => {
+        if (ready && focus !== null) {
+            map.current?.flyTo({ center: focus, zoom: Math.max(map.current.getZoom(), 16) });
+        }
+    }, [ready, focus]);
 
     // The satellite image, under everything drawn.
     useEffect(() => {
@@ -228,7 +276,10 @@ export function AreaMap({
         }
 
         if (instance.getSource('imagery') === undefined) {
-            registerProtocol().add(openedImagery.archive);
+            if (openedImagery.archive !== null) {
+                registerProtocol().add(openedImagery.archive);
+            }
+
             instance.addSource('imagery', { type: 'raster', url: `pmtiles://${openedImagery.url}`, tileSize: 256 });
             instance.addLayer(
                 { id: 'imagery', type: 'raster', source: 'imagery', paint: { 'raster-fade-duration': 0 } },
@@ -296,10 +347,10 @@ export function AreaMap({
         });
     }, [ready, position]);
 
-    if (opened === null || failed !== null) {
+    if ((opened === null && openedImagery === null) || failed !== null) {
         return (
             <div className="flex h-full items-center justify-center p-6 text-center text-ui text-muted">
-                {failed ?? 'The offline map is not on this phone yet. Download it from Sync & device.'}
+                {failed ?? 'There is no map for this ground yet.'}
             </div>
         );
     }

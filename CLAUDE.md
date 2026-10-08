@@ -132,10 +132,12 @@ Inertia is pinned to v2 on both sides: `inertiajs/inertia-laravel ^2.0` with
 
 ## Roles and access
 
-Three staff roles: `officer`, `supervisor`, `admin`. An officer holds assignments
-and captures; a supervisor assigns and reviews; an admin also rules on
-escalations, reads the audit log, manages people and devices, and contracts
-mandates.
+Four staff roles: `officer`, `supervisor`, `admin`, `desk_digitiser`. An officer
+holds assignments and captures; a supervisor assigns and reviews; an admin also
+rules on escalations, reads the audit log, manages people and devices, and
+contracts mandates. A desk digitiser draws and imports area features over
+imagery at `/desk` and answers false to `supervises()`, `capturesInTheField()`
+and `administers()`; `Role::digitises()` is true for it and for an admin.
 
 Four session guards, and they never overlap: `web` (staff, against `users`),
 `portal` (parties, against `party_users`), `client` (the commissioning body,
@@ -144,10 +146,14 @@ against `client_users`) and `investor` (investor organisations, against
 `supervises` by construction rather than by check, which is the entire reason
 there are four rather than one table with a wider `Role`.
 
-Six surfaces, six middleware aliases, all registered in `bootstrap/app.php`:
+Seven surfaces, seven middleware aliases, all registered in `bootstrap/app.php`:
 `field` (`/field`), `supervises` (`/console`), `administers` (`/admin`),
-`portal` (`/portal`, and Enumerate's `/enumerate` on the same guard), `client`
-(`/client`) and `investor` (`/invest`).
+`digitises` (`/desk`), `portal` (`/portal`, and Enumerate's `/enumerate` on the
+same guard; `portal:landing` shows a signed-out visitor the landing page there
+instead of a sign-in form), `client` (`/client`) and `investor` (`/invest`).
+Area captures carry their channel from the caller, never the payload:
+`CaptureAreaFeature::FIELD` from sync accepts only field methods, and
+`CaptureAreaFeature::DESK` requires `digitises()`.
 `investor:verified` additionally requires the organisation to have passed KYC,
 which an admin rules on at `/admin/investors`; everything that names a business
 sits behind it. Per record access is `AssignmentPolicy` and `DevicePolicy`.

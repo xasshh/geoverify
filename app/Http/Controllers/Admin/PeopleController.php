@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,7 +92,7 @@ final class PeopleController
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255'],
-            'role' => ['required', 'in:officer,supervisor,admin'],
+            'role' => ['required', Rule::enum(Role::class)],
             'phone' => ['nullable', 'string', 'max:32'],
         ]);
 

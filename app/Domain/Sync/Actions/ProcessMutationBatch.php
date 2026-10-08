@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Sync\Actions;
 
 use App\Domain\AreaCapture\Actions\CaptureAreaFeature;
+use App\Domain\AreaCapture\Actions\RecordAreaOutcome;
 use App\Domain\Registry\Actions\CaptureEnterprise;
 use App\Domain\Registry\Actions\CaptureStructure;
 use App\Domain\Registry\Data\StructureCapture;
@@ -54,6 +55,7 @@ final class ProcessMutationBatch
         private readonly CaptureStructure $structures,
         private readonly CaptureEnterprise $enterprises,
         private readonly CaptureAreaFeature $areaFeatures,
+        private readonly RecordAreaOutcome $areaOutcomes,
     ) {}
 
     /**
@@ -175,7 +177,10 @@ final class ProcessMutationBatch
             // Area capture (land, water, the things on it). Added beside the
             // two above and touching neither: a handset that never sends it
             // syncs exactly as before.
-            'area_feature' => ($this->areaFeatures)($payload, $officer),
+            'area_feature' => ($this->areaFeatures)($payload, $officer, CaptureAreaFeature::FIELD),
+            // An officer's "not there" or "come back later" on a feature they
+            // were sent to check: no shape, so not a revision.
+            'area_feature_outcome' => ($this->areaOutcomes)($payload, $officer),
             default => throw new RuntimeException("This system does not sync '{$entity}' records."),
         };
     }

@@ -89,7 +89,7 @@ export type MutationState = 'queued' | 'sending' | 'done' | 'failed' | 'deferred
  */
 export interface Mutation {
     clientUuid: string;
-    entity: 'structure' | 'enterprise' | 'area_feature';
+    entity: 'structure' | 'enterprise' | 'area_feature' | 'area_feature_outcome';
     op: 'create' | 'update';
     payload: Record<string, unknown>;
     createdAt: string;

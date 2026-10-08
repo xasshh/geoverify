@@ -10,12 +10,9 @@ use App\Domain\Verification\Models\VerificationEvent;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use JsonException;
 
 /**
  * A mandate drawn from a file the client sent: a forest reserve, a project
@@ -35,6 +32,8 @@ use JsonException;
  */
 final class CreateCoverageAreaFromBoundary
 {
+    public function __construct(private readonly ReadVectorFile $files) {}
+
     /** Larger than any LGA in the country; a guard against uploading a state. */
     public const MAX_AREA_KM2 = 15_000;
 
@@ -138,72 +137,10 @@ final class CreateCoverageAreaFromBoundary
         });
     }
 
-    /**
-     * The upload as one GeoJSON FeatureCollection in EPSG:4326.
-     */
+    /** The upload as one GeoJSON FeatureCollection in EPSG:4326. */
     private function readAsGeoJson(UploadedFile $file): string
     {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if (in_array($extension, ['geojson', 'json'], true)) {
-            return $this->asCollection((string) file_get_contents($file->getRealPath()));
-        }
-
-        if (! in_array($extension, ['kml', 'zip', 'gpkg'], true)) {
-            throw ValidationException::withMessages(['boundary' => 'Send GeoJSON, KML, a zipped Shapefile or a GeoPackage.']);
-        }
-
-        $work = storage_path('app/boundary-work/'.Str::lower((string) Str::ulid()));
-        File::ensureDirectoryExists($work);
-
-        try {
-            $input = "{$work}/input.{$extension}";
-            copy($file->getRealPath(), $input);
-
-            // A zipped Shapefile is read in place through GDAL's zip reader.
-            $source = $extension === 'zip' ? "/vsizip/{$input}" : $input;
-            $bin = rtrim((string) config('geoverify.imagery.gdal_bin'), '/');
-
-            $result = Process::timeout(120)->run([
-                $bin === '' ? 'ogr2ogr' : "{$bin}/ogr2ogr",
-                '-f', 'GeoJSON',
-                '-t_srs', 'EPSG:4326',
-                '-nlt', 'PROMOTE_TO_MULTI',
-                "{$work}/out.geojson",
-                $source,
-            ]);
-
-            if ($result->failed() || ! is_file("{$work}/out.geojson")) {
-                throw ValidationException::withMessages([
-                    'boundary' => 'The file could not be read as a map layer. '.Str::limit(trim($result->errorOutput()), 200),
-                ]);
-            }
-
-            return $this->asCollection((string) file_get_contents("{$work}/out.geojson"));
-        } finally {
-            File::deleteDirectory($work);
-        }
-    }
-
-    /** A bare geometry or a single Feature, wrapped so the SQL reads one shape. */
-    private function asCollection(string $json): string
-    {
-        try {
-            /** @var mixed $data */
-            $data = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            throw ValidationException::withMessages(['boundary' => 'The GeoJSON could not be read.']);
-        }
-
-        if (! is_array($data) || ! is_string($data['type'] ?? null)) {
-            throw ValidationException::withMessages(['boundary' => 'The GeoJSON could not be read.']);
-        }
-
-        $collection = match ($data['type']) {
-            'FeatureCollection' => $data,
-            'Feature' => ['type' => 'FeatureCollection', 'features' => [$data]],
-            default => ['type' => 'FeatureCollection', 'features' => [['type' => 'Feature', 'properties' => [], 'geometry' => $data]]],
-        };
+        $collection = ($this->files)($file->getRealPath(), $file->getClientOriginalExtension(), 'boundary');
 
         return json_encode($collection, JSON_THROW_ON_ERROR);
     }

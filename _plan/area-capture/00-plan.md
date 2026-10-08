@@ -497,6 +497,15 @@ Tests:
 
 ### Stage 4: desk digitising and verification tasks
 
+**Built 2026-10-08.**
+- The `desk_digitiser` role, with `/desk` behind `digitises`.
+- The desk map: satellite imagery, with the street pack optional.
+- All-or-nothing import, with property-to-class mapping.
+- `SeedFromLandCover`: WorldCover, then sieve, polygonize and simplify. Proved on the server: 30 km2 became 280 polygons in 0.7 s.
+- `GenerateVerificationTasks`: a deterministic md5 sample, sent to the nearest officer.
+- The phone's "Sent to check" list: confirm or reclassify as a `field_verified` revision, or "not there" / "cannot check today" via the `area_feature_outcome` sync entity.
+- Found while building: the capture method had come from the payload, so a phone could claim to be the desk. The channel is now the caller's.
+
 - **Role and surface:** a `DeskDigitiser` role, the `digitises` middleware
   and the `/desk` surface.
 - **The desk map:** a full-screen map with the campaign imagery (online, from

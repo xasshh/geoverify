@@ -77,6 +77,7 @@ final class CreateStaffMember
             Role::Officer => ['FO', 1042],
             Role::Supervisor => ['SUP', 1],
             Role::Admin => ['ADM', 1],
+            Role::DeskDigitiser => ['DSK', 1],
         };
 
         $highest = DB::scalar(

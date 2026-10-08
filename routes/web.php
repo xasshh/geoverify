@@ -33,6 +33,7 @@ use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Console\SupportController as ConsoleSupportController;
 use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
+use App\Http\Controllers\Desk\DeskController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\Enumerate\EnumerateController;
 use App\Http\Controllers\Enumerate\LandingController as EnumerateLandingController;
@@ -195,6 +196,24 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
 | in front of every supervisor, and escalation exists precisely so that the
 | person who raised a concern is not the person who rules on it.
 */
+/*
+| The desk: drawing and importing features of the land over imagery, for
+| officers to check. Desk digitisers and administrators.
+*/
+Route::middleware(['auth', 'digitises'])->prefix('desk')->name('desk.')->group(function (): void {
+    Route::get('/', [DeskController::class, 'index'])->name('index');
+    Route::get('mandates/{area}', [DeskController::class, 'show'])->name('mandate');
+    Route::get('mandates/{area}/features.geojson', [DeskController::class, 'features'])->name('features');
+    Route::get('mandates/{area}/pack.pmtiles', [DeskController::class, 'pack'])->name('pack');
+    Route::get('mandates/{area}/imagery.pmtiles', [DeskController::class, 'imagery'])->name('imagery');
+    Route::post('mandates/{area}/features', [DeskController::class, 'store'])->name('features.store');
+    Route::post('mandates/{area}/import', [DeskController::class, 'previewImport'])->name('import.preview');
+    Route::post('mandates/{area}/landcover', [DeskController::class, 'seedLandCover'])->name('landcover');
+    Route::post('imports/{batch}/commit', [DeskController::class, 'commitImport'])->name('import.commit');
+    Route::post('features/{feature:client_uuid}/withdraw', [DeskController::class, 'withdraw'])->name('features.withdraw');
+    Route::post('campaigns/{campaign}/verification-tasks', [DeskController::class, 'sendForVerification'])->name('verification-tasks');
+});
+
 Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::get('escalations', [EscalationController::class, 'index'])->name('escalations');
     Route::get('escalations/{observation}', [EscalationController::class, 'show'])->name('escalations.show');

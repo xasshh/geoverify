@@ -30,7 +30,7 @@ final class ValidateFeatureAttributes
      *
      * @throws ValidationException
      */
-    public function __invoke(FeatureClassVersion $version, array $answers, bool $inTheField): array
+    public function __invoke(FeatureClassVersion $version, array $answers, bool $inTheField, bool $requireAnswers = true): array
     {
         $errors = [];
         $clean = [];
@@ -43,7 +43,7 @@ final class ValidateFeatureAttributes
             $empty = $value === null || $value === '' || $value === [];
 
             if ($empty) {
-                $mustAnswer = $attribute['required'] && ($inTheField || ! $attribute['field_only']);
+                $mustAnswer = $requireAnswers && $attribute['required'] && ($inTheField || ! $attribute['field_only']);
 
                 if ($mustAnswer) {
                     $errors["attributes.{$key}"] = "{$attribute['label']} is required.";

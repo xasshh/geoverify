@@ -8,6 +8,7 @@ use App\Domain\AreaCapture\Jobs\RefreshCellAreaProgress;
 use App\Domain\AreaCapture\Jobs\ScoreAreaRevision;
 use App\Domain\AreaCapture\Models\AreaFeature;
 use App\Domain\AreaCapture\Models\AreaFeatureRevision;
+use App\Domain\AreaCapture\Models\AreaVerificationTask;
 use App\Domain\Campaign\Actions\ValidateFeatureAttributes;
 use App\Domain\Campaign\Enums\CaptureMode;
 use App\Domain\Campaign\Enums\GeometryType;
@@ -50,6 +51,12 @@ final class CaptureAreaFeature
     /** A repair that moves more of the area than this is flagged for review. */
     private const MATERIAL_REPAIR_PCT = 5.0;
 
+    /** From a phone, through the sync queue. */
+    public const FIELD = 'field';
+
+    /** From the desk: drawn over imagery, or imported from a file. */
+    public const DESK = 'desk';
+
     public function __construct(private readonly ValidateFeatureAttributes $answers) {}
 
     /**
@@ -57,8 +64,16 @@ final class CaptureAreaFeature
      *
      * @throws ValidationException
      */
-    public function __invoke(array $input, User $actor): AreaFeatureRevision
+    public function __invoke(array $input, User $actor, string $channel = self::FIELD): AreaFeatureRevision
     {
+        // The channel is the caller's to state, never the payload's. A phone
+        // can only ever capture as itself in the field: if the method came from
+        // the payload, a handset could send "imported" with any mandate and
+        // step round the check that it is standing in its own cells.
+        if ($channel === self::DESK && ! $actor->digitises()) {
+            $this->fail('capture_method', 'Only a desk digitiser or an administrator captures from the desk.');
+        }
+
         if (! is_string($input['client_uuid'] ?? null) || ! Str::isUuid($input['client_uuid'])) {
             $this->fail('client_uuid', 'A capture needs its own uuid.');
         }
@@ -74,6 +89,14 @@ final class CaptureAreaFeature
 
         $inTheField = in_array($method, AreaFeatureRevision::FIELD_METHODS, true);
 
+        if ($inTheField !== ($channel === self::FIELD)) {
+            $this->fail('capture_method', $channel === self::FIELD
+                ? 'A phone captures in the field: walked, drawn or verified.'
+                : 'The desk draws or imports; it does not capture in the field.');
+        }
+
+        $imported = $method === AreaFeatureRevision::METHOD_IMPORTED;
+
         $class = FeatureClass::query()->find((int) ($input['feature_class_id'] ?? 0))
             ?? $this->fail('feature_class_id', 'That feature class does not exist.');
 
@@ -82,7 +105,22 @@ final class CaptureAreaFeature
             ->where('version', (int) ($input['class_version'] ?? 0))
             ->first() ?? $this->fail('class_version', 'That version of the class form does not exist.');
 
-        [$area, $assignment] = $this->ground($input, $actor, $inTheField);
+        $featureUuid = (string) ($input['feature_uuid'] ?? '');
+        $existing = $featureUuid === '' ? null : AreaFeature::query()->where('client_uuid', $featureUuid)->first();
+
+        // An officer sent to check a feature: the task is their permission to
+        // be there, wherever it lies in the campaign, so it is the feature's
+        // ground that counts rather than their own cells.
+        $sentToCheck = $method === AreaFeatureRevision::METHOD_VERIFIED
+            && $existing !== null
+            && AreaVerificationTask::query()->open()
+                ->where('area_feature_id', $existing->id)
+                ->where('assigned_to', $actor->id)
+                ->exists();
+
+        [$area, $assignment] = $sentToCheck
+            ? [CoverageArea::query()->findOrFail($existing->coverage_area_id), null]
+            : $this->ground($input, $actor, $inTheField);
 
         $campaign = Campaign::query()->find($area->campaign_id)
             ?? $this->fail('coverage_area_id', 'This ground is not under a campaign.');
@@ -95,7 +133,13 @@ final class CaptureAreaFeature
             $this->fail('feature_class_id', 'That class belongs to a different campaign.');
         }
 
-        $clean = ($this->answers)($version, is_array($input['answers'] ?? null) ? $input['answers'] : [], $inTheField);
+        if ($existing !== null && $existing->campaign_id !== $campaign->id) {
+            $this->fail('feature_uuid', 'That feature belongs to a different campaign.');
+        }
+
+        // An import arrives with whatever the file held, so nothing is
+        // required of it; the officer who verifies it answers the rest.
+        $clean = ($this->answers)($version, is_array($input['answers'] ?? null) ? $input['answers'] : [], $inTheField, requireAnswers: ! $imported);
 
         $geojson = $this->geojson($input['geometry'] ?? null);
         $shape = $this->shape($geojson, $class->geometry_type);
@@ -103,15 +147,8 @@ final class CaptureAreaFeature
         $this->checkSize($shape, $campaign);
         $this->checkInsideCampaign($shape->ewkt, $campaign);
 
-        if ($inTheField && $assignment !== null) {
+        if ($inTheField && ! $sentToCheck) {
             $this->checkInsideAssignments($shape->ewkt, $actor, $campaign);
-        }
-
-        $featureUuid = (string) ($input['feature_uuid'] ?? '');
-        $existing = $featureUuid === '' ? null : AreaFeature::query()->where('client_uuid', $featureUuid)->first();
-
-        if ($existing !== null && $existing->campaign_id !== $campaign->id) {
-            $this->fail('feature_uuid', 'That feature belongs to a different campaign.');
         }
 
         if ($class->exclusivity_group !== null && $class->geometry_type === GeometryType::Polygon) {
@@ -127,7 +164,7 @@ final class CaptureAreaFeature
                 ->first();
         }
 
-        return DB::transaction(function () use ($input, $actor, $method, $class, $version, $area, $assignment, $campaign, $clean, $shape, $existing, $featureUuid, $inTheField, $session): AreaFeatureRevision {
+        return DB::transaction(function () use ($input, $actor, $channel, $method, $class, $version, $area, $assignment, $campaign, $clean, $shape, $existing, $featureUuid, $inTheField, $session): AreaFeatureRevision {
             $feature = $existing ?? AreaFeature::query()->create([
                 'client_uuid' => $featureUuid !== '' ? $featureUuid : (string) Str::uuid(),
                 'campaign_id' => $campaign->id,
@@ -142,8 +179,8 @@ final class CaptureAreaFeature
                     client_uuid, area_feature_id, feature_class_version_id, answers, capture_method,
                     basemap_layer_id, imagery_date, gps_accuracy_m, field_session_id, assignment_id,
                     captured_by, captured_at, area_ha, length_m, geometry_repaired, repair_area_change_pct,
-                    notes, geom, created_at, updated_at
-                ) VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ST_GeomFromEWKT(?), now(), now())
+                    notes, area_feature_batch_id, geom, created_at, updated_at
+                ) VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ST_GeomFromEWKT(?), now(), now())
                 RETURNING id
             SQL, [
                 (string) $input['client_uuid'],
@@ -163,11 +200,15 @@ final class CaptureAreaFeature
                 $shape->repaired ? 'true' : 'false',
                 $shape->change_pct,
                 is_string($input['notes'] ?? null) ? mb_substr($input['notes'], 0, 2000) : null,
+                // A batch is the desk's to name; a phone never sets one.
+                $channel === self::DESK && isset($input['area_feature_batch_id']) ? (int) $input['area_feature_batch_id'] : null,
                 $shape->ewkt,
             ]);
 
             // A field capture is ground truth by being there; a desk drawing
             // waits for an officer. A reclassification moves the feature.
+            $previousClass = $feature->feature_class_id;
+
             $feature->forceFill([
                 'current_revision_id' => $revisionId,
                 'feature_class_id' => $class->id,
@@ -196,6 +237,19 @@ final class CaptureAreaFeature
                 'geometry_repaired' => $shape->repaired ?: null,
                 'repair_area_change_pct' => $shape->change_pct,
             ], static fn (mixed $v): bool => $v !== null));
+
+            // An officer verifying a feature they were sent to closes the task.
+            if ($method === AreaFeatureRevision::METHOD_VERIFIED && $existing !== null) {
+                AreaVerificationTask::query()
+                    ->open()
+                    ->where('area_feature_id', $feature->id)
+                    ->update([
+                        'status' => AreaVerificationTask::STATUS_DONE,
+                        'outcome' => $previousClass === $class->id ? 'verified' : 'reclassified',
+                        'resolved_revision_id' => $revisionId,
+                        'resolved_at' => now(),
+                    ]);
+            }
 
             $cells = DB::table('area_feature_cells')->where('area_feature_id', $feature->id)->pluck('grid_cell_id');
 

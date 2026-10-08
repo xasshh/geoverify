@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Responses;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,9 +22,11 @@ final class LoginResponse implements LoginResponseContract
     public function toResponse($request): RedirectResponse|JsonResponse
     {
         $user = $request->user();
-        $home = $user instanceof User && $user->supervises()
-            ? route('console.team')
-            : route('field.index');
+        $home = match (true) {
+            $user instanceof User && $user->supervises() => route('console.team'),
+            $user instanceof User && $user->role === Role::DeskDigitiser => route('desk.index'),
+            default => route('field.index'),
+        };
 
         if ($request->wantsJson()) {
             return new JsonResponse(['redirect' => $home], 200);

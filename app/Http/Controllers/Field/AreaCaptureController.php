@@ -78,6 +78,7 @@ final class AreaCaptureController
                 'attributes' => $class->latestVersion->attribute_schema ?? [],
             ])->values()->all(),
             'features' => $this->featuresAround($cell->coverage_area_id, $request->user()),
+            'tasks' => $this->tasksFor($request->user(), $campaign->id),
         ]);
     }
 
@@ -168,5 +169,41 @@ final class AreaCaptureController
                 ],
             ], $rows),
         ];
+    }
+
+    /**
+     * The features this officer was sent to check, with the shape drawn at the
+     * desk so they can confirm it or correct it on the ground.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function tasksFor(mixed $officer, int $campaignId): array
+    {
+        if (! $officer instanceof User) {
+            return [];
+        }
+
+        $rows = DB::select(<<<'SQL'
+            SELECT t.id, f.client_uuid, f.feature_class_id, fc.label, r.capture_method,
+                   ST_AsGeoJSON(r.geom, 7) AS geometry,
+                   ST_X(ST_PointOnSurface(r.geom)) AS lon, ST_Y(ST_PointOnSurface(r.geom)) AS lat
+              FROM area_verification_tasks t
+              JOIN area_features f ON f.id = t.area_feature_id
+              JOIN area_feature_revisions r ON r.id = f.current_revision_id
+              JOIN feature_classes fc ON fc.id = f.feature_class_id
+             WHERE t.status = 'open' AND t.assigned_to = ? AND f.campaign_id = ? AND f.status = 'live'
+             ORDER BY t.id
+             LIMIT 200
+        SQL, [$officer->id, $campaignId]);
+
+        return array_map(static fn (object $row): array => [
+            'id' => (int) $row->id,
+            'featureUuid' => (string) $row->client_uuid,
+            'classId' => (int) $row->feature_class_id,
+            'label' => (string) $row->label,
+            'method' => (string) $row->capture_method,
+            'geometry' => json_decode((string) $row->geometry, true),
+            'at' => [(float) $row->lon, (float) $row->lat],
+        ], $rows);
     }
 }
