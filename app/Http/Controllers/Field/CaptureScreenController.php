@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Field;
 
+use App\Domain\Campaign\Enums\CaptureMode;
+use App\Domain\Campaign\Models\Campaign;
 use App\Domain\Field\Models\Assignment;
 use App\Domain\Registry\Enums\OccupancyStatus;
 use App\Domain\Registry\Enums\StructureType;
@@ -47,7 +49,15 @@ final class CaptureScreenController
             [$cell->id],
         );
 
+        // The way across to area capture, offered only where the campaign
+        // asks for it; every other campaign's screen is exactly as before.
+        $campaign = Campaign::query()->find($cell->coverageArea?->campaign_id);
+        $areaCaptureUrl = $campaign !== null && $campaign->captures(CaptureMode::AreaFeatures)
+            ? route('field.area', $assignment)
+            : null;
+
         return Inertia::render('field/Capture', [
+            'areaCaptureUrl' => $areaCaptureUrl,
             'assignmentId' => $assignment->id,
             'cell' => [
                 'id' => $cell->id,

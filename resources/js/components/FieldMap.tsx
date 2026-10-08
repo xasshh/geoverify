@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Map as MapLibre, type GeoJSONSource } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
-import { addProtocol } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
+import { registerProtocol } from '@/lib/pmtilesProtocol';
 import { fieldStyle, readPalette } from '@/lib/mapStyle';
 import { openPack } from '@/lib/offline/pack';
 import { openImagery, type BasemapChoice } from '@/lib/offline/imagery';
@@ -11,23 +10,6 @@ import type { LocalImagery, LocalPack } from '@/lib/offline/db';
 import type { Fix } from '@/lib/geolocation';
 import { cx } from '@/lib/cx';
 
-/**
- * The pmtiles protocol, registered once for the life of the tab.
- *
- * MapLibre resolves protocols from a module level registry, so registering per
- * map would either throw or quietly replace the handler for a map still using it.
- */
-const protocol = new Protocol();
-let registered = false;
-
-function registerProtocol(): Protocol {
-    if (!registered) {
-        addProtocol('pmtiles', protocol.tile);
-        registered = true;
-    }
-
-    return protocol;
-}
 
 /**
  * The layers drawn out of the pack archive, as opposed to the officer's own

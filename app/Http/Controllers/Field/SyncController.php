@@ -24,7 +24,7 @@ final class SyncController
             // batches rather than one request the server cannot hold in memory.
             'mutations' => ['required', 'array', 'max:200'],
             'mutations.*.client_uuid' => ['required', 'uuid'],
-            'mutations.*.entity' => ['required', 'string', 'in:structure,enterprise'],
+            'mutations.*.entity' => ['required', 'string', 'in:structure,enterprise,area_feature'],
             'mutations.*.op' => ['nullable', 'string', 'in:create,update'],
             'mutations.*.payload' => ['required', 'array'],
             'device_id' => ['nullable', 'string', 'max:128'],

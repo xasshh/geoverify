@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Sync\Actions;
 
+use App\Domain\AreaCapture\Actions\CaptureAreaFeature;
 use App\Domain\Registry\Actions\CaptureEnterprise;
 use App\Domain\Registry\Actions\CaptureStructure;
 use App\Domain\Registry\Data\StructureCapture;
@@ -52,6 +53,7 @@ final class ProcessMutationBatch
     public function __construct(
         private readonly CaptureStructure $structures,
         private readonly CaptureEnterprise $enterprises,
+        private readonly CaptureAreaFeature $areaFeatures,
     ) {}
 
     /**
@@ -170,6 +172,10 @@ final class ProcessMutationBatch
         return match ($entity) {
             'structure' => $this->structures->capture(StructureCapture::fromArray($payload), $officer),
             'enterprise' => $this->enterprises->capture($this->withResolvedParent($payload), $officer),
+            // Area capture (land, water, the things on it). Added beside the
+            // two above and touching neither: a handset that never sends it
+            // syncs exactly as before.
+            'area_feature' => ($this->areaFeatures)($payload, $officer),
             default => throw new RuntimeException("This system does not sync '{$entity}' records."),
         };
     }

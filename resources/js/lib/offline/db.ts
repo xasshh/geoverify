@@ -89,7 +89,7 @@ export type MutationState = 'queued' | 'sending' | 'done' | 'failed' | 'deferred
  */
 export interface Mutation {
     clientUuid: string;
-    entity: 'structure' | 'enterprise';
+    entity: 'structure' | 'enterprise' | 'area_feature';
     op: 'create' | 'update';
     payload: Record<string, unknown>;
     createdAt: string;
@@ -209,6 +209,22 @@ export interface LocalImagery {
     installedAt: string | null;
 }
 
+/** A photograph of an area feature, waiting for its capture to land. */
+export interface LocalAreaPhoto {
+    clientUuid: string;
+    /** The area_feature mutation (revision) it belongs to. */
+    revisionClientUuid: string;
+    kind: string;
+    blob: Blob;
+    bytes: number;
+    longitude: number | null;
+    latitude: number | null;
+    /** Which way the camera faced, from the compass, when the phone has one. */
+    bearing: number | null;
+    takenAt: string;
+    serverId: number | null;
+}
+
 export interface ImageryChunk {
     layerId: number;
     index: number;
@@ -228,6 +244,7 @@ const db = new Dexie('geoverify') as Dexie & {
     jobActions: EntityTable<JobAction, 'seq'>;
     imagery: EntityTable<LocalImagery, 'layerId'>;
     imageryChunks: EntityTable<ImageryChunk, 'layerId'>;
+    areaPhotos: EntityTable<LocalAreaPhoto, 'clientUuid'>;
 };
 
 db.version(1).stores({
@@ -263,6 +280,12 @@ db.version(4).stores({
 db.version(5).stores({
     imagery: 'layerId, coverageAreaId',
     imageryChunks: '[layerId+index], layerId',
+});
+
+// Area capture photographs. Their own table, so the building photo queue
+// (which waits on a building's server id) never sees them.
+db.version(6).stores({
+    areaPhotos: 'clientUuid, revisionClientUuid, serverId',
 });
 
 export { db };

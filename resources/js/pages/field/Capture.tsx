@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { CaptureStepHeader, GpsCard, SupervisorNote } from '@/components/CaptureChrome';
 import { CoverageBar, FootprintLegend, MapChrome } from '@/components/MapChrome';
@@ -63,6 +63,8 @@ interface CapturedStructure {
 }
 
 interface CaptureProps {
+    /** Present only when the campaign also maps land: the way across to it. */
+    areaCaptureUrl?: string | null;
     assignmentId: number;
     cell: Cell;
     structureTypes: Option[];
@@ -87,6 +89,7 @@ export default function Capture({
     occupancyStatuses,
     structures,
     consentScript,
+    areaCaptureUrl = null,
 }: CaptureProps) {
     const [stage, setStage] = useState<Stage>('map');
     const [openStructure, setOpenStructure] = useState<CapturedStructure | null>(null);
@@ -295,6 +298,15 @@ export default function Capture({
                                 imagery={imagery.image}
                                 basemap={imagery.choice}
                             />
+
+                            {areaCaptureUrl !== null && (
+                                <Link
+                                    href={areaCaptureUrl}
+                                    className="absolute top-12 left-2.5 rounded-full bg-raised/95 px-3 py-1.5 text-label font-extrabold text-ink shadow-card backdrop-blur"
+                                >
+                                    Area features →
+                                </Link>
+                            )}
 
                             {imagery.image !== null && (
                                 <BasemapSwitch

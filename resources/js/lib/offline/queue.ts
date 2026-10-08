@@ -1,4 +1,5 @@
 import { db, readMeta, writeMeta, type Mutation } from './db';
+import { drainAreaPhotographs } from './areaPhotos';
 import { compressPhotograph, uuid7 } from '@/lib/capture';
 
 /**
@@ -153,7 +154,7 @@ export async function snapshot(): Promise<QueueSnapshot> {
         db.mutations.where('state').anyOf('queued', 'sending').count(),
         db.mutations.where('state').equals('failed').count(),
         db.mutations.where('state').equals('deferred').count(),
-        db.photos.filter((p) => p.serverId === null).count(),
+        db.photos.filter((p) => p.serverId === null).count().then(async (n) => n + (await db.areaPhotos.filter((p) => p.serverId === null).count())),
         readMeta<string | null>('lastSyncAt', null),
     ]);
 
@@ -185,6 +186,7 @@ export async function drain(batchSize = 50): Promise<SyncResult[]> {
 
         if (pending.length === 0) {
             await drainPhotographs();
+        await drainAreaPhotographs();
             await writeMeta('lastSyncAt', new Date().toISOString());
 
             return [];
@@ -226,6 +228,7 @@ export async function drain(batchSize = 50): Promise<SyncResult[]> {
 
         // Records first, always. Photographs follow once their building has an id.
         await drainPhotographs();
+        await drainAreaPhotographs();
         await writeMeta('lastSyncAt', new Date().toISOString());
 
         return results;

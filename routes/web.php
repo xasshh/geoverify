@@ -41,6 +41,7 @@ use App\Http\Controllers\Enumerate\ReportController as EnumerateReportController
 use App\Http\Controllers\Enumerate\RequestController as EnumerateRequestController;
 use App\Http\Controllers\Enumerate\SupportController as EnumerateSupportController;
 use App\Http\Controllers\Enumerate\WalletController as EnumerateWalletController;
+use App\Http\Controllers\Field\AreaCaptureController;
 use App\Http\Controllers\Field\AssignmentBoardController;
 use App\Http\Controllers\Field\CaptureController;
 use App\Http\Controllers\Field\CaptureScreenController;
@@ -660,6 +661,8 @@ Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(fun
     // A site visit somebody paid for through Enumerate (E2).
     Route::get('visits/{visit}', [FieldVisitController::class, 'show'])->name('visits.show');
     Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
+    // Area capture: land, water and the things on it, for campaigns that ask.
+    Route::get('assignments/{assignment}/area', [AreaCaptureController::class, 'show'])->name('area');
 });
 
 /*
@@ -674,6 +677,8 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     Route::post('structures', [CaptureController::class, 'storeStructure'])->name('structures.store');
     Route::post('enterprises', [CaptureController::class, 'storeEnterprise'])->name('enterprises.store');
     Route::post('photographs', [CaptureController::class, 'storePhotograph'])->name('photographs.store');
+    Route::post('area-photographs', [AreaCaptureController::class, 'storePhotograph'])
+        ->middleware('throttle:120,1')->name('area-photographs.store');
     Route::get('photographs/{media}', [CaptureController::class, 'showPhotograph'])->name('photographs.show');
 
     Route::get('sectors', [CaptureController::class, 'searchSectors'])->name('sectors');
