@@ -152,7 +152,16 @@ final class CaptureAreaFeature
         }
 
         if ($class->exclusivity_group !== null && $class->geometry_type === GeometryType::Polygon) {
-            $this->checkOverlap($shape->ewkt, $class->exclusivity_group, $campaign, $existing?->id);
+            $this->checkOverlap(
+                $shape->ewkt,
+                $class->exclusivity_group,
+                $campaign,
+                $existing?->id,
+                // Only the desk may ask, and only about its own batch.
+                $channel === self::DESK && ($input['overlap_ignores_own_batch'] ?? false) === true && isset($input['area_feature_batch_id'])
+                    ? (int) $input['area_feature_batch_id']
+                    : null,
+            );
         }
 
         $session = null;
@@ -459,7 +468,7 @@ final class CaptureAreaFeature
     }
 
     /** A piece of ground is one land cover, not two: refuse a real overlap. */
-    private function checkOverlap(string $ewkt, string $group, Campaign $campaign, ?int $exceptFeatureId): void
+    private function checkOverlap(string $ewkt, string $group, Campaign $campaign, ?int $exceptFeatureId, ?int $ignoreBatchId = null): void
     {
         $conflicts = DB::select(<<<'SQL'
             WITH mine AS (SELECT ST_GeomFromEWKT(?) AS g)
@@ -474,9 +483,10 @@ final class CaptureAreaFeature
                AND f.status = 'live'
                AND fc.exclusivity_group = ?
                AND (?::bigint IS NULL OR f.id <> ?::bigint)
+               AND (?::bigint IS NULL OR r.area_feature_batch_id IS DISTINCT FROM ?::bigint)
                AND GeometryType(r.geom) IN ('POLYGON', 'MULTIPOLYGON')
                AND ST_Intersects(r.geom, mine.g)
-        SQL, [$ewkt, $campaign->id, $group, $exceptFeatureId, $exceptFeatureId]);
+        SQL, [$ewkt, $campaign->id, $group, $exceptFeatureId, $exceptFeatureId, $ignoreBatchId, $ignoreBatchId]);
 
         $real = array_values(array_filter(
             $conflicts,

@@ -89,6 +89,8 @@ final class SeedFromLandCover implements ShouldQueue
         File::ensureDirectoryExists($work);
 
         $created = 0;
+        $refused = 0;
+        $dropped = 0;
         $refusals = [];
 
         try {
@@ -102,14 +104,44 @@ final class SeedFromLandCover implements ShouldQueue
                 'east' => (float) $shape->east, 'north' => (float) $shape->north,
             ], $minimumPixels, $work);
 
-            /** @var array{features: list<array<string, mixed>>} $cover */
-            $cover = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+            $lines = fopen($path, 'rb');
 
-            foreach ($cover['features'] as $index => $feature) {
+            if ($lines === false) {
+                throw new \RuntimeException('The land cover could not be read back.');
+            }
+
+            $minimumHa = (float) ($campaign->min_mapping_unit_ha ?? 0.5);
+
+            $index = -1;
+
+            while (($line = fgets($lines)) !== false) {
+                $index++;
+                $line = trim($line, "\x1E \n\r\t");
+
+                if ($line === '') {
+                    continue;
+                }
+
+                /** @var array<string, mixed> $feature */
+                $feature = json_decode($line, true, flags: JSON_THROW_ON_ERROR);
                 $key = self::CLASSES[(int) ($feature['properties']['class'] ?? 0)] ?? null;
                 $class = $key === null ? null : $classes->get($key);
 
-                if ($class === null) {
+                if ($class === null || ! is_array($feature['geometry'] ?? null)) {
+                    continue;
+                }
+
+                // Pixel edges simplified to about 3 m in PostGIS, which keeps
+                // every polygon valid. A piece the simplification leaves
+                // under the minimum mapping unit is noise, not a refusal.
+                $simple = DB::selectOne(<<<'SQL'
+                    WITH g AS (SELECT ST_SimplifyPreserveTopology(ST_SetSRID(ST_GeomFromGeoJSON(?), 4326), 0.00003) AS g)
+                    SELECT ST_AsGeoJSON(g, 7) AS geojson, ST_Area(g::geography) / 10000 AS ha FROM g
+                SQL, [json_encode($feature['geometry'], JSON_THROW_ON_ERROR)]);
+
+                if ($simple === null || (float) $simple->ha < $minimumHa) {
+                    $dropped++;
+
                     continue;
                 }
 
@@ -121,17 +153,25 @@ final class SeedFromLandCover implements ShouldQueue
                         'class_version' => $class->latestVersion?->version,
                         'capture_method' => AreaFeatureRevision::METHOD_IMPORTED,
                         'coverage_area_id' => $area->id,
-                        'geometry' => $feature['geometry'] ?? null,
+                        'geometry' => json_decode((string) $simple->geojson, true),
                         'answers' => [],
                         'area_feature_batch_id' => $batch->id,
+                        // Neighbouring pieces of one land cover map share
+                        // edges; a sliver between them is the simplification,
+                        // not a conflict. Anything drawn by a person still is.
+                        'overlap_ignores_own_batch' => true,
                     ], $actor, CaptureAreaFeature::DESK));
                     $created++;
                 } catch (ValidationException $e) {
+                    $refused++;
+
                     if (count($refusals) < 50) {
                         $refusals[] = ['index' => $index, 'message' => (string) collect($e->errors())->flatten()->first()];
                     }
                 }
             }
+
+            fclose($lines);
         } finally {
             File::deleteDirectory($work);
         }
@@ -139,15 +179,17 @@ final class SeedFromLandCover implements ShouldQueue
         $batch->forceFill([
             'status' => 'done',
             'created_count' => $created,
-            'refused_count' => count($refusals),
+            'refused_count' => $refused,
             'refusals' => $refusals === [] ? null : $refusals,
+            'error' => $dropped > 0 ? "{$dropped} pieces were smaller than the minimum mapping unit and were left out." : null,
             'finished_at' => now(),
         ])->save();
 
         VerificationEvent::record($batch, 'area_features.seeded', null, [
             'coverage_area_id' => $area->id,
             'created' => $created,
-            'refused' => count($refusals),
+            'refused' => $refused,
+            'dropped_below_minimum' => $dropped,
             'source' => 'ESA WorldCover 10 m 2021 (CC BY 4.0)',
         ], VerificationEvent::ACTOR_SYSTEM);
     }

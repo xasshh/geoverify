@@ -183,9 +183,9 @@ it('pre-draws land cover through the same rules, mapping WorldCover classes', fu
                 // Snow: not a class that maps to anything here.
                 ['type' => 'Feature', 'properties' => ['class' => 70], 'geometry' => square($this->centre, 0.002, dy: 0.015)],
             ];
-            file_put_contents("{$workDir}/cover.geojson", (string) json_encode(['type' => 'FeatureCollection', 'features' => $features]));
+            file_put_contents("{$workDir}/cover.geojsonl", implode("\n", array_map(static fn (array $f): string => (string) json_encode($f), $features))."\n");
 
-            return "{$workDir}/cover.geojson";
+            return "{$workDir}/cover.geojsonl";
         }
     });
 
@@ -289,4 +289,43 @@ it('withdraws a feature without deleting it, and cancels its check', function ()
     expect($desk->feature->refresh()->status)->toBe('withdrawn')
         ->and(AreaFeatureRevision::query()->where('area_feature_id', $desk->area_feature_id)->exists())->toBeTrue()
         ->and(AreaVerificationTask::query()->value('status'))->toBe('cancelled');
+});
+
+it('lets a land cover seed\'s own pieces touch, but never overrides what a person drew', function () {
+    $ground = areaGround();
+    $c = $ground['centre'];
+
+    // An officer's forest in their own cell.
+    app(CaptureAreaFeature::class)(areaInput($ground, 'forest_woodland', square($c, 0.0004)), $ground['officer']);
+
+    app()->instance(LandCoverPipeline::class, new class($c) extends LandCoverPipeline
+    {
+        /** @param array{0: float, 1: float} $centre */
+        public function __construct(private readonly array $centre) {}
+
+        public function build(string $boundaryGeoJson, array $bounds, int $minimumPixels, string $workDir): string
+        {
+            $features = [
+                // Two grassland pieces overlapping each other by far more
+                // than the slack: a simplification sliver, so both are kept.
+                ['type' => 'Feature', 'properties' => ['class' => 30], 'geometry' => square($this->centre, 0.002, dx: 0.02)],
+                ['type' => 'Feature', 'properties' => ['class' => 30], 'geometry' => square($this->centre, 0.002, dx: 0.0236)],
+                // Farmland over the officer's forest: refused.
+                ['type' => 'Feature', 'properties' => ['class' => 40], 'geometry' => square($this->centre, 0.0006)],
+            ];
+            file_put_contents("{$workDir}/cover.geojsonl", implode("\n", array_map(static fn (array $f): string => (string) json_encode($f), $features))."\n");
+
+            return "{$workDir}/cover.geojsonl";
+        }
+    });
+
+    $batch = AreaFeatureBatch::query()->create([
+        'coverage_area_id' => $ground['cell']->coverage_area_id, 'kind' => 'landcover', 'status' => 'queued', 'requested_by' => digitiser()->id,
+    ]);
+    (new SeedFromLandCover($batch->id))->handle(app(LandCoverPipeline::class), app(CaptureAreaFeature::class));
+    $batch->refresh();
+
+    expect($batch->created_count)->toBe(2)
+        ->and($batch->refused_count)->toBe(1)
+        ->and($batch->refusals[0]['message'] ?? '')->toContain('overlaps forest');
 });

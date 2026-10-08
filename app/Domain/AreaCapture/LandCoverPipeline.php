@@ -14,8 +14,8 @@ use RuntimeException;
  * shrubland, grassland, cropland, built-up, bare, water, wetland. Read by
  * range straight from its cloud GeoTIFF tiles, clipped to the boundary, specks
  * smaller than the minimum mapping unit sieved away, the rest turned into
- * polygons and simplified to about 4 m. Proved on the production server over
- * Makurdi: 30 km2 became 280 polygons in under a second.
+ * polygons. Proved on the production server over Makurdi: 30 km2 became 280
+ * polygons in under a second, and the whole LGA 17,889.
  *
  * Bound in the container so a test can stand in for it, like ImageryPipeline.
  */
@@ -25,7 +25,7 @@ class LandCoverPipeline
 
     /**
      * @param  array{west: float, south: float, east: float, north: float}  $bounds
-     * @return string the path of a GeoJSON FeatureCollection whose features carry a `class` property
+     * @return string the path of newline-delimited GeoJSON features, each carrying a `class` property
      */
     public function build(string $boundaryGeoJson, array $bounds, int $minimumPixels, string $workDir): string
     {
@@ -53,14 +53,20 @@ class LandCoverPipeline
         $this->run([$this->gdal('gdal_polygonize.py'), '-q', '-8', "{$workDir}/sieved.tif",
             '-f', 'GeoJSON', "{$workDir}/raw.geojson", 'cover', 'class'], $env);
 
-        $this->run([$this->gdal('ogr2ogr'), '-f', 'GeoJSON', '-simplify', '0.00004', '-where', 'class > 0',
-            "{$workDir}/cover.geojson", "{$workDir}/raw.geojson"], $env);
+        // Not simplified here. ogr2ogr's -simplify works on each polygon
+        // alone and can make a large one cross itself and pull neighbours
+        // over each other; the job simplifies each in PostGIS instead, with
+        // ST_SimplifyPreserveTopology, which cannot.
+        // One feature per line, so a whole LGA at pixel resolution is read a
+        // polygon at a time rather than decoded into memory at once.
+        $this->run([$this->gdal('ogr2ogr'), '-f', 'GeoJSONSeq', '-where', 'class > 0',
+            "{$workDir}/cover.geojsonl", "{$workDir}/raw.geojson"], $env);
 
-        if (! is_file("{$workDir}/cover.geojson")) {
+        if (! is_file("{$workDir}/cover.geojsonl")) {
             throw new RuntimeException('The land cover was not produced.');
         }
 
-        return "{$workDir}/cover.geojson";
+        return "{$workDir}/cover.geojsonl";
     }
 
     /**
