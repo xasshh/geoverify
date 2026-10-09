@@ -473,3 +473,21 @@ it('treats a Prembly refusal as the provider being unavailable, and a miss as no
 it('refuses to start Prembly without its key', function () {
     new PremblyRegistry('https://api.prembly.com', '', '');
 })->throws(RuntimeException::class, 'PREMBLY_API_KEY');
+
+it('reads Prembly\'s live field names, and says plainly when name search is not on the account', function () {
+    Http::fake([
+        'api.prembly.com/verification/cac/advance' => Http::response(['status' => true, 'data' => [[
+            'rc_number' => '208767', 'company_name' => 'DANGOTE CEMENT PLC', 'company_status' => 'ACTIVE',
+            'date_of_registration' => '1992-11-03T23:00:00.000+00:00', 'address' => 'Union Marble House, Falomo, Ikoyi',
+            'directors' => [],
+        ]]]),
+        'api.prembly.com/identitypass/verification/global/company/search' => Http::response(['status' => false, 'detail' => "Verification 'global/company/search' could not be processed at the moment"], 404),
+    ]);
+
+    $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', '');
+    $company = $prembly->company('208767', 'COMPANY');
+
+    expect($company?->incorporatedOn)->toBe('1992-11-03')
+        ->and($company?->address)->toBe('Union Marble House, Falomo, Ikoyi')
+        ->and(fn () => $prembly->search('name', 'dangote'))->toThrow(RegistryUnavailable::class, RegistryUnavailable::NAME_SEARCH_OFF);
+});

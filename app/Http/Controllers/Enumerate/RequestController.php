@@ -45,8 +45,8 @@ final class RequestController
 
         try {
             $matches = $registry->search($input['by'], $input['q']);
-        } catch (RegistryUnavailable) {
-            return new JsonResponse(['message' => 'The register is not answering just now. Try again in a minute.'], 503);
+        } catch (RegistryUnavailable $e) {
+            return new JsonResponse(['message' => $e->forPeople() ?? 'The register is not answering just now. Try again in a minute.'], 503);
         }
 
         return new JsonResponse([

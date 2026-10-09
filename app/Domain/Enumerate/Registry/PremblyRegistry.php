@@ -71,7 +71,24 @@ final class PremblyRegistry implements RegistryLookup
             return [];
         }
 
-        $entities = $this->post('/identitypass/verification/global/company/search', ['country_code' => 'ng', 'company_name' => $term]);
+        // Prembly's name search answers 404 "could not be processed" on an
+        // account without that product (found on the live key, 2026-10-09),
+        // which is not "no such business" and must not read as one.
+        try {
+            $response = $this->client()->post('/identitypass/verification/global/company/search', ['country_code' => 'ng', 'company_name' => $term]);
+        } catch (ConnectionException) {
+            throw new RegistryUnavailable('The registry provider could not be reached.');
+        }
+
+        if ($response->status() === 404 || $response->status() === 403) {
+            throw new RegistryUnavailable(RegistryUnavailable::NAME_SEARCH_OFF);
+        }
+
+        if (! $response->successful()) {
+            throw new RegistryUnavailable(self::reason($response));
+        }
+
+        $entities = $response->json('status') === true ? $response->json('data') : [];
         $matches = [];
 
         foreach (array_slice(is_array($entities) && array_is_list($entities) ? $entities : [], 0, 8) as $entity) {
@@ -131,8 +148,10 @@ final class PremblyRegistry implements RegistryLookup
             self::digits((string) ($entity['rc_number'] ?? $rcNumber)) ?: self::digits($rcNumber),
             self::ours($entity['company_type'] ?? $entity['entity_type'] ?? null) ?? $companyType,
             self::status($entity['company_status'] ?? null) ?? 'Unknown',
-            is_string($entity['registrationDate'] ?? null) ? substr($entity['registrationDate'], 0, 10) : null,
-            is_string($entity['company_address'] ?? null) && $entity['company_address'] !== '' ? $entity['company_address'] : self::place($entity),
+            // The live API says date_of_registration and address where the
+            // documentation says registrationDate and company_address.
+            self::date($entity['date_of_registration'] ?? $entity['registrationDate'] ?? null),
+            self::firstText($entity['address'] ?? null, $entity['company_address'] ?? null) ?? self::place($entity),
             $directors,
         );
     }
@@ -234,6 +253,22 @@ final class PremblyRegistry implements RegistryLookup
         $found = array_search(strtoupper(trim($type)), self::TYPES, true);
 
         return is_string($found) ? $found : (array_key_exists(strtoupper($type), self::TYPES) ? strtoupper($type) : null);
+    }
+
+    private static function date(mixed $value): ?string
+    {
+        return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1 ? substr($value, 0, 10) : null;
+    }
+
+    private static function firstText(mixed ...$values): ?string
+    {
+        foreach ($values as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
     }
 
     private static function digits(string $value): string

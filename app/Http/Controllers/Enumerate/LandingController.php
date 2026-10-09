@@ -83,8 +83,8 @@ final class LandingController
                 static fn (RegistryMatch $m): array => $m->toArray(),
                 array_slice($registry->search($input['by'], $input['q']), 0, 8),
             );
-        } catch (RegistryUnavailable) {
-            return new JsonResponse(['message' => 'The register is not answering just now. Try again in a minute.'], 503);
+        } catch (RegistryUnavailable $e) {
+            return new JsonResponse(['message' => $e->forPeople() ?? 'The register is not answering just now. Try again in a minute.'], 503);
         } catch (Throwable) {
             // A server with no registry keys yet, or any other fault: the
             // visitor is told plainly rather than shown a stack.
