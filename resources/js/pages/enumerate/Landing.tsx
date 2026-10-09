@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { HexField } from '@/components/AuthLayouts';
-import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick } from '@/components/PublicSite';
+import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
 import { companyType, kobo, type Prices } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
@@ -22,12 +22,15 @@ interface Match {
     place: string | null;
 }
 
-const NAV = [
+const NAV: NavItem[] = [
     { label: 'Registry', href: '/directory' },
-    { label: 'Invest Portal', href: '/invest' },
+    {
+        label: 'Products',
+        children: [{ label: 'Enumerate', href: '/enumerate', caption: 'Verify any business in Nigeria' }],
+    },
     { label: 'How it works', href: '#how' },
     { label: 'Pricing', href: '#pricing' },
-    { label: 'Field network', href: '#field' },
+    { label: 'Become an agent', href: '/become-an-agent' },
 ];
 
 /**
@@ -728,8 +731,8 @@ function FieldNetwork({ covered }: { covered: string[] }) {
                                 <dd className="font-display text-[2rem] font-extrabold text-ink">24 to 48h</dd>
                             </div>
                         </dl>
-                        <a href="/#field-network" className="mt-5 inline-block text-ui font-extrabold text-gold-dark underline underline-offset-4">
-                            Become a field officer
+                        <a href="/become-an-agent" className="mt-5 inline-block text-ui font-extrabold text-gold-dark underline underline-offset-4">
+                            Become an agent
                         </a>
                     </div>
                 </div>

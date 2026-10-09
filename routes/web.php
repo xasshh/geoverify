@@ -86,6 +86,10 @@ use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
+// Becoming a field agent: a placeholder until the application is specified.
+// Applying will never create an account; staff do not self register.
+Route::get('become-an-agent', fn () => Inertia::render('public/BecomeAgent'))->name('become-agent');
+
 // The spatial stack check that used to sit behind /, kept where an operator
 // can still reach it.
 Route::get('health', fn (CheckSpatialStack $check) => Inertia::render('Health', $check()))

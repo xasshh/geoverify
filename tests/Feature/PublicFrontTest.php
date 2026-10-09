@@ -10,6 +10,7 @@ use App\Domain\Enumerate\Registry\TinRecord;
 use App\Domain\Party\Actions\ManagePortalCredentials;
 use App\Domain\Party\Actions\NormalisePhone;
 use App\Domain\Party\Models\PortalAccount;
+use App\Models\User;
 use Database\Seeders\VerificationPricingSeeder;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia;
@@ -155,4 +156,12 @@ it('limits the free search per connection, by the minute', function () {
     }
 
     $this->getJson('/enumerate/search?by=name&q=business%209')->assertStatus(429);
+});
+
+it('shows the become-an-agent page, which creates no account', function () {
+    $this->get('/become-an-agent')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('public/BecomeAgent'));
+
+    expect(User::query()->count())->toBe(0);
 });

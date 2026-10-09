@@ -3,17 +3,19 @@ import { Head, Link, router } from '@inertiajs/react';
 import { CityBackdrop } from '@/components/CityBackdrop';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 import { HexField } from '@/components/AuthLayouts';
-import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick } from '@/components/PublicSite';
+import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
 import { kobo, type Prices } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
 
-const NAV = [
+const NAV: NavItem[] = [
     { label: 'Registry', href: '/directory' },
-    { label: 'Enumerate', href: '/enumerate' },
-    { label: 'Invest Portal', href: '/invest' },
+    {
+        label: 'Products',
+        children: [{ label: 'Enumerate', href: '/enumerate', caption: 'Verify any business in Nigeria' }],
+    },
     { label: 'How it works', href: '#how' },
-    { label: 'Field network', href: '#field-network' },
+    { label: 'Become an agent', href: '/become-an-agent' },
 ];
 
 /**
@@ -95,8 +97,8 @@ function Hero() {
                         <Link href="/enumerate" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
                             Verify a business
                         </Link>
-                        <Link href="/invest" className="rounded-full border border-white/50 px-5 py-2.5 text-ui font-extrabold hover:bg-white/10">
-                            Explore the Investment Portal
+                        <Link href="/become-an-agent" className="rounded-full border border-white/50 px-5 py-2.5 text-ui font-extrabold hover:bg-white/10">
+                            Become an agent
                         </Link>
                     </div>
                 </div>
@@ -380,9 +382,7 @@ function InvestPortal() {
                         </div>
                     ))}
                 </div>
-                <Link href="/invest" className="mt-8 inline-flex rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
-                    Open the Invest Portal
-                </Link>
+                <span className="mt-8 inline-flex rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">Coming soon</span>
             </div>
         </section>
     );
@@ -539,9 +539,9 @@ function FieldAgents() {
                         Join the on-ground network confirming business addresses across Nigeria. Field officers are the
                         reason a GeoVerify listing means something: every pin on the map has been visited by someone real.
                     </p>
-                    <span className="mt-6 inline-flex rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">
-                        Applications open soon
-                    </span>
+                    <Link href="/become-an-agent" className="mt-6 inline-flex rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
+                        Become an agent
+                    </Link>
                 </div>
                 <ul className="grid gap-3 sm:grid-cols-2">
                     {[

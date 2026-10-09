@@ -8,6 +8,59 @@ export interface NavLink {
     href: string;
 }
 
+/** A top-level nav entry: a link, or a menu of links (Products). */
+export interface NavItem {
+    label: string;
+    href?: string;
+    children?: Array<NavLink & { caption?: string }>;
+}
+
+/** A nav entry with a menu: opens on hover or focus, and on tap. */
+function NavMenu({ item, dark }: { item: NavItem; dark: boolean }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <div
+            className="relative"
+            onMouseEnter={() => {
+                setOpen(true);
+            }}
+            onMouseLeave={() => {
+                setOpen(false);
+            }}
+        >
+            <button
+                type="button"
+                aria-expanded={open}
+                aria-haspopup="true"
+                onClick={() => {
+                    setOpen(!open);
+                }}
+                className={cx('flex items-center gap-1 text-ui font-semibold', dark ? 'text-inverse/85 hover:text-inverse' : 'text-muted hover:text-ink')}
+            >
+                {item.label}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true" className={cx('transition-transform', open && 'rotate-180')}>
+                    <path d="m6 9 6 6 6-6" />
+                </svg>
+            </button>
+            {open && (
+                <div className="absolute top-full left-0 z-30 pt-2">
+                    <ul className="min-w-[240px] rounded-card border border-rule bg-raised p-2 text-ink shadow-card">
+                        {(item.children ?? []).map((child) => (
+                            <li key={child.href}>
+                                <a href={child.href} className="block rounded-sm px-3 py-2.5 hover:bg-sunken">
+                                    <span className="block text-ui font-extrabold">{child.label}</span>
+                                    {child.caption !== undefined && <span className="block text-label text-muted">{child.caption}</span>}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /**
  * The public site's header: brand on the left, the doors in the middle, sign in
  * and get started on the right. Collapses to a menu below md.
@@ -22,7 +75,7 @@ export function SiteHeader({
     tone = 'light',
 }: {
     brand: ReactNode;
-    links: NavLink[];
+    links: NavItem[];
     signIn: NavLink;
     getStarted: NavLink;
     tone?: 'light' | 'dark';
@@ -35,15 +88,19 @@ export function SiteHeader({
             <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-4 py-4 sm:px-6">
                 <div className="shrink-0">{brand}</div>
                 <nav aria-label="Main" className="hidden flex-1 items-center gap-6 md:flex">
-                    {links.map((link) => (
-                        <a
-                            key={link.href}
-                            href={link.href}
-                            className={cx('text-ui font-semibold', dark ? 'text-inverse/85 hover:text-inverse' : 'text-muted hover:text-ink')}
-                        >
-                            {link.label}
-                        </a>
-                    ))}
+                    {links.map((link) =>
+                        link.children !== undefined ? (
+                            <NavMenu key={link.label} item={link} dark={dark} />
+                        ) : (
+                            <a
+                                key={link.label}
+                                href={link.href}
+                                className={cx('text-ui font-semibold', dark ? 'text-inverse/85 hover:text-inverse' : 'text-muted hover:text-ink')}
+                            >
+                                {link.label}
+                            </a>
+                        ),
+                    )}
                 </nav>
                 <div className="ml-auto hidden items-center gap-3 md:flex">
                     <Link
@@ -78,18 +135,21 @@ export function SiteHeader({
             </div>
             {open && (
                 <nav aria-label="Main" className="border-t border-rule bg-raised px-4 pb-4 text-ink md:hidden">
-                    {links.map((link) => (
-                        <a
-                            key={link.href}
-                            href={link.href}
-                            onClick={() => {
-                                setOpen(false);
-                            }}
-                            className="block min-h-touch py-3 text-body font-semibold"
-                        >
-                            {link.label}
-                        </a>
-                    ))}
+                    {links.flatMap((link) =>
+                        (link.children ?? [{ label: link.label, href: link.href ?? '#' }]).map((entry) => (
+                            <a
+                                key={`${link.label}-${entry.href}`}
+                                href={entry.href}
+                                onClick={() => {
+                                    setOpen(false);
+                                }}
+                                className="block min-h-touch py-3 text-body font-semibold"
+                            >
+                                {link.children !== undefined && <span className="mr-2 text-label font-semibold text-muted uppercase">{link.label}</span>}
+                                {entry.label}
+                            </a>
+                        )),
+                    )}
                     <div className="mt-2 flex gap-3">
                         <Link href={signIn.href} className="flex-1 rounded-full border border-rule-strong py-3 text-center text-ui font-semibold">
                             {signIn.label}
@@ -169,14 +229,13 @@ export function SiteFooter() {
                 { label: 'Business directory', href: '/directory' },
                 { label: 'Enumerate', href: '/enumerate' },
                 { label: 'Business portal', href: '/portal/sign-in' },
-                { label: 'Invest Portal', href: '/invest' },
             ],
         },
         {
             title: 'Company',
             links: [
                 { label: 'How it works', href: '/directory/how-verification-works' },
-                { label: 'Field network', href: '/#field-network' },
+                { label: 'Become an agent', href: '/become-an-agent' },
                 { label: 'Pricing', href: '/enumerate#pricing' },
             ],
         },
