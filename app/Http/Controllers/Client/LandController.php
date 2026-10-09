@@ -230,7 +230,10 @@ final class LandController extends Controller
     /**
      * The campaign's land drawn as SVG by PostGIS: one path per class, in web
      * mercator, simplified to what an A4 page can show. Points are left to the
-     * table; at this scale they are noise.
+     * table; at this scale they are noise. Each class is extracted to a single
+     * multi geometry first: a mixed collection (polygons beside multipolygons,
+     * which a land cover seed always produces) comes out of ST_AsSVG as
+     * semicolon separated pieces that no path can draw.
      *
      * @return array{viewBox: string, stroke: float, paths: list<array{d: string, colour: string, line: bool}>, boundary: string}|null
      */
@@ -251,7 +254,8 @@ final class LandController extends Controller
 
         $paths = DB::select(<<<'SQL'
             SELECT fc.style, fc.geometry_type,
-                   ST_AsSVG(ST_SimplifyPreserveTopology(ST_Collect(ST_Transform(r.geom, 3857)), ?), 0, 0) AS d
+                   ST_AsSVG(ST_Multi(ST_CollectionExtract(ST_SimplifyPreserveTopology(ST_Collect(ST_Transform(r.geom, 3857)), ?),
+                                                       CASE WHEN fc.geometry_type = 'line' THEN 2 ELSE 3 END)), 0, 0) AS d
               FROM area_features f
               JOIN area_feature_revisions r ON r.id = f.current_revision_id
               JOIN feature_classes fc ON fc.id = f.feature_class_id
@@ -261,7 +265,7 @@ final class LandController extends Controller
         SQL, [$tolerance, $campaign->id]);
 
         $boundary = (string) DB::scalar(
-            'SELECT ST_AsSVG(ST_SimplifyPreserveTopology(ST_Collect(ST_Transform(boundary, 3857)), ?), 0, 0) FROM coverage_areas WHERE campaign_id = ?',
+            'SELECT ST_AsSVG(ST_Multi(ST_CollectionExtract(ST_SimplifyPreserveTopology(ST_Collect(ST_Transform(boundary, 3857)), ?), 3)), 0, 0) FROM coverage_areas WHERE campaign_id = ?',
             [$tolerance, $campaign->id],
         );
 

@@ -153,6 +153,7 @@
             </tbody>
         </table>
 
+        <div class="avoid-break">
         <h2>Ground checks</h2>
         <table class="datagrid avoid-break" style="width:100%">
             <tbody>
@@ -166,6 +167,7 @@
             </tbody>
         </table>
         <p class="muted" style="font-size:8pt">A feature counts as checked only once an officer has stood on it. Features drawn at the desk stay unverified until then.</p>
+        </div>
 
         @if ($sources !== [])
             <h2>Sources</h2>
