@@ -209,9 +209,10 @@ Domain code lives under
 prepaid wallet to have any business checked by its CAC number. The same portal
 accounts and `portal` guard, behind its own door. The subject is a CAC record,
 not a row of `enterprises`, and nothing is written to the register on a
-stranger's say-so. `RegistryLookup` is the one way to CAC and FIRS: `dojah` in
-anything real, `fake` (a fixed list that refuses production) in development and
-tests, chosen by `REGISTRY_DRIVER`. Drivers report what the register said;
+stranger's say-so. `RegistryLookup` is the one way to CAC and FIRS: `prembly`
+in anything real (chosen 2026-10-09; `dojah` is kept as an alternative), `fake`
+(a fixed list that refuses production) in development and tests, chosen by
+`REGISTRY_DRIVER`. Drivers report what the register said;
 `RunRegistryChecks` alone decides what matches, and directors are kept to a name
 and a role. A supervisor reads the answers at `/console/desk-checks`
 (`DecideDeskCheck`): a desk check that ends the job earns `registry_fee_minor`

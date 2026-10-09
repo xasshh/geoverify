@@ -14,6 +14,7 @@ use App\Domain\Enumerate\Models\RegistryCheck;
 use App\Domain\Enumerate\Models\WalletFunding;
 use App\Domain\Enumerate\Registry\DojahRegistry;
 use App\Domain\Enumerate\Registry\FakeRegistry;
+use App\Domain\Enumerate\Registry\PremblyRegistry;
 use App\Domain\Enumerate\Registry\RegistryUnavailable;
 use App\Domain\Ledger\Actions\ReadLedgerBalances;
 use App\Domain\Ledger\Models\LedgerAccount;
@@ -398,3 +399,77 @@ it('reads Dojah as documented and keeps directors to a name and a role', functio
 
     expect(fn () => $dojah->search('rc', '1482093'))->toThrow(RegistryUnavailable::class);
 });
+
+it('reads Prembly as documented, translates company types, and keeps directors to a name and a role', function () {
+    Http::fake([
+        'api.prembly.com/verification/cac/advance' => Http::response([
+            'status' => true, 'response_code' => '00',
+            'data' => [[
+                'rc_number' => '1482093',
+                'company_name' => 'KORA BUILD SUPPLIES LIMITED',
+                'company_status' => 'ACTIVE',
+                'company_address' => 'Plot 7, Ahmadu Bello Way, Garki',
+                'entity_type' => 'RC',
+                'registrationDate' => '2016-03-14T00:00:00Z',
+                'directors' => [[
+                    'surname' => 'Ade', 'firstname' => 'Kolawole', 'otherName' => 'N/A',
+                    'email' => 'k@kora.ng', 'phoneNumber' => '08030000000', 'address' => '4 Home Street',
+                    'affiliateTypeFk' => ['name' => 'DIRECTOR'],
+                ]],
+            ]],
+        ]),
+        'api.prembly.com/verification/tin' => Http::response([
+            'status' => true, 'response_code' => '00',
+            'data' => ['taxpayer_name' => 'KORA BUILD SUPPLIES LIMITED', 'cac_reg_number' => 'RC1482093', 'firstin' => '12392112-0001'],
+        ]),
+        'api.prembly.com/identitypass/verification/global/company/search' => Http::response([
+            'status' => true, 'response_code' => '00',
+            'data' => [['name' => 'KORA BUILD SUPPLIES LIMITED', 'internationalNumber' => 'RC1482093', 'countryCode' => 'ng']],
+        ]),
+        // A business name number: not a company, found on the second try.
+        'api.prembly.com/verification/cac/basic' => function ($request) {
+            return $request['company_type'] === 'BN'
+                ? Http::response(['status' => true, 'response_code' => '00', 'data' => [
+                    'rc_number' => '3300112', 'company_name' => 'IYA BOSE PROVISIONS', 'company_status' => 'Active',
+                    'company_type' => 'BN', 'city' => 'Garki', 'state' => 'FCT',
+                ]])
+                : Http::response([], 400);
+        },
+    ]);
+
+    $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', 'app-456');
+    $company = $prembly->company('RC 1482093', 'COMPANY');
+
+    expect($company?->status)->toBe('Active')
+        ->and($company?->incorporatedOn)->toBe('2016-03-14')
+        ->and($company?->directors)->toBe([['name' => 'Kolawole Ade', 'role' => 'Director']])
+        ->and(json_encode($company?->toFacts()))->not->toContain('0803')
+        ->and(json_encode($company?->toFacts()))->not->toContain('Home Street')
+        ->and($prembly->tin('1482093', 'COMPANY')?->tin)->toBe('12392112-0001')
+        ->and($prembly->search('name', 'kora')[0]->rcNumber)->toBe('1482093');
+
+    $bn = $prembly->search('rc', '3300112');
+    expect($bn)->toHaveCount(1)
+        ->and($bn[0]->companyType)->toBe('BUSINESS_NAME')
+        ->and($bn[0]->name)->toBe('IYA BOSE PROVISIONS');
+
+    Http::assertSent(fn ($request) => $request->hasHeader('x-api-key', 'key-123') && $request->hasHeader('app-id', 'app-456'));
+    Http::assertSent(fn ($request) => str_ends_with($request->url(), '/verification/tin') && $request['number'] === 'RC1482093' && $request['channel'] === 'CAC');
+    Http::assertSent(fn ($request) => str_ends_with($request->url(), '/verification/cac/advance') && $request['company_type'] === 'RC' && $request['rc_number'] === '1482093');
+});
+
+it('treats a Prembly refusal as the provider being unavailable, and a miss as no record', function () {
+    Http::fake([
+        'api.prembly.com/verification/cac/advance' => Http::response(['status' => false, 'detail' => 'No record found'], 200),
+        'api.prembly.com/verification/tin' => Http::response(['detail' => 'Insufficient wallet balance'], 402),
+    ]);
+
+    $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', '');
+
+    expect($prembly->company('1482093', 'COMPANY'))->toBeNull()
+        ->and(fn () => $prembly->tin('1482093', 'COMPANY'))->toThrow(RegistryUnavailable::class, 'Insufficient wallet balance');
+});
+
+it('refuses to start Prembly without its key', function () {
+    new PremblyRegistry('https://api.prembly.com', '', '');
+})->throws(RuntimeException::class, 'PREMBLY_API_KEY');

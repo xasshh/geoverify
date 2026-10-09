@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Enumerate\Registry\DojahRegistry;
 use App\Domain\Enumerate\Registry\FakeRegistry;
+use App\Domain\Enumerate\Registry\PremblyRegistry;
 use App\Domain\Enumerate\Registry\RegistryLookup;
 use App\Domain\Sms\LogSms;
 use App\Domain\Sms\SmsGateway;
@@ -27,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
                 (string) config('services.dojah.base_url'),
                 (string) config('services.dojah.app_id'),
                 (string) config('services.dojah.secret'),
+            ),
+            'prembly' => new PremblyRegistry(
+                (string) config('services.prembly.base_url'),
+                (string) config('services.prembly.api_key'),
+                (string) config('services.prembly.app_id'),
             ),
             default => new FakeRegistry($this->app->isProduction()),
         });

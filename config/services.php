@@ -86,6 +86,14 @@ return [
         'driver' => env('REGISTRY_DRIVER', 'fake'),
     ],
 
+    // Prembly (IdentityPass), the provider since 2026-10-09. Test and live
+    // keys use the same host; the key decides which.
+    'prembly' => [
+        'base_url' => env('PREMBLY_BASE_URL', 'https://api.prembly.com'),
+        'api_key' => env('PREMBLY_API_KEY', ''),
+        'app_id' => env('PREMBLY_APP_ID', ''),
+    ],
+
     'dojah' => [
         'base_url' => env('DOJAH_BASE_URL', 'https://sandbox.dojah.io'),
         'app_id' => env('DOJAH_APP_ID', ''),

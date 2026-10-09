@@ -526,3 +526,22 @@ Portal accounts are proved by email, so the site must be able to send it.
 
 `SMS_ENABLED` stays unset (off). Termii keys are only needed if SMS is ever
 switched back on.
+
+## CAC and TIN lookups (Prembly)
+
+1. In the Prembly dashboard, copy the API key (x-api-key) and the App ID.
+2. On the server, without either passing through chat:
+
+   ```bash
+   cd /var/www/geoverify
+   read -rs -p "Prembly API key: " KEY && echo
+   read -r -p "Prembly App ID: " APPID
+   sed -i '/^PREMBLY_/d; /^REGISTRY_DRIVER=/d' .env
+   printf 'REGISTRY_DRIVER=prembly\nPREMBLY_BASE_URL=https://api.prembly.com\nPREMBLY_API_KEY=%s\nPREMBLY_APP_ID=%s\n' "$KEY" "$APPID" >> .env
+   unset KEY APPID
+   php artisan config:cache
+   ```
+
+Every lookup is charged to the Prembly wallet; a lookup that fails for lack of
+balance shows as "the registry provider did not answer" and charges the
+requester nothing.
