@@ -76,7 +76,7 @@ final class LandController extends Controller
 
     /**
      * One mandate's features for the map, lightly simplified for the screen
-     * (to about five metres). The exports carry the shapes at full precision.
+     * (to about ten metres, a 10 m land cover pixel). The exports carry the shapes at full precision.
      */
     public function features(Campaign $campaign, int $area): JsonResponse
     {
@@ -86,7 +86,7 @@ final class LandController extends Controller
             SELECT f.client_uuid, fc.id AS class_id, fc.label, fc.style, f.verification_status, r.capture_method,
                    r.area_ha, r.length_m, r.captured_at,
                    ST_AsGeoJSON(CASE WHEN GeometryType(r.geom) = 'POINT' THEN r.geom
-                                     ELSE ST_SimplifyPreserveTopology(r.geom, 0.00005) END, 6) AS geometry
+                                     ELSE ST_SimplifyPreserveTopology(r.geom, 0.0001) END, 5) AS geometry
               FROM area_features f
               JOIN area_feature_revisions r ON r.id = f.current_revision_id
               JOIN feature_classes fc ON fc.id = f.feature_class_id
