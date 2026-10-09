@@ -63,9 +63,9 @@ export function BusinessAuthLayout({
                     className="pointer-events-none absolute top-[27%] right-[-18%] size-[560px] rounded-full bg-[#16302A]/70"
                 />
                 <div className="relative flex flex-1 flex-col px-14 pt-12 pb-10">
-                    <Link href="/directory" className="self-start">
+                    <a href="/" aria-label="GeoVerify home" className="self-start">
                         <GeoVerifyLockup size={46} caption="Nigeria business directory" tone="light" />
-                    </Link>
+                    </a>
                     {showcase ?? <BusinessShowcase />}
                 </div>
             </aside>
@@ -75,7 +75,9 @@ export function BusinessAuthLayout({
                 <HexField />
                 <div className="relative">
                     <span className="flex items-center gap-2.5">
-                        <GeoVerifyMark size={40} ink="light" />
+                        <a href="/" aria-label="GeoVerify home">
+                            <GeoVerifyMark size={40} ink="light" />
+                        </a>
                         <span className="font-wordmark text-[1.5rem] font-bold text-logo">GeoVerify</span>
                     </span>
                     <p className="mt-6 font-display text-display-l">{mobileTitle}</p>
@@ -172,9 +174,9 @@ export function InvestorAuthLayout({ panel, children }: { panel: ReactNode; chil
         <div data-mode="daylight" className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
             <main className="flex min-h-dvh flex-col px-6 pt-8 pb-8 sm:px-14 lg:pt-10">
                 <div className="flex items-center justify-between gap-4">
-                    <Link href="/invest/sign-in">
+                    <a href="/" aria-label="GeoVerify home">
                         <GeoVerifyLockup size={42} caption="Investor & discovery" />
-                    </Link>
+                    </a>
                     <Link href="/directory" className="text-ui font-bold text-ink hover:text-gold">
                         Business directory <span aria-hidden="true">→</span>
                     </Link>

@@ -57,9 +57,9 @@ export function DirectoryChrome({
         <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
             <header className="border-b border-rule bg-raised">
                 <div className={`mx-auto flex h-[76px] ${inner} items-center justify-between gap-6 px-5`}>
-                    <Link href="/directory" className="shrink-0">
+                    <a href="/" aria-label="GeoVerify home" className="shrink-0">
                         <GeoVerifyLockup size={40} caption="Nigeria business directory" />
-                    </Link>
+                    </a>
                     <nav className="hidden items-center gap-7 lg:flex" aria-label="Directory">
                         {(
                             [

@@ -597,7 +597,8 @@ export default function Design() {
                             </div>
                             <div className="h-[560px]">
                                 <MapChrome
-                                    cellId="8928308280fffff"
+                                    title="Abuja Municipal"
+                                    backHref="/field"
                                     openFlags={2}
                                     sync={
                                         <SyncIndicator

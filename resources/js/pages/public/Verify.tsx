@@ -86,7 +86,9 @@ export default function Verify({ result }: Props) {
 
             <main className="mx-auto flex w-full max-w-2xl flex-col gap-6">
                 <header className="flex items-center gap-3 border-b-2 border-ink pb-4">
-                    <GeoVerifyMark size={32} title="GeoVerify" />
+                    <a href="/" aria-label="GeoVerify home">
+                        <GeoVerifyMark size={32} title="GeoVerify" />
+                    </a>
                     <div className="flex flex-col">
                         <span className="font-display text-display-s text-ink">GeoVerify</span>
                         <span className="text-label tracking-[0.05em] text-faint uppercase">

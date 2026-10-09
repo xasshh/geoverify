@@ -27,7 +27,9 @@ export default function SignIn() {
             <div className="relative w-full max-w-sm">
                 <div className="rounded-card bg-raised shadow-[0_18px_48px_rgb(15_26_23/0.34)]">
                     <div className="flex flex-col items-center px-6 pt-7 pb-5 text-center sm:pt-8 sm:pb-6">
-                        <GeoVerifyMark size={64} className="mb-3 sm:mb-4" title="GeoVerify" />
+                        <a href="/" aria-label="GeoVerify home" className="mb-3 sm:mb-4">
+                            <GeoVerifyMark size={64} title="GeoVerify" />
+                        </a>
                         <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
                             Nigeria Business Directory
                         </p>

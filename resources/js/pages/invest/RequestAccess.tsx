@@ -1,4 +1,4 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { SelectField, TextField } from '@/components/Field';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
@@ -37,9 +37,9 @@ export default function RequestAccess({ kinds }: { kinds: { value: string; label
             <Head title="Request investor access" />
             <header className="border-b border-rule bg-raised">
                 <div className="mx-auto flex h-[72px] max-w-5xl items-center px-5">
-                    <Link href="/invest/sign-in">
+                    <a href="/" aria-label="GeoVerify home">
                         <GeoVerifyLockup size={36} caption="Investor & discovery" />
-                    </Link>
+                    </a>
                 </div>
             </header>
             <main className="mx-auto max-w-2xl px-5 pt-10 pb-24">

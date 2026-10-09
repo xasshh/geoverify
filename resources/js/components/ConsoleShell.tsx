@@ -224,11 +224,11 @@ export function ConsoleShell({
                 data-mode="dusk"
                 className="hidden border-r border-rule bg-surface text-ink lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col"
             >
-                <Link href="/console" className="flex items-center px-7 pt-7 pb-6">
+                <a href="/" aria-label="GeoVerify home" className="flex items-center px-7 pt-7 pb-6">
                     <GeoVerifyLockup
                         caption={user?.role === 'admin' ? 'Administration' : 'Field · Supervisor'}
                     />
-                </Link>
+                </a>
 
                 <nav className="flex flex-col gap-1 overflow-y-auto px-5 pb-4" aria-label="Console">
                     <ConsoleNav current={current} counts={queues} />
@@ -287,7 +287,9 @@ export function ConsoleShell({
                 )}
             >
                 <div className="flex items-center gap-2 px-4 py-2">
-                    <GeoVerifyMark size={28} />
+                    <a href="/" aria-label="GeoVerify home">
+                        <GeoVerifyMark size={28} />
+                    </a>
                     <span className="font-wordmark text-[1.125rem] font-bold text-logo">GeoVerify</span>
                     {user !== null && (
                         <button

@@ -136,9 +136,9 @@ export function PortalShell({
             <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
                 <header className="border-b border-rule bg-raised">
                     <div className="mx-auto flex h-[72px] max-w-5xl items-center px-5">
-                        <Link href="/portal/sign-in">
+                        <a href="/" aria-label="GeoVerify home">
                             <GeoVerifyLockup size={36} caption="Business portal" />
-                        </Link>
+                        </a>
                     </div>
                 </header>
                 <main className="mx-auto max-w-xl px-5 pt-10 pb-24">
@@ -226,9 +226,9 @@ export function PortalShell({
             className="min-h-dvh bg-surface text-ink lg:grid lg:grid-cols-[280px_minmax(0,1fr)]"
         >
             <aside className="hidden border-r border-rule bg-raised lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
-                <Link href="/portal" className="flex items-center px-7 pt-7 pb-6">
+                <a href="/" aria-label="GeoVerify home" className="flex items-center px-7 pt-7 pb-6">
                     <GeoVerifyLockup caption="Business portal" />
-                </Link>
+                </a>
 
                 <nav className="flex flex-col gap-1 overflow-y-auto px-5" aria-label="Portal">
                     {nav.map((item) => navRow(item, false))}
@@ -286,7 +286,9 @@ export function PortalShell({
 
             <div className="border-b border-rule bg-raised lg:hidden">
                 <div className="flex items-center gap-2.5 px-4 py-3">
-                    <GeoVerifyMark size={30} />
+                    <a href="/" aria-label="GeoVerify home">
+                        <GeoVerifyMark size={30} />
+                    </a>
                     <span className="font-wordmark text-[1.125rem] font-bold text-logo">
                         GeoVerify
                     </span>

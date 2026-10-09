@@ -32,9 +32,9 @@ export function ClientShell({
         <div data-mode="daylight" className="min-h-dvh bg-surface text-ink">
             <header className="border-b border-rule bg-raised">
                 <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-8 gap-y-2 px-6 py-4">
-                    <Link href="/client">
+                    <a href="/" aria-label="GeoVerify home">
                         <GeoVerifyLockup size={38} caption={organisation?.name ?? 'Client'} />
-                    </Link>
+                    </a>
 
                     <nav className="flex items-center gap-1.5" aria-label="Client">
                         {links.map((link) => (

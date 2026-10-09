@@ -221,11 +221,12 @@ export default function Capture({
 
     return (
         <div data-mode="daylight" className="h-dvh bg-surface text-ink">
-            <Head title={`Capture ${cell.h3}`} />
+            <Head title={`Capture · ${cell.mandate}`} />
 
             {stage === 'map' && (
                 <MapChrome
-                    cellId={cell.h3}
+                    title={cell.mandate}
+                    backHref="/field"
                     openFlags={poorAccuracy ? 1 : 0}
                     sync={
                         <SyncIndicator

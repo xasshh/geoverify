@@ -114,9 +114,9 @@ export default function Checkout({ business, products, deliveryNaira, protection
             <Head title="Checkout" />
             <header className="border-b border-rule bg-raised">
                 <div className="mx-auto flex min-h-[76px] max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-3">
-                    <Link href={`/directory/${String(business.id)}`}>
+                    <a href="/" aria-label="GeoVerify home">
                         <GeoVerifyLockup size={36} />
-                    </Link>
+                    </a>
                     <ol className="flex list-none flex-wrap items-center gap-x-5 gap-y-2 p-0" aria-label="Checkout steps">
                         {STEPS.map((label, i) => (
                             <li

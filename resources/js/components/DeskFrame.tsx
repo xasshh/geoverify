@@ -6,7 +6,9 @@ export function DeskFrame({ title, children, back }: { title: string; children: 
     return (
         <div data-mode="daylight" className="min-h-dvh bg-sunken text-ink">
             <header className="flex items-center gap-4 border-b border-rule bg-raised px-5 py-3">
-                <GeoVerifyLockup size={30} caption="Desk" />
+                <a href="/" aria-label="GeoVerify home">
+                    <GeoVerifyLockup size={30} caption="Desk" />
+                </a>
                 {back !== undefined && (
                     <Link href={back} className="text-label text-gold-dark underline underline-offset-2">
                         All ground

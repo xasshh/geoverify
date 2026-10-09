@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { cx } from '@/lib/cx';
 import { GeoVerifyMark } from '@/components/GeoVerifyMark';
@@ -42,7 +43,10 @@ export function CoverageBar({ captured, detected }: CoverageBarProps) {
 }
 
 interface MapChromeProps {
-    cellId: string;
+    /** What the officer is working: the mandate's name, never the raw cell index. */
+    title: string;
+    /** Where the back button goes. */
+    backHref: string;
     openFlags?: number;
     sync: ReactNode;
     coverage: ReactNode;
@@ -60,7 +64,8 @@ interface MapChromeProps {
  * reaches them.
  */
 export function MapChrome({
-    cellId,
+    title,
+    backHref,
     openFlags = 0,
     sync,
     coverage,
@@ -71,9 +76,18 @@ export function MapChrome({
         <div className="flex h-full flex-col overflow-hidden rounded-card border border-rule bg-raised">
             <header className="shrink-0 border-b border-rule px-4 py-2.5">
                 <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 numeric-mono text-mono text-ink">
+                    <span className="flex min-w-0 items-center gap-2">
+                        <Link
+                            href={backHref}
+                            aria-label="Back"
+                            className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-sunken"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </Link>
                         <GeoVerifyMark size={20} />
-                        {cellId}
+                        <span className="truncate text-ui font-bold text-ink">{title}</span>
                     </span>
                     {openFlags > 0 && (
                         <span className="flex items-center gap-1.5 text-ui font-semibold text-amber-ink">

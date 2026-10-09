@@ -86,7 +86,7 @@ export function SiteHeader({
     return (
         <header className={cx('relative z-20', dark ? 'text-inverse' : 'border-b border-rule bg-raised/90 backdrop-blur')}>
             <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-4 py-4 sm:px-6">
-                <div className="shrink-0">{brand}</div>
+                <a href="/" aria-label="GeoVerify home" className="shrink-0">{brand}</a>
                 <nav aria-label="Main" className="hidden flex-1 items-center gap-6 md:flex">
                     {links.map((link) =>
                         link.children !== undefined ? (
@@ -245,7 +245,9 @@ export function SiteFooter() {
         <footer className="bg-[#0F1A17] text-inverse">
             <div className="mx-auto grid max-w-[1200px] gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
                 <div>
-                    <GeoVerifyLockup tone="light" />
+                    <a href="/" aria-label="GeoVerify home" className="inline-block">
+                        <GeoVerifyLockup tone="light" />
+                    </a>
                     <p className="mt-4 max-w-[38ch] text-ui text-inverse/70">
                         A national platform for business registration and geographic mapping, built to give Nigeria one
                         trustworthy map of where business happens.
