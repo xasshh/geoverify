@@ -23,7 +23,10 @@ use RuntimeException;
  */
 final class ManageTeam
 {
-    public function __construct(private readonly NormalisePhone $phones) {}
+    public function __construct(
+        private readonly NormalisePhone $phones,
+        private readonly SendPortalPasswordLink $links,
+    ) {}
 
     public function invite(PartyUser $owner, string $rawPhone, string $name, PartyRole $role): PartyUser
     {
@@ -68,6 +71,66 @@ final class ManageTeam
 
             return $membership;
         });
+    }
+
+    /**
+     * The same, to an email address. Somebody with no account yet gets one,
+     * passwordless, and an email with a link to choose a password; following
+     * it proves the address. Somebody who already has an account sees the
+     * invitation the next time they sign in.
+     */
+    public function inviteByEmail(PartyUser $owner, string $email, string $name, PartyRole $role): PartyUser
+    {
+        $this->assertOwner($owner);
+
+        if ($role === PartyRole::Owner) {
+            throw new RuntimeException('A business has one owner. Invite a manager or a viewer.');
+        }
+
+        $email = mb_strtolower(trim($email));
+        $created = false;
+
+        $membership = DB::transaction(function () use ($owner, $email, $name, $role, &$created): PartyUser {
+            $account = PortalAccount::query()->whereRaw('lower(email) = ?', [$email])->first();
+
+            if ($account === null) {
+                $account = PortalAccount::query()->create(['name' => $name, 'email' => $email, 'status' => PortalAccount::STATUS_ACTIVE]);
+                $created = true;
+            }
+
+            $membership = PartyUser::query()->firstOrNew([
+                'party_id' => $owner->party_id,
+                'portal_account_id' => $account->id,
+            ]);
+
+            if ($membership->exists && $membership->revoked_at === null) {
+                throw new RuntimeException($membership->accepted_at === null
+                    ? 'That email already has an invitation waiting.'
+                    : 'That person already has access.');
+            }
+
+            $membership->fill([
+                'role' => $role,
+                'invited_by' => $owner->portal_account_id,
+                'invited_at' => now(),
+                'accepted_at' => null,
+                'revoked_at' => null,
+            ])->save();
+
+            VerificationEvent::recordForParty($owner->party, 'team.invited', $owner->party, [
+                'membership_id' => $membership->id,
+                'role' => $role->value,
+                'by' => 'email',
+            ]);
+
+            return $membership;
+        });
+
+        if ($created) {
+            $this->links->invite($membership->account()->firstOrFail(), (string) $owner->party?->display_name);
+        }
+
+        return $membership;
     }
 
     /** The invitee, signed in on the invited number, says yes. */

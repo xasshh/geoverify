@@ -114,7 +114,13 @@ final class EnumerateContext
     public function invitations(PortalAccount $account): array
     {
         return EnumerateMember::query()
-            ->where('phone', $account->phone)
+            ->where(function ($q) use ($account): void {
+                // By the number the account proved, or the email it proved.
+                $q->when($account->phone !== null, fn ($q) => $q->orWhere('phone', $account->phone))
+                    ->when($account->email !== null && $account->email_verified_at !== null,
+                        fn ($q) => $q->orWhereRaw('lower(email) = ?', [mb_strtolower((string) $account->email)]))
+                    ->orWhereRaw('false');
+            })
             ->whereNull('accepted_at')
             ->whereNull('revoked_at')
             ->with('organisation')

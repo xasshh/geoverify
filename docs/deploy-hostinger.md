@@ -500,3 +500,29 @@ also reachable at this address, even though nobody uses them. No payment
 provider is configured, so nothing can be bought. Switching those surfaces off
 in production would take a small change to the code (a setting that stops
 their routes being registered); it has not been made yet.
+
+
+## Email (Resend)
+
+Portal accounts are proved by email, so the site must be able to send it.
+
+1. Create an account at resend.com and add the domain `logyon.com`.
+2. Add the DNS records Resend shows (an MX and TXT on `send.logyon.com`, and a
+   DKIM TXT on `resend._domainkey`) in Hostinger's DNS editor, and wait until
+   Resend says the domain is verified.
+3. Create an API key with "Sending access" only.
+4. On the server, put it in `.env` without it ever passing through chat:
+
+   ```bash
+   cd /var/www/geoverify
+   read -rs -p "Resend API key: " KEY && echo
+   sed -i '/^MAIL_/d' .env
+   printf 'MAIL_MAILER=smtp\nMAIL_SCHEME=smtps\nMAIL_HOST=smtp.resend.com\nMAIL_PORT=465\nMAIL_USERNAME=resend\nMAIL_PASSWORD=%s\nMAIL_FROM_ADDRESS=no-reply@logyon.com\nMAIL_FROM_NAME=GeoVerify\n' "$KEY" >> .env
+   unset KEY
+   php artisan config:cache
+   ```
+
+5. Test: `php artisan tinker --execute="Mail::raw('It works', fn (\$m) => \$m->to('you@example.com')->subject('GeoVerify mail test'));"`
+
+`SMS_ENABLED` stays unset (off). Termii keys are only needed if SMS is ever
+switched back on.

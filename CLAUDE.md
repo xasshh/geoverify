@@ -273,11 +273,19 @@ vector packs and never inside `/api/field/packs`, whose answer a shipped
 handset depends on. A mandate can also come from an uploaded boundary file
 (`CreateCoverageAreaFromBoundary`, `coverage_areas.boundary_source`).
 `Staff` is the in-house side: creating, suspending and reinstating the people
-who work this system. `Sms` is the one way a text reaches a phone: `SmsGateway`,
-chosen by `SMS_DRIVER`, is `termii` (the `dnd` channel, which reaches numbers on
-the do-not-disturb list) anywhere real and `log` on a developer machine only,
-where the browser specs read codes back from `SMS to +234...` lines. Only codes
-are sent, synchronously, so a refusal reaches the person waiting on the screen. `Ledger` is the
+who work this system. Portal accounts are opened and proved by email (decided
+2026-10-09: no SMS anywhere): `RegisterByEmail`, a signed link from
+`SendPortalEmailVerification`, and `EnsurePortalAccount` holding an unproved
+account (`PortalAccount::isProved`) at `/portal/email/verify`. Passwords reset
+through the `portal_accounts` broker (its own token table), and an invitation
+to a business or an Enumerate seat goes by email, ending in that same reset
+link, which proves the address. A claim with no phone code waits for a
+supervisor at `/console/claims`. Account emails share one template
+(`PortalActionMail`) and go out through Resend over SMTP in production.
+`Sms` is kept behind `SMS_ENABLED` (off) so the code paths can return without
+a rebuild: `SmsGateway`, chosen by `SMS_DRIVER`, is `termii` anywhere real and
+`log` on a developer machine, where the browser specs (run with
+`SMS_ENABLED=true` in CI) read codes back from `SMS to +234...` lines. `Ledger` is the
 double-entry record behind paid verification: one signed `amount_minor` column,
 append-only by database trigger, and `PostTransaction` is the only writer.
 Business rules go in action classes, not in controllers and not in models.

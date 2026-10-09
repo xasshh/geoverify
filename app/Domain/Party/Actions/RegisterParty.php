@@ -85,6 +85,48 @@ final class RegisterParty
     }
 
     /**
+     * A party for an account that already exists and proved its email: the
+     * email-first registration. The account becomes the party's owner.
+     */
+    public function forAccount(
+        PortalAccount $account,
+        string $displayName,
+        PartyKind $kind,
+        ?string $legalName = null,
+        ?string $phone = null,
+    ): Party {
+        $phone = $phone === null || trim($phone) === '' ? null : ($this->phones)($phone);
+
+        return DB::transaction(function () use ($account, $displayName, $kind, $legalName, $phone): Party {
+            $party = Party::query()->create([
+                'code' => $this->uniqueCode(),
+                'kind' => $kind,
+                'display_name' => $displayName,
+                'legal_name' => $legalName,
+                'primary_phone' => $phone,
+                'primary_email' => $account->email,
+                'status' => Party::STATUS_ACTIVE,
+                'identity_tier' => 'listed',
+            ]);
+
+            PartyUser::query()->create([
+                'party_id' => $party->id,
+                'portal_account_id' => $account->id,
+                'role' => PartyRole::Owner,
+                'accepted_at' => now(),
+            ]);
+
+            VerificationEvent::record($party, 'party.registered', null, [
+                'code' => $party->code,
+                'kind' => $kind->value,
+                'by' => 'email',
+            ], VerificationEvent::ACTOR_PARTY);
+
+            return $party;
+        });
+    }
+
+    /**
      * A code no party already holds.
      *
      * The alphabet gives 31^8 bodies, so a collision is vanishingly unlikely

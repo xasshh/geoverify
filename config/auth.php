@@ -151,6 +151,16 @@ return [
     */
 
     'passwords' => [
+        // Portal accounts reset by email with their own token table, so a
+        // member of staff and a business owner sharing an address never share
+        // a token row.
+        'portal_accounts' => [
+            'provider' => 'portal_accounts',
+            'table' => 'portal_password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),

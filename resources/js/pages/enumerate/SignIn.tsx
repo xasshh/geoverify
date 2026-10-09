@@ -17,9 +17,10 @@ type Mode = 'password' | 'code';
  * The forms post to the portal's own endpoints: these are the same accounts,
  * and a second sign-in implementation would be a second thing to get wrong.
  * The page has already told the session to come back here afterwards. A new
- * person starts with a code to their phone, which is how every account starts.
+ * person creates an account with their email (or, with SMS switched on,
+ * starts with a code to their phone).
  */
-export default function SignIn({ prices }: { prices: Prices }) {
+export default function SignIn({ prices, smsEnabled = false }: { prices: Prices; smsEnabled?: boolean }) {
     const status = usePage().props.flash.status;
     const [who, setWho] = useState<'individual' | 'organisation'>('individual');
     const [mode, setMode] = useState<Mode>('password');
@@ -111,15 +112,15 @@ export default function SignIn({ prices }: { prices: Prices }) {
                             <div className="mt-6 rounded-card border border-rule bg-sunken px-5 py-5">
                                 <p className="text-body font-extrabold text-ink">Every seat signs in as its own person</p>
                                 <p className="mt-2 text-ui text-muted">
-                                    Sign in with your own number or email, then choose your organisation from the switcher at the top of the
-                                    sidebar. Invited to one? The invitation is waiting when you sign in with the number it was sent to.
+                                    Sign in with your own {smsEnabled ? 'number or email' : 'email'}, then choose your organisation from the switcher at the top of the
+                                    sidebar. Invited to one? The invitation is waiting when you sign in with the {smsEnabled ? 'number' : 'email'} it was sent to.
                                 </p>
                                 <p className="mt-3 text-ui text-muted">New here? Sign in, then choose “Open an organisation account”.</p>
                                 <button type="button" onClick={() => { setWho('individual'); }} className="mt-4 text-ui font-extrabold text-gold hover:text-gold-dark">
                                     Sign in →
                                 </button>
                             </div>
-                        ) : mode === 'password' ? (
+                        ) : mode === 'password' || !smsEnabled ? (
                             <form
                                 className="mt-6 flex flex-col gap-4"
                                 onSubmit={(e) => {
@@ -128,7 +129,7 @@ export default function SignIn({ prices }: { prices: Prices }) {
                                 }}
                             >
                                 <label className="flex flex-col gap-2">
-                                    <span className="text-ui font-bold text-ink">Email or phone number</span>
+                                    <span className="text-ui font-bold text-ink">{smsEnabled ? 'Email or phone number' : 'Email'}</span>
                                     <input
                                         className={INPUT}
                                         autoComplete="username"
@@ -160,12 +161,21 @@ export default function SignIn({ prices }: { prices: Prices }) {
                                 <Button type="submit" variant="primary" size="field-primary" fullWidth busy={password.processing}>
                                     Sign in
                                 </Button>
-                                <Button type="button" size="field-primary" fullWidth onClick={() => { setMode('code'); }}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                                        <path d="M7 2.5h10v19H7zM11 18.5h2" />
-                                    </svg>
-                                    Sign in with a code by SMS
-                                </Button>
+                                {smsEnabled ? (
+                                    <Button type="button" size="field-primary" fullWidth onClick={() => { setMode('code'); }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                            <path d="M7 2.5h10v19H7zM11 18.5h2" />
+                                        </svg>
+                                        Sign in with a code by SMS
+                                    </Button>
+                                ) : (
+                                    <p className="text-center text-ui text-muted">
+                                        New here?{' '}
+                                        <Link href="/portal/register?as=buyer&next=enumerate" className="font-extrabold text-gold hover:text-gold-dark">
+                                            Create an account
+                                        </Link>
+                                    </p>
+                                )}
                             </form>
                         ) : (
                             <form

@@ -46,11 +46,19 @@ final class SignInController
             return redirect()->route('portal.dashboard');
         }
 
-        return Inertia::render('portal/SignIn');
+        return Inertia::render('portal/SignIn', ['smsEnabled' => self::sms()]);
+    }
+
+    /** Whether the SMS code paths are switched on (config services.sms.enabled). */
+    public static function sms(): bool
+    {
+        return (bool) config('services.sms.enabled');
     }
 
     public function requestCode(Request $request, RequestSignInCode $codes, NormalisePhone $phones): RedirectResponse
     {
+        abort_unless(self::sms(), 404);
+
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:32'],
             'intent' => ['nullable', 'in:sign-in,reset'],
@@ -74,6 +82,8 @@ final class SignInController
 
     public function verifyForm(Request $request): Response|RedirectResponse
     {
+        abort_unless(self::sms(), 404);
+
         $phone = $request->session()->get('portal.phone');
 
         if (! is_string($phone)) {
@@ -98,6 +108,8 @@ final class SignInController
      */
     public function resend(Request $request, RequestSignInCode $codes): RedirectResponse
     {
+        abort_unless(self::sms(), 404);
+
         $phone = $request->session()->get('portal.phone');
 
         if (! is_string($phone)) {
@@ -117,6 +129,8 @@ final class SignInController
 
     public function verify(Request $request, VerifySignInCode $verify): RedirectResponse
     {
+        abort_unless(self::sms(), 404);
+
         $validated = $request->validate([
             'code' => ['required', 'string', 'size:6'],
         ]);
@@ -167,6 +181,10 @@ final class SignInController
 
     public function registerForm(Request $request): Response|RedirectResponse
     {
+        if (! self::sms()) {
+            return app()->call([app(EmailAccountController::class), 'registerForm']);
+        }
+
         if (! is_string($request->session()->get(self::PENDING_PHONE))) {
             return redirect()->route('portal.sign-in');
         }
@@ -178,6 +196,10 @@ final class SignInController
 
     public function register(Request $request, RegisterParty $register, ManagePortalCredentials $credentials): RedirectResponse
     {
+        if (! self::sms()) {
+            return app()->call([app(EmailAccountController::class), 'register']);
+        }
+
         $phone = $request->session()->get(self::PENDING_PHONE);
 
         if (! is_string($phone)) {
@@ -246,7 +268,9 @@ final class SignInController
 
         if (! $account instanceof PortalAccount) {
             return back()->withErrors([
-                'identifier' => 'Those details do not match an account. You can always sign in with a code by SMS.',
+                'identifier' => self::sms()
+                    ? 'Those details do not match an account. You can always sign in with a code by SMS.'
+                    : 'Those details do not match an account. Check the email and password, or use "Forgot password".',
             ])->onlyInput('identifier');
         }
 
@@ -259,11 +283,15 @@ final class SignInController
 
     public function forgotForm(): Response
     {
-        return Inertia::render('portal/ForgotPassword');
+        return Inertia::render('portal/ForgotPassword', ['smsEnabled' => self::sms()]);
     }
 
     public function resetForm(Request $request): Response|RedirectResponse
     {
+        if ($request->filled('token') || ! self::sms()) {
+            return app()->call([app(EmailAccountController::class), 'resetForm']);
+        }
+
         if (! is_string($request->session()->get(self::RESET_PHONE))) {
             return redirect()->route('portal.forgot-password');
         }
@@ -273,6 +301,10 @@ final class SignInController
 
     public function reset(Request $request, ManagePortalCredentials $credentials): RedirectResponse
     {
+        if ($request->filled('token') || ! self::sms()) {
+            return app()->call([app(EmailAccountController::class), 'reset']);
+        }
+
         $phone = $request->session()->get(self::RESET_PHONE);
 
         if (! is_string($phone)) {

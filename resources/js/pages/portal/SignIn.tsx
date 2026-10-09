@@ -38,15 +38,19 @@ function startFromUrl(): { audience: Audience; mode: Mode } {
  * on the verification certificate; each person on the business uses it with
  * their own password.
  */
-export default function SignIn() {
+export default function SignIn({ smsEnabled = false }: { smsEnabled?: boolean }) {
     const status = usePage().props.flash.status;
-    const [{ audience, mode }, setView] = useState(startFromUrl);
+    const [view, setView] = useState(startFromUrl);
+    const { audience } = view;
+    // With SMS switched off there is one way in: email (or business ID) and password.
+    const mode: Mode = smsEnabled ? view.mode : 'password';
+    const register = `/portal/register?as=${audience}`;
 
     const password = useForm({ identifier: '', password: '', remember: false });
     const code = useForm({ phone: '', intent: 'sign-in', audience });
 
     const setAudience = (next: Audience) => {
-        setView({ audience: next, mode: next === 'buyer' ? 'code' : mode });
+        setView({ audience: next, mode: next === 'buyer' && smsEnabled ? 'code' : mode });
         code.setData('audience', next);
     };
 
@@ -55,7 +59,7 @@ export default function SignIn() {
             topRight={
                 <>
                     New to GeoVerify?&nbsp;
-                    <Link href="/portal/sign-in?as=business&mode=code" preserveState={false} className="font-extrabold text-gold hover:text-gold-dark">
+                    <Link href={smsEnabled ? '/portal/sign-in?as=business&mode=code' : '/portal/register?as=business'} preserveState={false} className="font-extrabold text-gold hover:text-gold-dark">
                         List your business, free
                     </Link>
                 </>
@@ -137,18 +141,22 @@ export default function SignIn() {
                     <Button type="submit" variant="primary" size="field-primary" fullWidth busy={password.processing}>
                         Sign in
                     </Button>
-                    <OrRule />
-                    <Button
-                        variant="secondary"
-                        size="field-primary"
-                        fullWidth
-                        onClick={() => {
-                            setView({ audience, mode: 'code' });
-                        }}
-                    >
-                        <PhoneIcon />
-                        Get a one-time code by SMS
-                    </Button>
+                    {smsEnabled && (
+                        <>
+                            <OrRule />
+                            <Button
+                                variant="secondary"
+                                size="field-primary"
+                                fullWidth
+                                onClick={() => {
+                                    setView({ audience, mode: 'code' });
+                                }}
+                            >
+                                <PhoneIcon />
+                                Get a one-time code by SMS
+                            </Button>
+                        </>
+                    )}
                 </form>
             ) : (
                 <form
@@ -209,22 +217,37 @@ export default function SignIn() {
                         <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5" />
                     </svg>
                     <span>
-                        Staff sign in with the business ID from your verification certificate and their own
-                        password. Set yours under Settings after your first sign-in by code.
+                        {smsEnabled
+                            ? 'Staff sign in with the business ID from your verification certificate and their own password. Set yours under Settings after your first sign-in by code.'
+                            : 'Staff can also sign in with the business ID from your verification certificate and their own password.'}{' '}
+                        {!smsEnabled && (
+                            <>
+                                New here?{' '}
+                                <Link href={register} className="font-extrabold underline underline-offset-2">
+                                    Create an account
+                                </Link>
+                            </>
+                        )}
                     </span>
                 </p>
             ) : (
                 <p className="mt-10 text-center text-ui text-muted">
                     New here?{' '}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setView({ audience, mode: 'code' });
-                        }}
-                        className="font-extrabold text-gold hover:text-gold-dark"
-                    >
-                        Create an account
-                    </button>
+                    {smsEnabled ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setView({ audience, mode: 'code' });
+                            }}
+                            className="font-extrabold text-gold hover:text-gold-dark"
+                        >
+                            Create an account
+                        </button>
+                    ) : (
+                        <Link href={register} className="font-extrabold text-gold hover:text-gold-dark">
+                            Create an account
+                        </Link>
+                    )}
                 </p>
             )}
         </BusinessAuthLayout>

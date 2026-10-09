@@ -1,38 +1,56 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { AudienceTabs, BusinessAuthLayout } from '@/components/AuthLayouts';
 import { SelectField, TextField } from '@/components/Field';
 
 /**
- * Who you are, asked once, after the number is proved.
+ * Who you are, asked once. By email (the only way since SMS was switched
+ * off): name, email and a password, then a link to verify the email. With SMS
+ * on, the number is already proved when this is shown.
  *
  * Four fields for an individual, five for a company, and nothing that is not
  * needed to issue a code and reach you. The legal name appears only when it
  * applies, because a market trader does not have one and asking implies they
  * should.
  */
-export default function Register({ audience: initial }: { audience: 'buyer' | 'business' }) {
+export default function Register({
+    audience: initial,
+    byEmail = false,
+    email: presetEmail = '',
+}: {
+    audience: 'buyer' | 'business';
+    byEmail?: boolean;
+    email?: string;
+}) {
     const form = useForm({
         audience: initial,
+        password: '',
+        password_confirmation: '',
+        phone: '',
         person_name: '',
         display_name: '',
         kind: 'individual',
         legal_name: '',
-        email: '',
+        email: presetEmail,
     });
+    const subtitle = byEmail ? 'We will email you a link to confirm your address.' : 'Your number is confirmed.';
 
     const isCompany = form.data.kind === 'company';
     const buying = form.data.audience === 'buyer';
 
     return (
-        <BusinessAuthLayout mobileTitle="Create your account" mobileSubtitle="Your number is confirmed.">
+        <BusinessAuthLayout mobileTitle="Create your account" mobileSubtitle={subtitle}>
             <Head title="Create your account" />
 
             <h1 className="hidden font-display text-display-l text-ink lg:block">Create your account</h1>
             <p className="mt-1.5 mb-6 max-w-[46ch] text-body text-muted">
-                {buying
-                    ? 'Your number is confirmed. Tell us your name and you are in.'
-                    : 'Your number is confirmed. Tell us who you are and we will issue your business ID.'}
+                {byEmail
+                    ? buying
+                        ? 'Your name, your email and a password. We send a link to confirm the email.'
+                        : 'Tell us who you are and we will issue your business ID once your email is confirmed.'
+                    : buying
+                      ? 'Your number is confirmed. Tell us your name and you are in.'
+                      : 'Your number is confirmed. Tell us who you are and we will issue your business ID.'}
             </p>
 
             <div className="mb-6">
@@ -118,7 +136,7 @@ export default function Register({ audience: initial }: { audience: 'buyer' | 'b
                     type="email"
                     autoComplete="email"
                     size="field"
-                    hint="Optional. For receipts and reports."
+                    hint={byEmail ? 'You sign in with this. We send a link to confirm it.' : 'Optional. For receipts and reports.'}
                     value={form.data.email}
                     onChange={(event) => {
                         form.setData('email', event.target.value);
@@ -126,10 +144,63 @@ export default function Register({ audience: initial }: { audience: 'buyer' | 'b
                     {...(form.errors.email !== undefined && { error: form.errors.email })}
                 />
 
+                {byEmail && (
+                    <>
+                        <TextField
+                            label="Password"
+                            name="password"
+                            type="password"
+                            autoComplete="new-password"
+                            size="field"
+                            hint="At least ten characters."
+                            value={form.data.password}
+                            onChange={(event) => {
+                                form.setData('password', event.target.value);
+                            }}
+                            {...(form.errors.password !== undefined && { error: form.errors.password })}
+                        />
+                        <TextField
+                            label="Password again"
+                            name="password_confirmation"
+                            type="password"
+                            autoComplete="new-password"
+                            size="field"
+                            value={form.data.password_confirmation}
+                            onChange={(event) => {
+                                form.setData('password_confirmation', event.target.value);
+                            }}
+                        />
+                        {!buying && (
+                            <TextField
+                                label="Business phone"
+                                name="phone"
+                                type="tel"
+                                autoComplete="tel"
+                                size="field"
+                                hint="Optional. So buyers and our team can call you."
+                                value={form.data.phone}
+                                onChange={(event) => {
+                                    form.setData('phone', event.target.value);
+                                }}
+                                {...(form.errors.phone !== undefined && { error: form.errors.phone })}
+                            />
+                        )}
+                    </>
+                )}
+
                 <Button type="submit" variant="primary" size="field-primary" fullWidth busy={form.processing}>
                     Create my account
                 </Button>
             </form>
+
+            {byEmail && (
+                <p className="mt-6 text-center text-ui text-muted">
+                    Already have an account?{' '}
+                    <Link href="/portal/sign-in" className="font-extrabold text-gold hover:text-gold-dark">
+                        Sign in
+                    </Link>
+                </p>
+            )}
         </BusinessAuthLayout>
     );
 }

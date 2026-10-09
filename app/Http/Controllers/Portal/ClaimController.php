@@ -146,7 +146,10 @@ final class ClaimController
             ],
             // Shown as a mask, and the reveal is itself recorded. The claimant
             // has to recognise the number rather than read it.
-            'recordedPhoneHint' => $claim->status->isSettled() ? null : $recorded->hintFor($claim),
+            // With SMS off a claim is decided by a supervisor, and the hint
+            // (whose reveal is recorded) is not shown at all.
+            'recordedPhoneHint' => $claim->status->isSettled() || ! SignInController::sms() ? null : $recorded->hintFor($claim),
+            'smsEnabled' => SignInController::sms(),
             'dispute' => $dispute === null ? null : [
                 'openedAt' => $dispute->opened_at->toIso8601String(),
                 'resolution' => $dispute->resolution,
@@ -157,6 +160,8 @@ final class ClaimController
 
     public function sendCode(Request $request, Claim $claim, RequestClaimCode $codes): RedirectResponse
     {
+        abort_unless(SignInController::sms(), 404);
+
         $this->mustOwnClaim($request, $claim);
 
         try {
@@ -170,6 +175,8 @@ final class ClaimController
 
     public function confirmCode(Request $request, Claim $claim, ConfirmClaimCode $confirm): RedirectResponse
     {
+        abort_unless(SignInController::sms(), 404);
+
         $this->mustOwnClaim($request, $claim);
 
         $data = $request->validate(['code' => ['required', 'string', 'size:6']]);

@@ -66,6 +66,15 @@ final class ManagePortalCredentials
             throw new RuntimeException('That email is already used by another account.');
         }
 
-        $account->forceFill(['email' => $email])->save();
+        if ($email === null && $account->phone === null) {
+            throw new RuntimeException('Your account signs in with its email, so it needs one.');
+        }
+
+        if ($email === $account->email) {
+            return;
+        }
+
+        // A new address is unproved until its own link is followed.
+        $account->forceFill(['email' => $email, 'email_verified_at' => null])->save();
     }
 }

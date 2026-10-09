@@ -19,14 +19,14 @@ const WHAT: Record<string, string> = {
 };
 
 /**
- * Team & roles. An admin invites by phone number; the seat waits for that
+ * Team & roles. An admin invites by email; the seat waits for that
  * person to sign in and accept. Removing a seat keeps everything its holder
  * did on the record, and the last admin cannot be removed.
  */
 export default function Team({ frame, team, roles, me }: Props) {
     const errors = usePage().props.errors as Record<string, string | undefined>;
     const canManage = frame.organisation?.can.team === true;
-    const invite = useForm({ phone: '', role: 'requester' });
+    const invite = useForm({ email: '', role: 'requester' });
 
     return (
         <EnumerateShell current="team" frame={frame} title="Team & roles">
@@ -75,17 +75,18 @@ export default function Team({ frame, team, roles, me }: Props) {
                         className="flex flex-col gap-3 rounded-card border border-rule bg-raised px-5 py-5"
                         onSubmit={(e) => {
                             e.preventDefault();
-                            invite.post('/enumerate/organisation/team', { preserveScroll: true, onSuccess: () => { invite.reset('phone'); } });
+                            invite.post('/enumerate/organisation/team', { preserveScroll: true, onSuccess: () => { invite.reset('email'); } });
                         }}
                     >
                         <h2 className="text-body font-extrabold text-ink">Invite somebody</h2>
                         <label className="flex flex-col gap-1.5 text-table font-bold text-ink">
-                            Their phone number
+                            Their email
                             <input
-                                inputMode="tel"
-                                value={invite.data.phone}
-                                onChange={(e) => { invite.setData('phone', e.target.value); }}
-                                placeholder="0803 000 0000"
+                                type="email"
+                                inputMode="email"
+                                value={invite.data.email}
+                                onChange={(e) => { invite.setData('email', e.target.value); }}
+                                placeholder="name@company.ng"
                                 className="h-11 rounded-sm border border-rule-strong bg-raised px-3 text-ui font-normal"
                             />
                         </label>
@@ -99,11 +100,11 @@ export default function Team({ frame, team, roles, me }: Props) {
                                 ))}
                             </select>
                         </label>
-                        {errors.phone !== undefined && <p role="alert" className="text-ui font-semibold text-alert-ink">{errors.phone}</p>}
-                        <Button type="submit" variant="primary" busy={invite.processing} disabled={invite.data.phone.trim() === ''}>
+                        {(errors.email ?? errors.phone) !== undefined && <p role="alert" className="text-ui font-semibold text-alert-ink">{errors.email ?? errors.phone}</p>}
+                        <Button type="submit" variant="primary" busy={invite.processing} disabled={invite.data.email.trim() === ''}>
                             Invite
                         </Button>
-                        <p className="text-[0.75rem] text-muted">They sign in to Enumerate with that number and accept. Nothing is sent from here yet.</p>
+                        <p className="text-[0.75rem] text-muted">We email them. They sign in to Enumerate with that email and accept.</p>
                     </form>
                 ) : (
                     <p className="max-w-none rounded-card border border-rule bg-raised px-5 py-5 text-ui text-muted">Only an admin of the organisation changes the team.</p>

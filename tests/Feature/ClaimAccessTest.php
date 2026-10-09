@@ -112,6 +112,9 @@ it('exposes no portal route that could write to an observation', function () {
         'portal.dashboard', 'portal.claim.search', 'portal.claim.store',
         'portal.claim.show', 'portal.claim.code', 'portal.claim.confirm',
         'portal.listing',
+        // Accounts by email (2026-10-09). They write a portal account, its
+        // verification stamp or its password, and nothing in the register.
+        'portal.forgot-password.send', 'portal.email.notice', 'portal.email.resend', 'portal.email.verify',
         // Self-registration. These write structures and enterprises, and none
         // of them touches an observation belonging to somebody else: a party
         // authors the one observation its own registration creates, and can

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Party\Models;
 
+use App\Domain\Party\Actions\SendPortalPasswordLink;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Carbon;
@@ -18,9 +19,10 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property string $name
- * @property string $phone
+ * @property string|null $phone
  * @property Carbon|null $phone_verified_at
  * @property string|null $email
+ * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string $status
  * @property Carbon|null $last_signed_in_at
@@ -42,6 +44,7 @@ final class PortalAccount extends Authenticatable
     {
         return [
             'phone_verified_at' => 'datetime',
+            'email_verified_at' => 'datetime',
             'last_signed_in_at' => 'datetime',
             'password' => 'hashed',
         ];
@@ -61,6 +64,28 @@ final class PortalAccount extends Authenticatable
     public function liveMemberships(): HasMany
     {
         return $this->memberships()->whereNull('revoked_at')->whereNotNull('accepted_at');
+    }
+
+    /**
+     * Whether this account has proved it reaches its owner: an email link
+     * followed, or (for accounts opened before email) a phone code entered.
+     * Nothing behind the portal door opens until it has.
+     */
+    public function isProved(): bool
+    {
+        return $this->email_verified_at !== null || $this->phone_verified_at !== null;
+    }
+
+    /** Where the password reset link goes, for the portal's password broker. */
+    public function getEmailForPasswordReset(): string
+    {
+        return (string) $this->email;
+    }
+
+    /** The reset link is sent by SendPortalPasswordLink, never by Laravel's own notification. */
+    public function sendPasswordResetNotification($token): void
+    {
+        app(SendPortalPasswordLink::class)->deliver($this, (string) $token, 'reset');
     }
 
     public function canSignIn(): bool

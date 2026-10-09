@@ -6,14 +6,15 @@ import { PortalShell } from '@/components/PortalShell';
 interface Props {
     account: {
         name: string;
-        phone: string;
+        phone: string | null;
         email: string | null;
+        emailVerified?: boolean;
         hasPassword: boolean;
         businessIds: { code: string | null; name: string | null }[];
     };
 }
 
-/** Your sign-in: the phone that proves you, an email, and a password for the desk. */
+/** Your sign-in: the email that proves you, and your password. */
 export default function Settings({ account }: Props) {
     const accountName = usePage().props.auth.portal?.name ?? account.name;
     const email = useForm({ email: account.email ?? '' });
@@ -26,10 +27,21 @@ export default function Settings({ account }: Props) {
                 <section className="rounded-card border border-rule bg-raised p-6 shadow-card">
                     <h2 className="font-display text-display-s text-ink">Your sign-in</h2>
                     <dl className="mt-4 flex flex-col">
-                        <div className="flex justify-between gap-4 border-b border-rule py-3">
-                            <dt className="text-ui text-muted">Phone</dt>
-                            <dd className="text-ui font-bold text-ink">{account.phone}</dd>
-                        </div>
+                        {account.email !== null && (
+                            <div className="flex justify-between gap-4 border-b border-rule py-3">
+                                <dt className="text-ui text-muted">Email</dt>
+                                <dd className="text-ui font-bold text-ink">
+                                    {account.email}
+                                    {account.emailVerified === true && <span className="ml-2 text-label font-semibold text-green">verified</span>}
+                                </dd>
+                            </div>
+                        )}
+                        {account.phone !== null && (
+                            <div className="flex justify-between gap-4 border-b border-rule py-3">
+                                <dt className="text-ui text-muted">Phone</dt>
+                                <dd className="text-ui font-bold text-ink">{account.phone}</dd>
+                            </div>
+                        )}
                         {account.businessIds.map((b) => (
                             <div key={b.code} className="flex justify-between gap-4 border-b border-rule py-3 last:border-b-0">
                                 <dt className="text-ui text-muted">Business ID · {b.name}</dt>
@@ -65,7 +77,7 @@ export default function Settings({ account }: Props) {
                 <section className="rounded-card border border-rule bg-raised p-6 shadow-card">
                     <h2 className="font-display text-display-s text-ink">{account.hasPassword ? 'Change password' : 'Set a password'}</h2>
                     <p className="mt-1 text-ui text-muted">
-                        With a password you can sign in with your business ID or email. A code by SMS always works too.
+                        You sign in with your email (or your business ID) and this password.
                     </p>
                     <form
                         className="mt-5 flex flex-col gap-4"

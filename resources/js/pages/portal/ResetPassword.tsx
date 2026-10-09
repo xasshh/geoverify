@@ -3,15 +3,20 @@ import { BusinessAuthLayout } from '@/components/AuthLayouts';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/Field';
 
-/** The phone is proved; choose the new password. */
-export default function ResetPassword() {
-    const form = useForm({ password: '', password_confirmation: '' });
+/**
+ * Choose the new password: from the emailed link (token and email in the
+ * address), or after proving the phone when SMS is switched on.
+ */
+export default function ResetPassword({ token = '', email = '' }: { token?: string; email?: string }) {
+    const form = useForm({ password: '', password_confirmation: '', token, email });
 
     return (
-        <BusinessAuthLayout mobileTitle="Choose a new password" mobileSubtitle="Your number is confirmed.">
+        <BusinessAuthLayout mobileTitle="Choose a new password" mobileSubtitle={token === '' ? 'Your number is confirmed.' : email}>
             <Head title="Choose a new password" />
             <h1 className="hidden font-display text-display-l text-ink lg:block">Choose a new password</h1>
-            <p className="mt-1.5 text-body text-muted">At least ten characters. You can still sign in with a code by SMS at any time.</p>
+            <p className="mt-1.5 text-body text-muted">
+                At least ten characters.{token === '' ? '' : ` For ${email}.`}
+            </p>
             <form
                 className="mt-6 flex flex-col gap-5"
                 onSubmit={(e) => {

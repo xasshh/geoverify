@@ -48,7 +48,8 @@ final class TeamController
             'members' => $members->map(static fn (PartyUser $m): array => [
                 'id' => $m->id,
                 'name' => $m->account?->name,
-                'phone' => $m->account === null ? null : $phones->masked($m->account->phone),
+                'phone' => $m->account?->phone === null ? null : $phones->masked($m->account->phone),
+                'email' => $m->account?->email,
                 'role' => $m->role->value,
                 'roleLabel' => $m->role->label(),
                 'pending' => $m->accepted_at === null,
@@ -63,17 +64,24 @@ final class TeamController
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'phone' => ['required', 'string', 'max:32'],
+            'email' => [SignInController::sms() ? 'nullable' : 'required', 'email', 'max:180'],
+            'phone' => [SignInController::sms() ? 'required_without:email' : 'nullable', 'nullable', 'string', 'max:32'],
             'role' => ['required', Rule::in([PartyRole::Manager->value, PartyRole::Viewer->value])],
         ]);
 
         try {
-            $this->team->invite($membership, $data['phone'], $data['name'], PartyRole::from($data['role']));
+            if (($data['email'] ?? null) !== null) {
+                $this->team->inviteByEmail($membership, $data['email'], $data['name'], PartyRole::from($data['role']));
+            } else {
+                $this->team->invite($membership, (string) $data['phone'], $data['name'], PartyRole::from($data['role']));
+            }
         } catch (InvalidArgumentException|RuntimeException $e) {
-            return back()->withErrors(['phone' => $e->getMessage()]);
+            return back()->withErrors([($data['email'] ?? null) !== null ? 'email' : 'phone' => $e->getMessage()]);
         }
 
-        return back()->with('status', 'Invited. They sign in with a code to that number and accept.');
+        return back()->with('status', ($data['email'] ?? null) !== null
+            ? 'Invited. They get an email, and accept once they are signed in.'
+            : 'Invited. They sign in with a code to that number and accept.');
     }
 
     public function role(Request $request, PartyUser $member): RedirectResponse

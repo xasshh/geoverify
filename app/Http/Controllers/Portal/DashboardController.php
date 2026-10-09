@@ -53,7 +53,7 @@ final class DashboardController
         return Inertia::render('portal/Dashboard', [
             'account' => [
                 'name' => $account->name,
-                'phone' => $phones->forDisplay($account->phone),
+                'phone' => $account->phone === null ? null : $phones->forDisplay($account->phone),
             ],
             'listings' => $this->listingsFor($memberships->pluck('party_id')->all()),
             'openClaims' => $this->openClaimsFor($memberships->pluck('party_id')->all()),

@@ -59,6 +59,14 @@ final class EnsurePortalAccount
             abort(403, 'This account is suspended.');
         }
 
+        // An account opened by email opens nothing until the address is
+        // proved by the link we sent it.
+        if (! $account->isProved()) {
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Verify your email first.'], 403)
+                : redirect()->route('portal.email.notice');
+        }
+
         return $next($request);
     }
 }

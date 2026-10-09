@@ -32,6 +32,8 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- The SMS paths stay tested while switched off in production; EmailAccountTest turns them off. -->
+        <env name="SMS_ENABLED" value="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

@@ -87,6 +87,7 @@ it('keeps another business, and a viewer, out of the catalogue', function () {
 
     // A second person on the business, who may look and not touch.
     $viewer = PortalAccount::query()->create(['name' => 'Viewer', 'phone' => '+2348037770004', 'status' => 'active']);
+    $viewer->forceFill(['phone_verified_at' => now()])->save();
     PartyUser::query()->create([
         'party_id' => $it['party']->id, 'portal_account_id' => $viewer->id, 'role' => 'viewer', 'accepted_at' => now(),
     ]);
@@ -144,6 +145,9 @@ it('adds a person to a business only when they prove the invited number and acce
 
     $invite = PartyUser::query()->where('party_id', $it['party']->id)->whereNull('accepted_at')->sole();
     $invitee = PortalAccount::query()->findOrFail($invite->portal_account_id);
+
+    // The invitee proves the number by signing in with a code to it.
+    $invitee->forceFill(['phone_verified_at' => now()])->save();
 
     // Before accepting, the invitee acts for nothing.
     $this->actingAs($invitee, 'portal')->get("/portal/businesses/{$it['shop']->id}/listings")->assertForbidden();

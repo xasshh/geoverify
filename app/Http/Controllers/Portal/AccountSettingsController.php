@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Domain\Party\Actions\ManagePortalCredentials;
 use App\Domain\Party\Actions\NormalisePhone;
+use App\Domain\Party\Actions\SendPortalEmailVerification;
 use App\Domain\Party\Models\PortalAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,8 +31,9 @@ final class AccountSettingsController
         return Inertia::render('portal/Settings', [
             'account' => [
                 'name' => $account->name,
-                'phone' => $phones->forDisplay($account->phone),
+                'phone' => $account->phone === null ? null : $phones->forDisplay($account->phone),
                 'email' => $account->email,
+                'emailVerified' => $account->email_verified_at !== null,
                 'hasPassword' => $account->password !== null,
                 'businessIds' => $account->memberships()
                     ->whereNull('revoked_at')
@@ -44,14 +46,26 @@ final class AccountSettingsController
         ]);
     }
 
-    public function email(Request $request, ManagePortalCredentials $credentials): RedirectResponse
+    public function email(Request $request, ManagePortalCredentials $credentials, SendPortalEmailVerification $verify): RedirectResponse
     {
         $validated = $request->validate(['email' => ['nullable', 'email', 'max:180']]);
+        $account = $this->account($request);
+        $before = $account->email;
 
         try {
-            $credentials->setEmail($this->account($request), $validated['email'] ?? null);
+            $credentials->setEmail($account, $validated['email'] ?? null);
         } catch (RuntimeException $e) {
             return back()->withErrors(['email' => $e->getMessage()]);
+        }
+
+        if ($account->email !== null && $account->email !== $before) {
+            try {
+                $verify($account);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            return redirect()->route('portal.email.notice')->with('status', 'Email changed. Follow the link we sent to '.$account->email.' to confirm it.');
         }
 
         return back()->with('status', 'Email saved.');

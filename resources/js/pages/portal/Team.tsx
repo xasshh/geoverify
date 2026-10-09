@@ -8,6 +8,7 @@ interface Member {
     id: number;
     name: string | null;
     phone: string | null;
+    email?: string | null;
     role: 'owner' | 'manager' | 'viewer';
     roleLabel: string;
     pending: boolean;
@@ -32,7 +33,7 @@ function initials(name: string | null): string {
 }
 
 /**
- * Team & roles. The owner invites by phone; the invitee proves the number and
+ * Team & roles. The owner invites by email; the invitee proves the address and
  * accepts. Everyone signs in with the business ID and their own password, or a
  * code to their own phone.
  */
@@ -40,7 +41,7 @@ export default function Team({ party, me, isOwner, roles, members }: Props) {
     const page = usePage();
     const accountName = page.props.auth.portal?.name ?? '';
     const roleError = page.props.errors.role;
-    const form = useForm({ name: '', phone: '', role: roles[0]?.value ?? 'manager' });
+    const form = useForm({ name: '', email: '', role: roles[0]?.value ?? 'manager' });
 
     return (
         <PortalShell
@@ -70,7 +71,7 @@ export default function Team({ party, me, isOwner, roles, members }: Props) {
                                         {m.id === me && <span className="ml-2 text-table font-semibold text-muted">you</span>}
                                     </span>
                                     <span className="text-table text-muted">
-                                        {m.phone} · {m.pending ? `invited ${m.since ?? ''}` : `since ${m.since ?? ''}`}
+                                        {m.email ?? m.phone} · {m.pending ? `invited ${m.since ?? ''}` : `since ${m.since ?? ''}`}
                                     </span>
                                 </span>
                                 {m.pending && <span className="rounded-full bg-amber-soft px-3 py-1 text-table font-bold text-amber-ink">Invitation sent</span>}
@@ -127,7 +128,7 @@ export default function Team({ party, me, isOwner, roles, members }: Props) {
                                 }}
                             >
                                 <TextField label="Name" value={form.data.name} onChange={(e) => { form.setData('name', e.target.value); }} {...(form.errors.name === undefined ? {} : { error: form.errors.name })} />
-                                <TextField label="Phone number" type="tel" inputMode="tel" placeholder="0803 123 4567" value={form.data.phone} onChange={(e) => { form.setData('phone', e.target.value); }} {...(form.errors.phone === undefined ? {} : { error: form.errors.phone })} />
+                                <TextField label="Email" type="email" inputMode="email" placeholder="name@business.ng" value={form.data.email} onChange={(e) => { form.setData('email', e.target.value); }} {...(form.errors.email === undefined ? {} : { error: form.errors.email })} />
                                 <SelectField label="Role" value={form.data.role} onChange={(e) => { form.setData('role', e.target.value); }}>
                                     {roles.map((r) => (
                                         <option key={r.value} value={r.value}>

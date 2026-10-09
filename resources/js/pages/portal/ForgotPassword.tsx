@@ -1,12 +1,62 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { TextField } from '@/components/Field';
 import { BusinessAuthLayout } from '@/components/AuthLayouts';
 import { Button } from '@/components/Button';
 
 /**
- * A password is reset by proving the phone again, not by email: most accounts
- * here have no email, and the phone is the credential the password hangs off.
+ * Forgot password. By email: a link to choose a new one. (With SMS switched
+ * on, by proving the phone again instead.)
  */
-export default function ForgotPassword() {
+export default function ForgotPassword({ smsEnabled = false }: { smsEnabled?: boolean }) {
+    return smsEnabled ? <ByPhone /> : <ByEmail />;
+}
+
+function ByEmail() {
+    const status = usePage().props.flash.status;
+    const form = useForm({ email: '' });
+
+    return (
+        <BusinessAuthLayout mobileTitle="Reset your password" mobileSubtitle="We email you a link.">
+            <Head title="Reset your password" />
+            <Link href="/portal/sign-in" className="text-ui font-bold text-muted hover:text-ink">
+                <span aria-hidden="true">←</span> Back to sign in
+            </Link>
+            <h1 className="mt-6 hidden font-display text-display-l text-ink lg:block">Reset your password</h1>
+            <p className="mt-1.5 text-body text-muted">
+                Enter the email on your account. We send a link to it, and you choose a new password.
+            </p>
+            {status !== null && (
+                <p role="status" className="mt-5 rounded-sm bg-green-soft px-4 py-3 text-ui font-semibold text-green">
+                    {status}
+                </p>
+            )}
+            <form
+                className="mt-6 flex flex-col gap-5"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    form.post('/portal/forgot-password');
+                }}
+            >
+                <TextField
+                    label="Email"
+                    type="email"
+                    autoComplete="email"
+                    size="field"
+                    value={form.data.email}
+                    onChange={(e) => {
+                        form.setData('email', e.target.value);
+                    }}
+                    {...(form.errors.email === undefined ? {} : { error: form.errors.email })}
+                />
+                <Button type="submit" variant="primary" size="field-primary" fullWidth busy={form.processing}>
+                    Email me a link
+                </Button>
+            </form>
+        </BusinessAuthLayout>
+    );
+}
+
+function ByPhone() {
     const form = useForm({ phone: '', intent: 'reset' });
 
     return (

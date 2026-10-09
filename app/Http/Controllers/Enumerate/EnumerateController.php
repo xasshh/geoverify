@@ -14,6 +14,7 @@ use App\Domain\Enumerate\Models\EnumerateRequest;
 use App\Domain\Enumerate\Models\EnumerateTicket;
 use App\Domain\Enumerate\Models\EnumerateTicketMessage;
 use App\Domain\Party\Models\PortalAccount;
+use App\Http\Controllers\Portal\SignInController;
 use App\Http\Middleware\EnsurePortalAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ final class EnumerateController
             $request->session()->put(EnsurePortalAccount::INTENDED, route('enumerate.home'));
         }
 
-        return Inertia::render('enumerate/SignIn', ['prices' => $prices->list()]);
+        return Inertia::render('enumerate/SignIn', ['prices' => $prices->list(), 'smsEnabled' => SignInController::sms()]);
     }
 
     public function home(Request $request, ReadEnumeratePrices $prices): Response|RedirectResponse

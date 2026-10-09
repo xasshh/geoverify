@@ -100,6 +100,10 @@ return [
      * numbers on the do-not-disturb list and needs an approved sender ID.
      */
     'sms' => [
+        // Off since 2026-10-09: accounts are opened and proved by email, and
+        // claims are decided by a supervisor. The SMS code paths stay in the
+        // code behind this switch so they can come back without a rebuild.
+        'enabled' => (bool) env('SMS_ENABLED', false),
         'driver' => env('SMS_DRIVER', 'log'),
     ],
 

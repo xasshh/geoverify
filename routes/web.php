@@ -67,6 +67,7 @@ use App\Http\Controllers\Portal\CheckoutController;
 use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\CorrectionController as PortalCorrectionController;
 use App\Http\Controllers\Portal\DashboardController;
+use App\Http\Controllers\Portal\EmailAccountController;
 use App\Http\Controllers\Portal\InvestorProfileController;
 use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\OrderController;
@@ -463,6 +464,17 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
     Route::get('reset-password', [SignInController::class, 'resetForm'])->name('reset-password');
     Route::post('reset-password', [SignInController::class, 'reset'])
         ->middleware('throttle:10,1')->name('reset-password.submit');
+
+    // By email (the only way since SMS was switched off). The verify link is
+    // signed and checked in the controller, so a stale one gets a sentence
+    // rather than a bare 403.
+    Route::post('forgot-password', [EmailAccountController::class, 'sendResetLink'])
+        ->middleware('throttle:5,1')->name('forgot-password.send');
+    Route::get('email/verify', [EmailAccountController::class, 'notice'])->name('email.notice');
+    Route::post('email/resend', [EmailAccountController::class, 'resend'])
+        ->middleware('throttle:3,1')->name('email.resend');
+    Route::get('email/verify/{account}/{hash}', [EmailAccountController::class, 'verify'])
+        ->middleware('throttle:20,1')->name('email.verify');
 
     Route::middleware('portal')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');

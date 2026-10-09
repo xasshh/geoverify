@@ -9,9 +9,11 @@ use App\Domain\Enumerate\Models\EnumerateOrganisation;
 use App\Domain\Party\Actions\NormalisePhone;
 use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Verification\Models\VerificationEvent;
+use App\Mail\PortalActionMail;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -50,6 +52,7 @@ final class ManageOrganisations
             EnumerateMember::query()->create([
                 'organisation_id' => $organisation->id,
                 'phone' => $account->phone,
+                'email' => $account->phone === null ? $account->email : null,
                 'portal_account_id' => $account->id,
                 'role' => 'admin',
                 'accepted_at' => now(),
@@ -135,9 +138,72 @@ final class ManageOrganisations
         return $seat;
     }
 
+    /**
+     * A seat for an email address. The invitee is told by email: to sign in
+     * if they have an account, or to open one with that address if not.
+     */
+    public function inviteByEmail(EnumerateMember $by, string $email, string $role): EnumerateMember
+    {
+        $this->assertTeam($by);
+
+        if (! array_key_exists($role, EnumerateMember::ROLES)) {
+            throw new RuntimeException('Choose a role.');
+        }
+
+        $email = mb_strtolower(trim($email));
+
+        try {
+            $seat = DB::transaction(fn (): EnumerateMember => EnumerateMember::query()->create([
+                'organisation_id' => $by->organisation_id,
+                'email' => $email,
+                'portal_account_id' => PortalAccount::query()->whereRaw('lower(email) = ?', [$email])->value('id'),
+                'role' => $role,
+                'invited_by' => $by->portal_account_id,
+            ]));
+        } catch (UniqueConstraintViolationException) {
+            throw new RuntimeException('That email already has a seat here.');
+        }
+
+        $organisation = $seat->organisation()->firstOrFail();
+
+        VerificationEvent::recordForBuyer($organisation, 'enumerate.member_invited', $by->account()->firstOrFail(), [
+            'member_id' => $seat->id,
+            'role' => $role,
+            'by' => 'email',
+        ]);
+
+        $hasAccount = $seat->portal_account_id !== null;
+
+        try {
+            Mail::to($email)->send(new PortalActionMail(
+                heading: "You have been invited to {$organisation->name} on Enumerate",
+                lines: [
+                    'Hello,',
+                    "{$organisation->name} has given you a seat as ".EnumerateMember::ROLES[$role].' on Enumerate, GeoVerify\'s business verification service.',
+                    $hasAccount
+                        ? 'Sign in with this email address and accept the invitation on your Enumerate home.'
+                        : 'Create your account with this email address, then accept the invitation on your Enumerate home.',
+                ],
+                buttonLabel: $hasAccount ? 'Sign in to Enumerate' : 'Create my account',
+                url: $hasAccount ? route('enumerate.sign-in') : route('portal.register', ['as' => 'buyer', 'email' => $email, 'next' => 'enumerate']),
+                footnote: 'If you were not expecting this, ignore this email.',
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $seat;
+    }
+
     public function accept(EnumerateMember $seat, PortalAccount $account): EnumerateMember
     {
-        if ($seat->phone !== $account->phone || $seat->revoked_at !== null) {
+        $byEmail = $seat->email !== null
+            && $account->email !== null
+            && $account->email_verified_at !== null
+            && mb_strtolower($seat->email) === mb_strtolower($account->email);
+        $byPhone = $seat->phone !== null && $seat->phone === $account->phone;
+
+        if (! ($byEmail || $byPhone) || $seat->revoked_at !== null) {
             throw new RuntimeException('That invitation is not for you.');
         }
 

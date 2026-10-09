@@ -156,6 +156,9 @@ jobs:
           # The design gallery and the field client are local only routes, and
           # the offline suite needs a seeded team to sign in as.
           APP_ENV: local
+          # The claim, correction and order specs sign in by reading SMS codes
+          # back from the log, so the switched off SMS paths are on for them.
+          SMS_ENABLED: "true"
           DB_HOST: 127.0.0.1
           DB_DATABASE: geoverify_testing
           DB_USERNAME: geoverify

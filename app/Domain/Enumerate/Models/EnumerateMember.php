@@ -14,7 +14,8 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $organisation_id
- * @property string $phone
+ * @property string|null $phone
+ * @property string|null $email
  * @property int|null $portal_account_id
  * @property string $role
  * @property int|null $invited_by
@@ -47,7 +48,7 @@ final class EnumerateMember extends Model
         'team' => ['admin'],
     ];
 
-    protected $fillable = ['organisation_id', 'phone', 'portal_account_id', 'role', 'invited_by', 'accepted_at', 'revoked_at'];
+    protected $fillable = ['organisation_id', 'phone', 'email', 'portal_account_id', 'role', 'invited_by', 'accepted_at', 'revoked_at'];
 
     protected function casts(): array
     {

@@ -24,6 +24,7 @@ interface Props {
         lga: string | null;
     };
     recordedPhoneHint: string | null;
+    smsEnabled?: boolean;
     dispute: { openedAt: string; resolution: string | null } | null;
     party: { code: string | null };
 }
@@ -48,6 +49,7 @@ export default function ClaimShow({
     claim,
     business,
     recordedPhoneHint,
+    smsEnabled = false,
     dispute,
     party,
 }: Props) {
@@ -151,9 +153,9 @@ export default function ClaimShow({
                             A reviewer will look at this
                         </h2>
                         <p className="mt-2 text-body text-muted">
-                            No phone number was recorded for this business, so
-                            there is nothing to send a code to. Someone will
-                            read your claim and decide.
+                            {smsEnabled
+                                ? 'No phone number was recorded for this business, so there is nothing to send a code to. Someone will read your claim and decide.'
+                                : 'A supervisor checks your claim against what our officer recorded at the business, and may call or visit. You will see the decision here.'}
                         </p>
                     </section>
                 ))}

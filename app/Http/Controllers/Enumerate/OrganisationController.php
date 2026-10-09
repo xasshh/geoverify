@@ -19,6 +19,7 @@ use App\Domain\Enumerate\Models\EnumerateProject;
 use App\Domain\Enumerate\Models\EnumerateRequest;
 use App\Domain\Party\Actions\NormalisePhone;
 use App\Domain\Party\Models\PortalAccount;
+use App\Http\Controllers\Portal\SignInController;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -148,6 +149,12 @@ final class OrganisationController
     public function invite(Request $request): RedirectResponse
     {
         [, $member] = $this->seat($request);
+        if ($request->filled('email') || ! SignInController::sms()) {
+            $input = $request->validate(['email' => ['required', 'email', 'max:180'], 'role' => ['required', 'string']]);
+
+            return $this->attempt(fn () => $this->organisations->inviteByEmail($this->must($member), $input['email'], $input['role']), 'Invitation sent. They get an email, and accept when they sign in to Enumerate.', 'email');
+        }
+
         $input = $request->validate(['phone' => ['required', 'string', 'max:32'], 'role' => ['required', 'string']]);
 
         return $this->attempt(fn () => $this->organisations->invite($this->must($member), $input['phone'], $input['role']), 'Invitation saved. They see it the next time they sign in to Enumerate with that number.', 'phone');
@@ -337,7 +344,9 @@ final class OrganisationController
             ->map(static fn (EnumerateMember $m): array => [
                 'id' => $m->id,
                 // A seat not yet taken is shown by its masked number, never in full.
-                'name' => $m->account !== null && $m->accepted_at !== null ? $m->account->name : $phones->masked($m->phone),
+                'name' => $m->account !== null && $m->accepted_at !== null
+                    ? $m->account->name
+                    : ($m->email ?? ($m->phone === null ? 'Invited' : $phones->masked($m->phone))),
                 'role' => $m->role,
                 'roleLabel' => EnumerateMember::ROLES[$m->role] ?? $m->role,
                 'pending' => $m->accepted_at === null,
