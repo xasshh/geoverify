@@ -27,6 +27,9 @@ const NAV: NavItem[] = [
  * field app is shown as it looks now rather than described.
  */
 export default function Home({ prices }: { prices: Prices }) {
+    // The directory searches open with the business portal.
+    const portalOpen = usePage().props.surfaces.portal;
+
     return (
         <div data-mode="daylight" className="min-h-dvh bg-raised text-ink">
             <Head title="GeoVerify: Nigeria's registry, where business happens" />
@@ -36,7 +39,7 @@ export default function Home({ prices }: { prices: Prices }) {
             <Enumerate tier1={prices.tier1} />
             <BusinessPortal />
             <InvestPortal />
-            <QuickCheck />
+            {portalOpen && <QuickCheck />}
             <Coverage />
             <Steps />
             <Closing />
@@ -47,6 +50,7 @@ export default function Home({ prices }: { prices: Prices }) {
 }
 
 function Hero() {
+    const heroSearch = usePage().props.surfaces.portal;
     const [q, setQ] = useState('');
 
     return (
@@ -59,7 +63,6 @@ function Hero() {
                     brand={<GeoVerifyLockup tone="light" size={38} />}
                     links={NAV}
                     signIn={{ label: 'Sign in', href: '/portal/sign-in' }}
-                    getStarted={{ label: 'Get started', href: '/portal/register' }}
                 />
                 <div className="mx-auto max-w-[1000px] px-4 pt-20 pb-24 text-center sm:px-6 sm:pt-28">
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-label font-bold backdrop-blur">
@@ -73,26 +76,28 @@ function Hero() {
                         Registrations tied to GPS-confirmed, physically inspected places, so government, investors and
                         businesses all read from the same map.
                     </p>
-                    <form
-                        className="mx-auto mt-8 flex max-w-[620px] gap-2 rounded-full bg-white p-1.5 shadow-2xl"
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            router.get('/directory', q.trim() === '' ? {} : { q: q.trim() });
-                        }}
-                    >
-                        <input
-                            aria-label="Find a business"
-                            value={q}
-                            onChange={(e) => {
-                                setQ(e.target.value);
+                    {heroSearch && (
+                        <form
+                            className="mx-auto mt-8 flex max-w-[620px] gap-2 rounded-full bg-white p-1.5 shadow-2xl"
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                router.get('/directory', q.trim() === '' ? {} : { q: q.trim() });
                             }}
-                            placeholder="Find a business: name, sector or area"
-                            className="h-12 min-w-0 flex-1 rounded-full px-5 text-ui text-ink placeholder:text-faint focus:outline-none"
-                        />
-                        <button type="submit" className="h-12 rounded-full bg-gold-dark px-6 text-ui font-extrabold text-on-accent hover:bg-gold">
-                            Locate business
-                        </button>
-                    </form>
+                        >
+                            <input
+                                aria-label="Find a business"
+                                value={q}
+                                onChange={(e) => {
+                                    setQ(e.target.value);
+                                }}
+                                placeholder="Find a business: name, sector or area"
+                                className="h-12 min-w-0 flex-1 rounded-full px-5 text-ui text-ink placeholder:text-faint focus:outline-none"
+                            />
+                            <button type="submit" className="h-12 rounded-full bg-gold-dark px-6 text-ui font-extrabold text-on-accent hover:bg-gold">
+                                Locate business
+                            </button>
+                        </form>
+                    )}
                     <div className="mt-5 flex flex-wrap justify-center gap-3">
                         <Link href="/enumerate" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
                             Verify a business

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { cx } from '@/lib/cx';
+import { EnumerateLockup } from '@/components/EnumerateShell';
 import { GeoVerifyLockup, GeoVerifyMark } from '@/components/GeoVerifyMark';
 
 /**
@@ -54,6 +55,10 @@ export function BusinessAuthLayout({
     showcase?: ReactNode;
     children: ReactNode;
 }) {
+    // While the business portal is closed these pages (register, verify email,
+    // reset password) serve Enumerate, so they wear its name.
+    const enumerate = !usePage().props.surfaces.portal;
+
     return (
         <div data-mode="daylight" className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <aside className="relative hidden overflow-hidden bg-[#0F1A17] text-inverse lg:flex lg:min-h-dvh lg:flex-col">
@@ -63,10 +68,10 @@ export function BusinessAuthLayout({
                     className="pointer-events-none absolute top-[27%] right-[-18%] size-[560px] rounded-full bg-[#16302A]/70"
                 />
                 <div className="relative flex flex-1 flex-col px-14 pt-12 pb-10">
-                    <a href="/" aria-label="GeoVerify home" className="self-start">
-                        <GeoVerifyLockup size={46} caption="Nigeria business directory" tone="light" />
+                    <a href={enumerate ? '/enumerate' : '/'} aria-label={enumerate ? 'Enumerate' : 'GeoVerify home'} className="self-start">
+                        {enumerate ? <EnumerateLockup size={46} tone="light" /> : <GeoVerifyLockup size={46} tone="light" />}
                     </a>
-                    {showcase ?? <BusinessShowcase />}
+                    {showcase ?? (enumerate ? <EnumerateShowcase /> : <BusinessShowcase />)}
                 </div>
             </aside>
 
@@ -78,7 +83,7 @@ export function BusinessAuthLayout({
                         <a href="/" aria-label="GeoVerify home">
                             <GeoVerifyMark size={40} ink="light" />
                         </a>
-                        <span className="font-wordmark text-[1.5rem] font-bold text-logo">GeoVerify</span>
+                        <span className="font-wordmark text-[1.5rem] font-bold text-logo">{enumerate ? 'Enumerate' : 'GeoVerify'}</span>
                     </span>
                     <p className="mt-6 font-display text-display-l">{mobileTitle}</p>
                     <p className="mt-2 text-ui text-inverse/75">{mobileSubtitle}</p>
@@ -236,6 +241,39 @@ export function OrRule({ label = 'or' }: { label?: string }) {
             <span className="h-px flex-1 bg-rule" />
             {label}
             <span className="h-px flex-1 bg-rule" />
+        </div>
+    );
+}
+
+/** The left panel while these pages serve Enumerate. */
+function EnumerateShowcase() {
+    const free = usePage().props.enumerateFree;
+
+    return (
+        <div className="mt-16 flex flex-1 flex-col">
+            <h1 className="max-w-[18ch] font-display text-[2.6rem] leading-[1.06] font-extrabold tracking-[-0.02em]">
+                Verify any business in Nigeria, on paper and on the ground.
+            </h1>
+            <p className="mt-4 max-w-[44ch] text-body text-inverse/80">
+                Check a business against CAC and FIRS, send a trained officer to the address, or watch it trade for up to
+                30 days.
+            </p>
+            <ul className="mt-10 flex max-w-[420px] flex-col gap-3">
+                {[
+                    ['Tier 1', 'Registry check', 'CAC status, directors and TIN'],
+                    ['Tier 2', 'Location verification', 'Agent visit with geo-tagged photos'],
+                    ['Tier 3', 'Daily activity', 'Monitored for up to 30 days'],
+                ].map(([tier, title, body]) => (
+                    <li key={tier} className="flex items-center gap-4 rounded-card border border-white/10 bg-white/5 px-4 py-3.5">
+                        <span className="shrink-0 rounded-[6px] bg-gold-soft px-2 py-1 text-[0.6875rem] font-extrabold tracking-[0.04em] text-gold-dark uppercase">{tier}</span>
+                        <span className="flex min-w-0 flex-col">
+                            <span className="text-ui font-extrabold">{title}</span>
+                            <span className="text-table text-inverse/65">{body}</span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            {free && <p className="mt-auto pt-10 text-table text-inverse/70">Free while Enumerate launches.</p>}
         </div>
     );
 }

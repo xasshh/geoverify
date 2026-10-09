@@ -74,12 +74,6 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
             </aside>
 
             <main className="relative -mt-8 flex min-h-[70dvh] flex-col rounded-t-[28px] bg-raised px-6 pt-7 pb-8 lg:mt-0 lg:min-h-dvh lg:rounded-none lg:px-14 lg:pt-8">
-                <div className="hidden justify-end text-ui text-muted lg:flex">
-                    Don’t have an account?&nbsp;
-                    <button type="button" onClick={() => { setWho('individual'); setMode('code'); }} className="font-extrabold text-gold hover:text-gold-dark">
-                        Create an account
-                    </button>
-                </div>
 
                 <div className="flex flex-1 flex-col lg:items-center lg:justify-center">
                     <div className="w-full lg:max-w-[420px]">

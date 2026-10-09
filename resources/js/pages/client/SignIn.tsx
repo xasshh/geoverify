@@ -30,9 +30,6 @@ export default function SignIn() {
                         <a href="/" aria-label="GeoVerify home" className="mb-3 sm:mb-4">
                             <GeoVerifyMark size={64} title="GeoVerify" />
                         </a>
-                        <p className="text-label font-semibold tracking-[0.05em] text-gold uppercase">
-                            Nigeria Business Directory
-                        </p>
                         <h1 className="font-wordmark text-[1.75rem] leading-none font-bold text-logo">GeoVerify</h1>
                     </div>
 

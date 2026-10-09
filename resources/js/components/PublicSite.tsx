@@ -77,7 +77,8 @@ export function SiteHeader({
     brand: ReactNode;
     links: NavItem[];
     signIn: NavLink;
-    getStarted: NavLink;
+    /** Left out where only signing in is offered, as on the home page. */
+    getStarted?: NavLink;
     tone?: 'light' | 'dark';
 }) {
     // With the business portal closed, signing in and getting started mean
@@ -87,10 +88,13 @@ export function SiteHeader({
         if (signIn.href.startsWith('/portal')) {
             signIn = { ...signIn, href: '/enumerate/sign-in' };
         }
-        if (getStarted.href.startsWith('/portal')) {
-            getStarted = { ...getStarted, href: '/portal/register?as=buyer&next=enumerate' };
+        if (getStarted?.href.startsWith('/portal') === true) {
+            getStarted = { label: getStarted.label, href: '/portal/register?as=buyer&next=enumerate' };
         }
     }
+
+    // The business directory is part of what opens with the business portal.
+    links = portalOpen ? links : links.filter((link) => link.href !== '/directory');
 
     const [open, setOpen] = useState(false);
     const dark = tone === 'dark';
@@ -121,15 +125,17 @@ export function SiteHeader({
                     >
                         {signIn.label}
                     </Link>
-                    <Link
-                        href={getStarted.href}
-                        className={cx(
-                            'rounded-full px-4 py-2 text-ui font-extrabold',
-                            dark ? 'bg-white text-ink hover:bg-white/90' : 'bg-gold-dark text-on-accent hover:bg-gold',
-                        )}
-                    >
-                        {getStarted.label}
-                    </Link>
+                    {getStarted !== undefined && (
+                        <Link
+                            href={getStarted.href}
+                            className={cx(
+                                'rounded-full px-4 py-2 text-ui font-extrabold',
+                                dark ? 'bg-white text-ink hover:bg-white/90' : 'bg-gold-dark text-on-accent hover:bg-gold',
+                            )}
+                        >
+                            {getStarted.label}
+                        </Link>
+                    )}
                 </div>
                 <button
                     type="button"
@@ -166,9 +172,11 @@ export function SiteHeader({
                         <Link href={signIn.href} className="flex-1 rounded-full border border-rule-strong py-3 text-center text-ui font-semibold">
                             {signIn.label}
                         </Link>
-                        <Link href={getStarted.href} className="flex-1 rounded-full bg-gold-dark py-3 text-center text-ui font-extrabold text-on-accent">
-                            {getStarted.label}
-                        </Link>
+                        {getStarted !== undefined && (
+                            <Link href={getStarted.href} className="flex-1 rounded-full bg-gold-dark py-3 text-center text-ui font-extrabold text-on-accent">
+                                {getStarted.label}
+                            </Link>
+                        )}
                     </div>
                 </nav>
             )}
