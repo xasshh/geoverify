@@ -11,6 +11,10 @@ return [
      */
     'enumerate_free' => (bool) env('ENUMERATE_FREE', false),
 
+    // Where the privacy policy and terms send people. Unset, they point to
+    // Enumerate's complaints desk instead of an address nobody reads.
+    'contact_email' => env('CONTACT_EMAIL') ?: null,
+
     /*
      * Surfaces built but not yet open to the public (decided 2026-10-09: the
      * business portal and the investor portal are coming soon). Closed, their

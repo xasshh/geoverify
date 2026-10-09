@@ -165,3 +165,8 @@ it('shows the become-an-agent page, which creates no account', function () {
 
     expect(User::query()->count())->toBe(0);
 });
+
+it('publishes a privacy policy and terms for Google\'s consent screen', function () {
+    $this->get('/privacy')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('public/Privacy'));
+    $this->get('/terms')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('public/Terms'));
+});

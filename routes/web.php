@@ -93,6 +93,10 @@ Route::get('/', HomeController::class)->name('home');
 // Applying will never create an account; staff do not self register.
 Route::get('become-an-agent', fn () => Inertia::render('public/BecomeAgent'))->name('become-agent');
 
+// The privacy policy and terms, linked from Google's sign in consent screen.
+Route::get('privacy', fn () => Inertia::render('public/Privacy', ['contactEmail' => config('geoverify.contact_email')]))->name('privacy');
+Route::get('terms', fn () => Inertia::render('public/Terms', ['contactEmail' => config('geoverify.contact_email')]))->name('terms');
+
 // The spatial stack check that used to sit behind /, kept where an operator
 // can still reach it.
 Route::get('health', fn (CheckSpatialStack $check) => Inertia::render('Health', $check()))
