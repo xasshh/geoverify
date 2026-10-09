@@ -50,6 +50,10 @@ interface AreaMapProps {
     focus?: [number, number] | null;
     /** When not drawing, a click on something recorded picks it. */
     onPickFeature?: (properties: Record<string, unknown> | null) => void;
+    /** Draw on a plain ground when there is neither a pack nor an image. */
+    bare?: boolean;
+    /** Fit to this box on load, as west, south, east, north. */
+    bounds?: [number, number, number, number] | null;
 }
 
 /**
@@ -76,6 +80,8 @@ export function AreaMap({
     onMoveVertex,
     onPickFeature,
     focus = null,
+    bare = false,
+    bounds = null,
 }: AreaMapProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibre | null>(null);
@@ -95,7 +101,7 @@ export function AreaMap({
     useEffect(() => {
         const element = container.current;
 
-        if (element === null || (opened === null && openedImagery === null)) {
+        if (element === null || (opened === null && openedImagery === null && !bare)) {
             return;
         }
 
@@ -133,6 +139,10 @@ export function AreaMap({
         instance.touchZoomRotate.disableRotation();
 
         instance.on('load', () => {
+            if (bounds !== null) {
+                instance.fitBounds(bounds, { padding: 24, duration: 0 });
+            }
+
             instance.addSource('recorded', { type: 'geojson', data: latest.current.features });
             instance.addSource('draft', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
 
@@ -259,7 +269,7 @@ export function AreaMap({
         };
         // Built once per archive: the imagery is added by its own effect.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened, assignedH3, centre]);
+    }, [opened, assignedH3, centre, bare, bounds]);
 
     useEffect(() => {
         if (ready && focus !== null) {
@@ -347,7 +357,7 @@ export function AreaMap({
         });
     }, [ready, position]);
 
-    if ((opened === null && openedImagery === null) || failed !== null) {
+    if ((opened === null && openedImagery === null && !bare) || failed !== null) {
         return (
             <div className="flex h-full items-center justify-center p-6 text-center text-ui text-muted">
                 {failed ?? 'There is no map for this ground yet.'}

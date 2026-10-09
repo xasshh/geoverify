@@ -454,6 +454,14 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                     >
                         Download the one page brief
                     </a>
+                    {campaign.capture.areaFeatures && (
+                        <Link
+                            href={`/client/campaigns/${String(campaign.id)}/land`}
+                            className="rounded-full bg-gold-dark px-4 py-2 text-ui font-extrabold text-on-accent hover:bg-gold"
+                        >
+                            Land and natural features
+                        </Link>
+                    )}
                     {!mustAcknowledge && (
                         <button
                             type="button"

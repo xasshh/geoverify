@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\MandateController;
 use App\Http\Controllers\Admin\PeopleController;
 use App\Http\Controllers\Admin\ReviewModerationController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
+use App\Http\Controllers\Client\LandController as ClientLandController;
 use App\Http\Controllers\Client\SignInController as ClientSignInController;
 use App\Http\Controllers\ConsentReceiptController;
 use App\Http\Controllers\Console\AssignmentController;
@@ -307,6 +308,14 @@ Route::prefix('client')->name('client.')->group(function (): void {
         Route::post('campaigns/{campaign}/acknowledge', [ClientCampaignController::class, 'acknowledge'])->name('campaigns.acknowledge');
         Route::get('campaigns/{campaign}/brief.pdf', [ClientCampaignController::class, 'brief'])->name('campaigns.brief');
         Route::get('campaigns/{campaign}/roads.json', [ClientCampaignController::class, 'roads'])->name('campaigns.roads');
+        Route::get('campaigns/{campaign}/land', [ClientLandController::class, 'show'])->name('campaigns.land');
+        Route::get('campaigns/{campaign}/land/{area}/features.json', [ClientLandController::class, 'features'])
+            ->whereNumber('area')->name('campaigns.land.features');
+        Route::get('campaigns/{campaign}/land/{area}/imagery.pmtiles', [ClientLandController::class, 'imagery'])
+            ->whereNumber('area')->name('campaigns.land.imagery');
+        Route::get('campaigns/{campaign}/land/export', [ClientLandController::class, 'export'])
+            ->middleware('throttle:12,1')->name('campaigns.land.export');
+        Route::get('campaigns/{campaign}/land/report.pdf', [ClientLandController::class, 'report'])->name('campaigns.land.report');
     });
 });
 
@@ -330,6 +339,8 @@ Route::get('media/file/{path}', MediaFileController::class)
 */
 Route::get('client/campaigns/{campaign}/brief.html', [ClientCampaignController::class, 'briefHtml'])
     ->name('client.campaigns.brief.render');
+Route::get('client/campaigns/{campaign}/land/report.html', [ClientLandController::class, 'reportHtml'])
+    ->name('client.campaigns.land.report.render');
 
 /*
 | The evidence pack as HTML, for the browser that prints it.

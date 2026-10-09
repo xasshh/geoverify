@@ -531,6 +531,18 @@ Tests:
 
 ### Stage 5: client views, exports, onboarding
 
+**Client side built 2026-10-09.** `/client/campaigns/{id}/land`: the map by
+class (filters for class, method and ground check, which the download obeys
+too), the summary (`AssembleAreaSummary`), and `ExportAreaFeatures`: GeoJSON,
+GeoPackage (a layer per class), Shapefile (one per class, answer columns named
+to ten characters by us and recorded in the dictionary), KML and CSV with WKT,
+each zipped with `data-dictionary.csv` and a README carrying the WorldCover
+attribution when it applies. Every download writes `area_features.exported`
+with the zip's SHA-256, by a client actor (`ACTOR_CLIENT`). The area report is
+the sixth document on the print path. Nothing names the officer.
+Onboarding (profiles, equipment, identity) waits for the agent application
+brief, which it overlaps.
+
 - **Client dossier:**
   - An area map by class, with filters for class, method, status, date and
     officer.

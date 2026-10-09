@@ -321,10 +321,11 @@ decides an order is late.
 
 ## Documents a browser prints
 
-Five documents leave the system as PDF: the evidence pack, the campaign brief,
-the verification certificate, the consent receipt and the Enumerate Business
-Verification Report. All five take one path, and a sixth should join it rather
-than grow a second pipeline. The report is assembled only from
+Six documents leave the system as PDF: the evidence pack, the campaign brief,
+the verification certificate, the consent receipt, the Enumerate Business
+Verification Report and the client's land report (`exports/area-report`, its
+map drawn as SVG by PostGIS). All six take one path, and a seventh should join
+it rather than grow a second pipeline. The report is assembled only from
 `PresentEnumerateRequest::page`, so it can never print what the requester's
 page withholds; its photographs are embedded as data URIs because the printing
 browser has no session to fetch a link with. A Blade view in

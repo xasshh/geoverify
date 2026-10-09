@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Verification\Models;
 
+use App\Domain\Campaign\Models\ClientUser;
 use App\Domain\Investment\Models\InvestorUser;
 use App\Domain\Party\Models\Party;
 use App\Domain\Party\Models\PortalAccount;
@@ -47,6 +48,9 @@ final class VerificationEvent extends Model
     public const ACTOR_INVESTOR = 'investor';
 
     public const ACTOR_BUYER = 'buyer';
+
+    /** A commissioning client's administrator, on the client guard. */
+    public const ACTOR_CLIENT = 'client';
 
     public const UPDATED_AT = null;
 
@@ -110,6 +114,30 @@ final class VerificationEvent extends Model
             'actor_id' => $investor->id,
             'actor_label' => $investor->organisation?->name,
             'evidence' => $evidence + ['investor_organisation_id' => $investor->investor_organisation_id],
+            'occurred_at' => now(),
+        ]);
+    }
+
+    /**
+     * A commissioning client did this: downloaded their campaign's data, say.
+     * Labelled with the organisation, which is who the data was sold to.
+     *
+     * @param  array<string, mixed>  $evidence
+     */
+    public static function recordForClient(
+        Model $subject,
+        string $event,
+        ClientUser $client,
+        array $evidence = [],
+    ): self {
+        return self::query()->create([
+            'subject_type' => $subject->getMorphClass(),
+            'subject_id' => $subject->getKey(),
+            'event' => $event,
+            'actor_type' => self::ACTOR_CLIENT,
+            'actor_id' => $client->id,
+            'actor_label' => $client->organisation?->name,
+            'evidence' => $evidence + ['client_organisation_id' => $client->client_organisation_id],
             'occurred_at' => now(),
         ]);
     }

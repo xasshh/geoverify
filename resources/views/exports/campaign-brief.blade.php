@@ -59,12 +59,12 @@
         .fact-label { font-size: 6.5pt; letter-spacing: 0.1em; text-transform: uppercase; color: #97A3AE; }
         .fact-value { font-family: 'JetBrains Mono', monospace; font-size: 11pt; }
 
-        table.grid { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-        table.grid th {
+        table.datagrid { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+        table.datagrid th {
             text-align: left; font-size: 6.5pt; letter-spacing: 0.1em; text-transform: uppercase;
             color: #97A3AE; border-bottom: 0.5pt solid #D8D3C8; padding: 1mm 2mm 1mm 0; font-weight: 600;
         }
-        table.grid td { padding: 1.2mm 2mm 1.2mm 0; border-bottom: 0.25pt solid #E7E2D8; vertical-align: top; }
+        table.datagrid td { padding: 1.2mm 2mm 1.2mm 0; border-bottom: 0.25pt solid #E7E2D8; vertical-align: top; }
 
         .prose { max-width: 46em; white-space: pre-line; }
         .muted { color: #6B7A88; }
@@ -121,7 +121,7 @@
         @endif
 
         <h2>Coverage</h2>
-        <table class="grid avoid-break">
+        <table class="datagrid avoid-break">
             <thead><tr><th>Mandate</th><th>State</th><th>LGA</th><th>Area</th><th>Cells</th></tr></thead>
             <tbody>
             @forelse ($campaign['coverage']['areas'] as $area)
@@ -139,7 +139,7 @@
         </table>
 
         <h2>What is being collected &middot; {{ $campaign['schema']['fieldCount'] }} fields</h2>
-        <table class="grid avoid-break">
+        <table class="datagrid avoid-break">
             <thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead>
             <tbody>
             @forelse ($campaign['schema']['fields'] as $field)
@@ -156,7 +156,7 @@
 
         <h2>Stakeholders</h2>
         @forelse ($campaign['stakeholders']['byCategory'] as $group)
-            <table class="grid avoid-break" style="margin-bottom:3mm">
+            <table class="datagrid avoid-break" style="margin-bottom:3mm">
                 <thead><tr><th colspan="3">{{ $group['label'] }}</th></tr></thead>
                 <tbody>
                 @foreach ($group['people'] as $person)
@@ -173,7 +173,7 @@
         @endforelse
 
         <h2>Agents deployed &middot; {{ $campaign['deployment']['activeCount'] }}</h2>
-        <table class="grid avoid-break">
+        <table class="datagrid avoid-break">
             <thead><tr><th>Officer</th><th>Reference</th><th>Area</th><th>Since</th></tr></thead>
             <tbody>
             @forelse ($campaign['deployment']['roster'] as $agent)
