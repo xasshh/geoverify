@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Button } from '@/components/Button';
 import { AudienceTabs, BusinessAuthLayout } from '@/components/AuthLayouts';
 import { SelectField, TextField } from '@/components/Field';
@@ -17,10 +18,12 @@ export default function Register({
     audience: initial,
     byEmail = false,
     email: presetEmail = '',
+    portalOpen = true,
 }: {
     audience: 'buyer' | 'business';
     byEmail?: boolean;
     email?: string;
+    portalOpen?: boolean;
 }) {
     const form = useForm({
         audience: initial,
@@ -46,14 +49,16 @@ export default function Register({
             <p className="mt-1.5 mb-6 max-w-[46ch] text-body text-muted">
                 {byEmail
                     ? buying
-                        ? 'Your name, your email and a password. We send a link to confirm the email.'
+                        ? portalOpen
+                            ? 'Your name, your email and a password. We send a link to confirm the email.'
+                            : 'Create your Enumerate account: your name, your email and a password. We send a link to confirm the email.'
                         : 'Tell us who you are and we will issue your business ID once your email is confirmed.'
                     : buying
                       ? 'Your number is confirmed. Tell us your name and you are in.'
                       : 'Your number is confirmed. Tell us who you are and we will issue your business ID.'}
             </p>
 
-            <div className="mb-6">
+            <div className={portalOpen ? 'mb-6' : 'hidden'}>
                 <AudienceTabs
                     value={form.data.audience}
                     onChange={(value) => {
@@ -61,6 +66,12 @@ export default function Register({
                     }}
                 />
             </div>
+
+            {byEmail && buying && (
+                <div className="mb-6 flex flex-col gap-4">
+                    <GoogleButton next={portalOpen ? 'portal' : 'enumerate'} label="Sign up with Google" />
+                </div>
+            )}
 
             <form
                 onSubmit={(event) => {
@@ -196,7 +207,7 @@ export default function Register({
             {byEmail && (
                 <p className="mt-6 text-center text-ui text-muted">
                     Already have an account?{' '}
-                    <Link href="/portal/sign-in" className="font-extrabold text-gold hover:text-gold-dark">
+                    <Link href={portalOpen ? '/portal/sign-in' : '/enumerate/sign-in'} className="font-extrabold text-gold hover:text-gold-dark">
                         Sign in
                     </Link>
                 </p>

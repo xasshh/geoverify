@@ -48,6 +48,7 @@ export function DirectoryChrome({
     const page = usePage();
     const path = page.url.split('?')[0] ?? '';
     const signedIn = page.props.auth.portal !== null;
+    const surfaces = page.props.surfaces;
     const carts = useCarts();
     const cartItems = countItems(carts);
     const firstCart = Object.values(carts)[0];
@@ -69,7 +70,10 @@ export function DirectoryChrome({
                                 ['/portal/sign-in', 'For businesses'],
                                 ['/invest/sign-in', 'Investors'],
                             ] as const
-                        ).map(([href, label]) => (
+                        )
+                            // A portal that is not open yet has no link.
+                            .filter(([href]) => (surfaces.portal || !href.startsWith('/portal')) && (surfaces.invest || !href.startsWith('/invest')))
+                            .map(([href, label]) => (
                             <Link
                                 key={href}
                                 href={href}
@@ -84,7 +88,15 @@ export function DirectoryChrome({
                         ))}
                     </nav>
                     <div className="flex items-center gap-2.5">
-                        {signedIn && (
+                        {!surfaces.portal && (
+                            <Link
+                                href="/enumerate"
+                                className="inline-flex min-h-touch items-center rounded-sm bg-gold px-4 text-ui font-extrabold text-on-accent hover:bg-gold-dark"
+                            >
+                                Verify a business
+                            </Link>
+                        )}
+                        {surfaces.portal && signedIn && (
                             <Link
                                 href="/portal/purchases"
                                 className="hidden min-h-touch items-center px-2 text-ui font-bold text-ink hover:text-gold sm:inline-flex"
@@ -92,7 +104,7 @@ export function DirectoryChrome({
                                 My orders
                             </Link>
                         )}
-                        {cartItems > 0 && firstCart !== undefined && (
+                        {surfaces.portal && cartItems > 0 && firstCart !== undefined && (
                             <Link
                                 href={`/portal/checkout/${String(firstCart.businessId)}`}
                                 className="inline-flex min-h-touch items-center rounded-sm border border-rule-strong px-4 text-ui font-bold text-ink hover:bg-sunken"
@@ -100,13 +112,15 @@ export function DirectoryChrome({
                                 Cart · {cartItems}
                             </Link>
                         )}
-                        <Link
-                            href="/portal/register"
-                            className="hidden min-h-touch items-center rounded-sm border border-gold px-4 text-ui font-bold text-gold hover:bg-gold-soft sm:inline-flex"
-                        >
-                            List your business, free
-                        </Link>
-                        {!signedIn && (
+                        {surfaces.portal && (
+                            <Link
+                                href="/portal/register"
+                                className="hidden min-h-touch items-center rounded-sm border border-gold px-4 text-ui font-bold text-gold hover:bg-gold-soft sm:inline-flex"
+                            >
+                                List your business, free
+                            </Link>
+                        )}
+                        {surfaces.portal && !signedIn && (
                             <Link
                                 href="/portal/sign-in"
                                 className="inline-flex min-h-touch items-center rounded-sm bg-gold px-4 text-ui font-extrabold text-on-accent hover:bg-gold-dark"
@@ -125,9 +139,17 @@ export function DirectoryChrome({
                 {(
                     [
                         ['/directory', 'Explore', 'M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
-                        ['/portal/saved', 'Saved', 'M6 3h12v18l-6-4-6 4z'],
-                        ['/portal/purchases', 'Orders', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
-                        [signedIn ? '/portal' : '/portal/sign-in', 'Account', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7'],
+                        ...(surfaces.portal
+                            ? ([
+                                  ['/portal/saved', 'Saved', 'M6 3h12v18l-6-4-6 4z'],
+                                  ['/portal/purchases', 'Orders', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
+                                  [signedIn ? '/portal' : '/portal/sign-in', 'Account', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7'],
+                              ] as const)
+                            : ([
+                                  ['/directory/sectors', 'Categories', 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z'],
+                                  ['/directory/how-verification-works', 'How it works', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 8v.5M12 11v5'],
+                                  ['/enumerate', 'Verify', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM8.5 12l2.5 2.5 4.5-5'],
+                              ] as const)),
                     ] as const
                 ).map(([href, label, icon]) => (
                     <Link

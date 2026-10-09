@@ -344,7 +344,7 @@ final class ManageEnumerateVisits
 
             $completes = $request->tier === Tier::Location;
 
-            $transaction = $completes ? ($this->post)(
+            $transaction = $completes && $request->price_minor > 0 ? ($this->post)(
                 [
                     LedgerAccount::CUSTOMER_FUNDS_HELD => $request->price_minor,
                     LedgerAccount::VERIFICATION_INCOME => -$request->price_minor,

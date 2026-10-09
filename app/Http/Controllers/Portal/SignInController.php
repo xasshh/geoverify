@@ -13,6 +13,7 @@ use App\Domain\Party\Actions\VerifySignInCode;
 use App\Domain\Party\Enums\PartyKind;
 use App\Domain\Party\Models\PortalAccount;
 use App\Http\Middleware\EnsurePortalAccount;
+use App\Http\Middleware\EnsureSurfaceOpen;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,11 @@ final class SignInController
     {
         if (Auth::guard('portal')->check()) {
             return redirect()->route('portal.dashboard');
+        }
+
+        // With the business portal closed, Enumerate's own door is the way in.
+        if (! EnsureSurfaceOpen::open('portal')) {
+            return redirect()->route('enumerate.sign-in');
         }
 
         return Inertia::render('portal/SignIn', ['smsEnabled' => self::sms()]);

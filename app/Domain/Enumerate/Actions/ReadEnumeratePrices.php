@@ -13,8 +13,18 @@ use RuntimeException;
  */
 final class ReadEnumeratePrices
 {
+    /** Whether checks are free just now (config geoverify.enumerate_free). */
+    public static function free(): bool
+    {
+        return (bool) config('geoverify.enumerate_free');
+    }
+
     public function priceMinor(Tier $tier, ?int $days): int
     {
+        if (self::free()) {
+            return 0;
+        }
+
         $price = EnumeratePrice::query()
             ->where('tier', $tier->value)
             ->whereNull('effective_to')
@@ -36,6 +46,10 @@ final class ReadEnumeratePrices
     public function list(): array
     {
         $rows = EnumeratePrice::query()->whereNull('effective_to')->get();
+
+        if (self::free()) {
+            $rows = $rows->map(fn (EnumeratePrice $row): EnumeratePrice => $row->setAttribute('amount_minor', 0));
+        }
         $tier3 = [];
 
         foreach ($rows->where('tier', 3) as $row) {

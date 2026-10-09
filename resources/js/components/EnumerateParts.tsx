@@ -2,7 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { StatusPill } from '@/components/StatusPill';
 import { cx } from '@/lib/cx';
-import { STATUS_TONE, day, kobo, type RequestRow } from '@/lib/enumerate';
+import { STATUS_TONE, day, kobo, priceLabel, type RequestRow } from '@/lib/enumerate';
 
 /** "Tier 3 · Activity" on its tier's own ground: the deeper the check, the darker the chip. */
 export function TierBadge({ tier, label }: { tier: 1 | 2 | 3; label: string }) {
@@ -110,7 +110,7 @@ export function QuickLookup({ tier1Minor }: { tier1Minor: number }) {
                 className="h-11 min-w-0 flex-1 rounded-sm border border-rule-strong bg-raised px-4 text-ui text-ink placeholder:text-faint focus:border-gold focus:outline-none"
             />
             <button type="submit" disabled={q.trim().length < 3} className="h-11 rounded-sm bg-gold px-5 text-ui font-extrabold whitespace-nowrap text-on-accent hover:bg-gold-dark disabled:bg-sunken disabled:text-muted">
-                Verify · {kobo(tier1Minor)}
+                Verify · {priceLabel(tier1Minor)}
             </button>
         </form>
     );

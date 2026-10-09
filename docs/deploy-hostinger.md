@@ -545,3 +545,32 @@ switched back on.
 Every lookup is charged to the Prembly wallet; a lookup that fails for lack of
 balance shows as "the registry provider did not answer" and charges the
 requester nothing.
+
+## Continue with Google
+
+1. Google Cloud Console (console.cloud.google.com): create a project, then
+   APIs & Services > OAuth consent screen: External, app name "GeoVerify",
+   support email, authorised domain `logyon.com`, scopes email, profile and
+   openid. Publish it (In production) so anybody can sign in.
+2. APIs & Services > Credentials > Create credentials > OAuth client ID:
+   Web application, authorised redirect URI
+   `https://logyon.com/auth/google/callback`.
+3. On the server:
+
+   ```bash
+   cd /var/www/geoverify
+   read -r -p "Google client ID: " GID
+   read -rs -p "Google client secret: " GSECRET && echo
+   sed -i '/^GOOGLE_CLIENT_/d' .env
+   printf 'GOOGLE_CLIENT_ID=%s\nGOOGLE_CLIENT_SECRET=%s\n' "$GID" "$GSECRET" >> .env
+   unset GID GSECRET
+   php artisan config:cache
+   ```
+
+The button appears on its own once both are set.
+
+## Launch mode
+
+`ENUMERATE_FREE=true`, `BUSINESS_PORTAL_OPEN=false` and `INVEST_PORTAL_OPEN=false`
+in `.env` (then `php artisan config:cache`). Flip them back to charge for
+checks and open the portals; nothing else changes.

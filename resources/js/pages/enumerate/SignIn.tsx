@@ -1,10 +1,11 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { HexField } from '@/components/AuthLayouts';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Button } from '@/components/Button';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
-import { kobo, type Prices } from '@/lib/enumerate';
+import { priceLabel, type Prices } from '@/lib/enumerate';
 
 const INPUT =
     'h-[52px] w-full rounded-sm border border-rule-strong bg-raised px-4 text-body text-ink placeholder:text-faint focus:border-gold focus:ring-4 focus:ring-gold-soft focus:outline-none';
@@ -22,6 +23,7 @@ type Mode = 'password' | 'code';
  */
 export default function SignIn({ prices, smsEnabled = false }: { prices: Prices; smsEnabled?: boolean }) {
     const status = usePage().props.flash.status;
+    const google = usePage().props.googleSignIn;
     const [who, setWho] = useState<'individual' | 'organisation'>('individual');
     const [mode, setMode] = useState<Mode>('password');
 
@@ -60,7 +62,7 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
                                     <span className="text-ui font-extrabold">{title}</span>
                                     <span className="text-table text-inverse/65">{body}</span>
                                 </span>
-                                <span className="ml-auto font-display text-body font-extrabold text-logo">{kobo(price)}</span>
+                                <span className="ml-auto font-display text-body font-extrabold text-logo">{priceLabel(price)}</span>
                             </li>
                         ))}
                     </ul>
@@ -128,6 +130,12 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
                                     password.post('/portal/sign-in/password');
                                 }}
                             >
+                                {google && (
+                                    <>
+                                        <GoogleButton />
+                                        <OrDivider />
+                                    </>
+                                )}
                                 <label className="flex flex-col gap-2">
                                     <span className="text-ui font-bold text-ink">{smsEnabled ? 'Email or phone number' : 'Email'}</span>
                                     <input
@@ -215,5 +223,16 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
                 </div>
             </main>
         </div>
+    );
+}
+
+/** "or" between two ways in. */
+function OrDivider() {
+    return (
+        <p className="flex items-center gap-3 text-table font-semibold text-muted" aria-hidden="true">
+            <span className="h-px flex-1 bg-rule" />
+            or with your email
+            <span className="h-px flex-1 bg-rule" />
+        </p>
     );
 }

@@ -10,6 +10,7 @@ use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Commerce\Enums\PurchaseStatus;
 use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Enumerate\Actions\ReadEnumeratePrices;
 use App\Domain\Enumerate\Enums\RequestStatus;
 use App\Domain\Enumerate\Models\EnumerateOrganisation;
 use App\Domain\Enumerate\Models\EnumerateProject;
@@ -20,6 +21,7 @@ use App\Domain\Field\Actions\FieldMessaging;
 use App\Domain\Field\Models\FieldMessage;
 use App\Domain\Investment\Models\InvestorUser;
 use App\Domain\Party\Actions\ActingParty;
+use App\Domain\Party\Actions\SignInWithGoogle;
 use App\Domain\Party\Models\PartyUser;
 use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Registry\Actions\CountCorrectionsAwaitingReview;
@@ -86,6 +88,18 @@ class HandleInertiaRequests extends Middleware
 
             'flash' => [
                 'status' => $request->session()->get('status'),
+            ],
+
+            // Enumerate checks are free for now: the screens hide the wallet.
+            'enumerateFree' => ReadEnumeratePrices::free(),
+
+            // Whether "Continue with Google" is set up on this server.
+            'googleSignIn' => SignInWithGoogle::configured(),
+
+            // Which surfaces are open to the public; the closed ones' links hide.
+            'surfaces' => [
+                'portal' => EnsureSurfaceOpen::open('portal'),
+                'invest' => EnsureSurfaceOpen::open('invest'),
             ],
             //
         ];

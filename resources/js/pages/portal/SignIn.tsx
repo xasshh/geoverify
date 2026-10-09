@@ -1,6 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { AudienceTabs, BusinessAuthLayout, OrRule } from '@/components/AuthLayouts';
+import { GoogleButton } from '@/components/GoogleButton';
 import { Button } from '@/components/Button';
 import { cx } from '@/lib/cx';
 
@@ -141,6 +142,7 @@ export default function SignIn({ smsEnabled = false }: { smsEnabled?: boolean })
                     <Button type="submit" variant="primary" size="field-primary" fullWidth busy={password.processing}>
                         Sign in
                     </Button>
+                    {!smsEnabled && <GoogleButton next="portal" />}
                     {smsEnabled && (
                         <>
                             <OrRule />

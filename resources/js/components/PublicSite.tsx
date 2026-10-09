@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 import { cx } from '@/lib/cx';
 
@@ -80,6 +80,18 @@ export function SiteHeader({
     getStarted: NavLink;
     tone?: 'light' | 'dark';
 }) {
+    // With the business portal closed, signing in and getting started mean
+    // Enumerate: the portal's own door would only say "coming soon".
+    const portalOpen = usePage().props.surfaces.portal;
+    if (!portalOpen) {
+        if (signIn.href.startsWith('/portal')) {
+            signIn = { ...signIn, href: '/enumerate/sign-in' };
+        }
+        if (getStarted.href.startsWith('/portal')) {
+            getStarted = { ...getStarted, href: '/portal/register?as=buyer&next=enumerate' };
+        }
+    }
+
     const [open, setOpen] = useState(false);
     const dark = tone === 'dark';
 
@@ -214,21 +226,28 @@ export function Tick({ className }: { className?: string }) {
 
 /** The site footer, shared by the home page and Enumerate. */
 export function SiteFooter() {
+    const portalOpen = usePage().props.surfaces.portal;
     const columns: Array<{ title: string; links: NavLink[] }> = [
         {
             title: 'Get started',
-            links: [
-                { label: 'Create a business account', href: '/portal/register' },
-                { label: 'Sign in to your business', href: '/portal/sign-in' },
-                { label: 'Staff sign in', href: '/login' },
-            ],
+            links: portalOpen
+                ? [
+                      { label: 'Create a business account', href: '/portal/register' },
+                      { label: 'Sign in to your business', href: '/portal/sign-in' },
+                      { label: 'Staff sign in', href: '/login' },
+                  ]
+                : [
+                      { label: 'Create an account', href: '/portal/register?as=buyer&next=enumerate' },
+                      { label: 'Sign in to Enumerate', href: '/enumerate/sign-in' },
+                      { label: 'Staff sign in', href: '/login' },
+                  ],
         },
         {
             title: 'Products',
             links: [
                 { label: 'Business directory', href: '/directory' },
                 { label: 'Enumerate', href: '/enumerate' },
-                { label: 'Business portal', href: '/portal/sign-in' },
+                ...(portalOpen ? [{ label: 'Business portal', href: '/portal/sign-in' }] : []),
             ],
         },
         {

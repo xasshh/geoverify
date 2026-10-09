@@ -359,7 +359,7 @@ final class ManageMonitoring
                 $legs[LedgerAccount::REQUESTER_WALLETS] = -$returned;
             }
 
-            $transaction = ($this->post)(
+            $transaction = $fresh->price_minor === 0 ? null : ($this->post)(
                 $legs,
                 LedgerEntry::REASON_WORK_COMPLETED,
                 null,

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
 import { EnumerateShell } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
-import { companyType, kobo, registration, type EnumerateFrame, type Prices, type RegistryMatch } from '@/lib/enumerate';
+import { companyType, kobo, priceLabel, registration, type EnumerateFrame, type Prices, type RegistryMatch } from '@/lib/enumerate';
 
 interface Props {
     frame: EnumerateFrame;
@@ -67,7 +67,8 @@ async function lookup(by: 'name' | 'rc', q: string): Promise<{ matches: Registry
  * what the request is called.
  */
 export default function New({ frame, prices, start }: Props) {
-    const [by, setBy] = useState(start.by);
+    // Name search is switched off (2026-10-09): the CAC record names the business.
+    const by = 'rc' as const;
     const [q, setQ] = useState(start.q);
     const [searching, setSearching] = useState(false);
     const [problem, setProblem] = useState<string | null>(null);
@@ -107,9 +108,9 @@ export default function New({ frame, prices, start }: Props) {
     useEffect(() => {
         if (!ran.current && start.q.trim().length >= 3) {
             ran.current = true;
-            void search(start.by, start.q);
+            void search('rc', start.q);
         }
-    }, [search, start.by, start.q]);
+    }, [search, start.q]);
 
     const tier = form.data.tier;
     const price = tier === 1 ? prices.tier1 : tier === 2 ? prices.tier2 : (prices.tier3[String(form.data.days)] ?? 0);
@@ -151,30 +152,12 @@ export default function New({ frame, prices, start }: Props) {
                                 void search(by, q);
                             }}
                         >
-                            <div role="tablist" aria-label="Search by" className="flex shrink-0 rounded-[10px] bg-sunken p-1">
-                                {(
-                                    [
-                                        ['name', 'Business name'],
-                                        ['rc', 'CAC number'],
-                                    ] as const
-                                ).map(([key, label]) => (
-                                    <button
-                                        key={key}
-                                        type="button"
-                                        role="tab"
-                                        aria-selected={by === key}
-                                        onClick={() => { setBy(key); }}
-                                        className={cx('min-h-[40px] rounded-[8px] px-3.5 text-table', by === key ? 'bg-raised font-extrabold text-ink shadow-card' : 'font-semibold text-muted')}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
+                            {/* Search by CAC (RC or BN) number only: the record names the business. */}
                             <input
-                                aria-label={by === 'name' ? 'Business name' : 'CAC number'}
+                                aria-label="CAC number (RC or BN)"
                                 value={q}
                                 onChange={(e) => { setQ(e.target.value); }}
-                                placeholder={by === 'name' ? 'Kora Build Supplies' : 'RC 1482093'}
+                                placeholder="RC 1482093 or BN 3300112"
                                 className="h-12 min-w-0 flex-1 rounded-sm border-2 border-rule-strong bg-raised px-4 text-body text-ink placeholder:text-faint focus:border-gold focus:outline-none"
                             />
                             <Button type="submit" variant="primary" size="field" busy={searching} disabled={q.trim().length < 3}>
@@ -223,9 +206,6 @@ export default function New({ frame, prices, start }: Props) {
                                         );
                                     })}
                                 </ul>
-                                {by === 'name' && matches.length > 0 && (
-                                    <p className="mt-3 text-table text-muted">Not the one? Search by its CAC number instead: it is on the company’s letterhead and invoices.</p>
-                                )}
                             </div>
                         )}
                     </section>
@@ -259,7 +239,7 @@ export default function New({ frame, prices, start }: Props) {
                                         </span>
                                         <span className="mt-2 text-body font-extrabold text-ink">{t.title}</span>
                                         <span className="mt-2 flex flex-wrap items-baseline gap-x-2">
-                                            <span className="font-display text-[1.5rem] font-extrabold text-ink">{kobo(amount)}</span>
+                                            <span className="font-display text-[1.5rem] font-extrabold text-ink">{priceLabel(amount)}</span>
                                             <span className="text-[0.75rem] whitespace-nowrap text-muted">{t.turnaround}</span>
                                         </span>
                                         <ul className="mt-3 flex flex-col gap-1.5 text-table text-ink">
@@ -293,7 +273,7 @@ export default function New({ frame, prices, start }: Props) {
                                             className={cx('min-h-touch rounded-sm border px-3.5 text-table font-extrabold', form.data.days === d ? 'border-2 border-gold bg-gold-soft text-gold-dark' : 'border-rule-strong bg-raised text-ink')}
                                         >
                                             {d} days
-                                            <span className="block text-[0.6875rem] font-semibold text-muted">{kobo(prices.tier3[String(d)] ?? 0)}</span>
+                                            <span className="block text-[0.6875rem] font-semibold text-muted">{priceLabel(prices.tier3[String(d)] ?? 0)}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -333,11 +313,15 @@ export default function New({ frame, prices, start }: Props) {
                         {GETS[tier].map((g) => <li key={g}>• {g}</li>)}
                     </ul>
 
+                    {price === 0 ? (
+                        <p className="mt-4 rounded-sm bg-green-soft px-4 py-3 text-ui font-semibold text-green">Free while Enumerate launches. No wallet needed.</p>
+                    ) : (
                     <dl className="mt-4 flex flex-col gap-2 border-t border-rule pt-4 text-ui">
-                        <div className="flex justify-between"><dt className="text-muted">Wallet balance</dt><dd className="text-ink">{kobo(frame.walletMinor, 2)}</dd></div>
-                        <div className="flex items-baseline justify-between"><dt className="text-body font-extrabold text-ink">Total</dt><dd className="font-display text-[1.5rem] font-extrabold text-ink">{kobo(price, 2)}</dd></div>
-                        <div className="flex justify-between"><dt className="text-muted">Balance after</dt><dd className={cx(after < 0 ? 'font-bold text-alert-ink' : 'text-muted')}>{kobo(after, 2)}</dd></div>
-                    </dl>
+                            <div className="flex justify-between"><dt className="text-muted">Wallet balance</dt><dd className="text-ink">{kobo(frame.walletMinor, 2)}</dd></div>
+                            <div className="flex items-baseline justify-between"><dt className="text-body font-extrabold text-ink">Total</dt><dd className="font-display text-[1.5rem] font-extrabold text-ink">{kobo(price, 2)}</dd></div>
+                            <div className="flex justify-between"><dt className="text-muted">Balance after</dt><dd className={cx(after < 0 ? 'font-bold text-alert-ink' : 'text-muted')}>{kobo(after, 2)}</dd></div>
+                        </dl>
+                    )}
 
                     {form.errors.tier !== undefined && <p role="alert" className="mt-3 text-ui font-semibold text-alert-ink">{form.errors.tier}</p>}
 
@@ -348,7 +332,7 @@ export default function New({ frame, prices, start }: Props) {
                             </Link>
                         ) : (
                             <Button variant="primary" size="field-primary" fullWidth disabled={!canPay} busy={form.processing} onClick={pay}>
-                                Pay {kobo(price, 2)} from wallet
+                                {price === 0 ? 'Run this check' : `Pay ${kobo(price, 2)} from wallet`}
                             </Button>
                         )}
                     </div>

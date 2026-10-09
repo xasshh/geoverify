@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $phone_verified_at
  * @property string|null $email
  * @property Carbon|null $email_verified_at
+ * @property string|null $google_id
  * @property string|null $password
  * @property string $status
  * @property Carbon|null $last_signed_in_at

@@ -3,6 +3,23 @@
 declare(strict_types=1);
 
 return [
+    /*
+     * Enumerate checks are free while the service launches (decided
+     * 2026-10-09). Every price reads as nothing, nothing is held from a
+     * wallet and no ledger movement is posted for a free check. Turning it
+     * off restores the price list as it stands in enumerate_prices.
+     */
+    'enumerate_free' => (bool) env('ENUMERATE_FREE', false),
+
+    /*
+     * Surfaces built but not yet open to the public (decided 2026-10-09: the
+     * business portal and the investor portal are coming soon). Closed, their
+     * links are hidden and their pages say so; see EnsureSurfaceOpen.
+     */
+    'surfaces' => [
+        'portal' => (bool) env('BUSINESS_PORTAL_OPEN', true),
+        'invest' => (bool) env('INVEST_PORTAL_OPEN', true),
+    ],
 
     /*
     |--------------------------------------------------------------------------

@@ -72,7 +72,7 @@ final class DecideDeskCheck
                 'completed_at' => $finishes ? now() : null,
             ]);
 
-            $transaction = $finishes ? $this->settle($fresh) : null;
+            $transaction = $finishes && $fresh->price_minor > 0 ? $this->settle($fresh) : null;
 
             if ($finishes) {
                 $this->score->stamp($fresh);

@@ -426,6 +426,7 @@ function ResultCard({
     onShow: (() => void) | null;
 }) {
     const signedIn = usePage().props.auth.portal !== null;
+    const portalOpen = usePage().props.surfaces.portal;
     const photo = entry.photos[0];
     const published = entry.depth !== 'reduced';
     const initials = entry.tradingName
@@ -506,7 +507,7 @@ function ResultCard({
                             Show on map
                         </button>
                     )}
-                    {signedIn ? (
+                    {!portalOpen ? null : signedIn ? (
                         <button
                             type="button"
                             aria-pressed={saved}

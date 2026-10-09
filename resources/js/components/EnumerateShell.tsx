@@ -147,7 +147,9 @@ export function EnumerateShell({
     const flash = usePage().props.flash.status;
     const org = frame.organisation;
     const dark = org !== null;
-    const nav = dark ? ORGANISATION : PERSONAL;
+    // While checks are free there is nothing to fund, so no wallet.
+    const free = usePage().props.enumerateFree;
+    const nav = (dark ? ORGANISATION : PERSONAL).filter((item) => !free || item.key !== 'wallet');
 
     const signOut = () => {
         router.post('/portal/sign-out');
@@ -263,7 +265,7 @@ export function EnumerateShell({
                         </div>
                         <div className="flex flex-wrap items-center gap-2.5">
                             {actions}
-                            <WalletPill minor={frame.walletMinor} label={org === null ? 'Wallet' : 'Organisation wallet'} />
+                            {!free && <WalletPill minor={frame.walletMinor} label={org === null ? 'Wallet' : 'Organisation wallet'} />}
                         </div>
                     </div>
                 </header>

@@ -12,6 +12,7 @@ use App\Domain\Party\Enums\PartyKind;
 use App\Domain\Party\Models\PortalAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsurePortalAccount;
+use App\Http\Middleware\EnsureSurfaceOpen;
 use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,21 +41,26 @@ final class EmailAccountController extends Controller
             return redirect()->route('portal.dashboard');
         }
 
-        // Somebody sent here from Enumerate goes back there once verified.
-        if ($request->query('next') === 'enumerate') {
+        $portalOpen = EnsureSurfaceOpen::open('portal');
+
+        // Somebody sent here from Enumerate goes back there once verified, as
+        // does everybody while the business portal is closed.
+        if ($request->query('next') === 'enumerate' || ! $portalOpen) {
             $request->session()->put(EnsurePortalAccount::INTENDED, url('/enumerate'));
         }
 
         return Inertia::render('portal/Register', [
-            'audience' => $request->query('as') === 'buyer' ? 'buyer' : 'business',
+            'audience' => $request->query('as') === 'buyer' || ! $portalOpen ? 'buyer' : 'business',
             'byEmail' => true,
+            'portalOpen' => $portalOpen,
             'email' => is_string($request->query('email')) ? mb_substr($request->query('email'), 0, 180) : '',
         ]);
     }
 
     public function register(Request $request, RegisterByEmail $register): RedirectResponse
     {
-        $business = $request->input('audience') !== 'buyer';
+        // No business is registered while the business portal is closed.
+        $business = $request->input('audience') !== 'buyer' && EnsureSurfaceOpen::open('portal');
 
         $validated = $request->validate([
             'person_name' => ['required', 'string', 'max:120'],

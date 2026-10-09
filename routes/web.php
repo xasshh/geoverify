@@ -68,6 +68,7 @@ use App\Http\Controllers\Portal\ClaimController;
 use App\Http\Controllers\Portal\CorrectionController as PortalCorrectionController;
 use App\Http\Controllers\Portal\DashboardController;
 use App\Http\Controllers\Portal\EmailAccountController;
+use App\Http\Controllers\Portal\GoogleSignInController;
 use App\Http\Controllers\Portal\InvestorProfileController;
 use App\Http\Controllers\Portal\ListingController;
 use App\Http\Controllers\Portal\OrderController;
@@ -440,6 +441,15 @@ Route::prefix('receipts')->name('receipts.')->where(['token' => '[a-z0-9]{16,64}
 | phone number does not have a session yet, and the same path serves both a
 | returning owner and somebody who has never been here.
 */
+/*
+| "Continue with Google", for portal and Enumerate accounts only. Staff are
+| created by an administrator and never sign in this way.
+*/
+Route::get('auth/google', [GoogleSignInController::class, 'redirect'])
+    ->middleware('throttle:20,1')->name('google.redirect');
+Route::get('auth/google/callback', [GoogleSignInController::class, 'callback'])
+    ->middleware('throttle:20,1')->name('google.callback');
+
 Route::prefix('portal')->name('portal.')->group(function (): void {
     Route::get('sign-in', [SignInController::class, 'show'])->name('sign-in');
     Route::post('sign-in', [SignInController::class, 'requestCode'])
@@ -476,7 +486,7 @@ Route::prefix('portal')->name('portal.')->group(function (): void {
     Route::get('email/verify/{account}/{hash}', [EmailAccountController::class, 'verify'])
         ->middleware('throttle:20,1')->name('email.verify');
 
-    Route::middleware('portal')->group(function (): void {
+    Route::middleware(['opens:portal', 'portal'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::get('settings', [AccountSettingsController::class, 'show'])->name('settings');
@@ -781,7 +791,7 @@ Route::post('webhooks/paystack', PaystackWebhookController::class)
 | names a business (opportunities, dossiers, data rooms, reports) waits for
 | the organisation to pass KYC, which `investor:verified` enforces.
 */
-Route::prefix('invest')->name('invest.')->group(function (): void {
+Route::prefix('invest')->name('invest.')->middleware('opens:invest')->group(function (): void {
     Route::get('sign-in', [InvestSignInController::class, 'show'])->name('sign-in');
     Route::post('sign-in', [InvestSignInController::class, 'signIn'])
         ->middleware('throttle:10,1')->name('sign-in.submit');

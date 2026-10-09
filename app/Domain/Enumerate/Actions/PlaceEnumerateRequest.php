@@ -93,7 +93,9 @@ final class PlaceEnumerateRequest
                 'paid_at' => now(),
             ]);
 
-            $transaction = ($this->post)(
+            // A free check moves no money: the ledger refuses a leg of zero,
+            // and there is nothing to hold.
+            $transaction = $price === 0 ? null : ($this->post)(
                 [
                     LedgerAccount::REQUESTER_WALLETS => $price,
                     LedgerAccount::CUSTOMER_FUNDS_HELD => -$price,

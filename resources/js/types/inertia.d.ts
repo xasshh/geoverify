@@ -42,6 +42,9 @@ declare module '@inertiajs/core' {
     interface PageProps {
         auth: { user: AuthUser | null; portal: PortalAuth | null; investor: InvestorAuth | null };
         flash: { status: string | null };
+        enumerateFree: boolean;
+        surfaces: { portal: boolean; invest: boolean };
+        googleSignIn: boolean;
         /**
          * What is waiting, for the console sidebar. Null off the console and
          * null for anyone who cannot act on it, so the shape says whether the

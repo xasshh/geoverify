@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureDigitises;
 use App\Http\Middleware\EnsureInvestor;
 use App\Http\Middleware\EnsurePortalAccount;
 use App\Http\Middleware\EnsureSupervises;
+use App\Http\Middleware\EnsureSurfaceOpen;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'digitises' => EnsureDigitises::class,
             'client' => EnsureClientUser::class,
             'investor' => EnsureInvestor::class,
+            'opens' => EnsureSurfaceOpen::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

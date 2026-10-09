@@ -88,6 +88,8 @@ export default function DirectoryListing({
     const flash = usePage().props.flash.status;
     const page = usePage();
     const signedIn = page.props.auth.portal !== null;
+    // Saving, buying and claiming live in the business portal, closed for now.
+    const portalOpen = page.props.surfaces.portal;
     const visitAsked = page.url.includes("visit=1");
     const offered = (value: "inspection" | "site_visit") =>
         services.find((x) => x.value === value)?.feeNaira != null;
@@ -105,7 +107,7 @@ export default function DirectoryListing({
         0;
     const inCart = (id: number) =>
         cart?.lines.find((line) => line.id === id)?.quantity ?? 0;
-    const buyable = products.some(
+    const buyable = portalOpen && products.some(
         (p) => p.priceNaira !== null && p.priceNaira > 0,
     );
     const [reason, setReason] = useState("");
@@ -202,7 +204,7 @@ export default function DirectoryListing({
                     </div>
                     {listing.depth !== "reduced" && (
                         <div className="flex flex-wrap gap-2 lg:ml-auto">
-                            {signedIn ? (
+                            {!portalOpen ? null : signedIn ? (
                                 <button
                                     type="button"
                                     aria-pressed={saved}
@@ -475,7 +477,7 @@ export default function DirectoryListing({
                     </div>
 
                     <div className="flex flex-col gap-5">
-                        {cartCount > 0 && (
+                        {portalOpen && cartCount > 0 && (
                             <Link
                                 href={`/portal/checkout/${String(listing.id)}`}
                                 className="flex min-h-[56px] items-center justify-between rounded-card bg-ink px-5 text-ui font-extrabold text-inverse hover:bg-graphite"
@@ -502,17 +504,19 @@ export default function DirectoryListing({
                                 Is this your business?
                             </h2>
                             <p className="mt-2 max-w-[62ch] text-ui text-muted">
-                                Claim it and you decide what appears here. You
-                                can also ask for it to be taken down, and you do
-                                not have to claim it first to do that.
+                                {portalOpen
+                                    ? "Claim it and you decide what appears here. You can also ask for it to be taken down, and you do not have to claim it first to do that."
+                                    : "Claiming a listing opens soon. You can already ask for it to be taken down, without claiming it first."}
                             </p>
                             <div className="mt-4 flex flex-wrap items-center gap-4">
-                                <Link
-                                    href="/portal/sign-in"
-                                    className="inline-flex min-h-touch items-center rounded-sm border border-transparent bg-gold px-5 text-ui font-semibold text-on-accent"
-                                >
-                                    Claim this listing
-                                </Link>
+                                {portalOpen && (
+                                    <Link
+                                        href="/portal/sign-in"
+                                        className="inline-flex min-h-touch items-center rounded-sm border border-transparent bg-gold px-5 text-ui font-semibold text-on-accent"
+                                    >
+                                        Claim this listing
+                                    </Link>
+                                )}
                                 <button
                                     type="button"
                                     onClick={() => {

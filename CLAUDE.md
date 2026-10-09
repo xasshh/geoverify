@@ -151,6 +151,17 @@ Seven surfaces, seven middleware aliases, all registered in `bootstrap/app.php`:
 `digitises` (`/desk`), `portal` (`/portal`, and Enumerate's `/enumerate` on the
 same guard; `portal:landing` shows a signed-out visitor the landing page there
 instead of a sign-in form), `client` (`/client`) and `investor` (`/invest`).
+Launch mode (decided 2026-10-09), three switches in config, all off in code
+and set on the server: `ENUMERATE_FREE` makes every Enumerate price nothing (a
+free request has price and fee both zero, the database allows only that or a
+proper price, and no ledger movement is posted for it, because a leg of zero
+is refused); `BUSINESS_PORTAL_OPEN=false` and `INVEST_PORTAL_OPEN=false` close
+those surfaces behind `opens:portal` and `opens:invest` (`EnsureSurfaceOpen`):
+pages say "coming soon", writes are not found, `/portal` sends a signed in
+person to `/enumerate`, and the shared account pages (register, verify email,
+reset) stay open because Enumerate uses them. "Continue with Google"
+(`SignInWithGoogle`, Socialite) opens or signs in portal accounts only, only
+for an address Google has verified, and is off without `GOOGLE_CLIENT_ID`.
 Area captures carry their channel from the caller, never the payload:
 `CaptureAreaFeature::FIELD` from sync accepts only field methods, and
 `CaptureAreaFeature::DESK` requires `digitises()`.

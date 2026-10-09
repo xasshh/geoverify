@@ -62,7 +62,7 @@ final class RequestController
             'frame' => $this->enumerate->frame($request, $account),
             'prices' => $prices->list(),
             'start' => [
-                'by' => $request->query('by') === 'rc' ? 'rc' : 'name',
+                'by' => 'rc',
                 'q' => is_string($request->query('q')) ? mb_substr($request->query('q'), 0, 120) : '',
                 'tier' => in_array((int) $request->query('tier'), [1, 2, 3], true) ? (int) $request->query('tier') : 1,
             ],

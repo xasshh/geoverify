@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { DirectoryChrome } from '@/components/DirectoryChrome';
 import { TIER_MEANING, TIER_STATEMENT, TIERS } from '@/lib/tiers';
 
@@ -104,9 +104,11 @@ export default function HowItWorks({ currentMonths, staleMonths }: Props) {
                     >
                         Explore the directory
                     </Link>
-                    <Link href="/portal/sign-in" className="text-ui font-bold text-gold hover:text-gold-dark">
-                        Own a business? Claim it and order a check
-                    </Link>
+                    {usePage().props.surfaces.portal && (
+                        <Link href="/portal/sign-in" className="text-ui font-bold text-gold hover:text-gold-dark">
+                            Own a business? Claim it and order a check
+                        </Link>
+                    )}
                 </section>
             </main>
         </DirectoryChrome>

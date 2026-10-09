@@ -94,6 +94,14 @@ return [
         'app_id' => env('PREMBLY_APP_ID', ''),
     ],
 
+    // "Continue with Google" for portal and Enumerate accounts. Off until both
+    // are set; the redirect URI registered with Google is APP_URL/auth/google/callback.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID', ''),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET', ''),
+        'redirect' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/google/callback',
+    ],
+
     'dojah' => [
         'base_url' => env('DOJAH_BASE_URL', 'https://sandbox.dojah.io'),
         'app_id' => env('DOJAH_APP_ID', ''),

@@ -72,6 +72,11 @@ export const STATUS_TONE: Record<RequestStatus, StatusTone> = {
 };
 
 /** ₦56,178.00 in the wallet, ₦12,000 in a table: the same kobo, two dressings. */
+/** A price as people read it: "Free" while checks cost nothing. */
+export function priceLabel(minor: number, decimals: 0 | 2 = 0): string {
+    return minor === 0 ? 'Free' : kobo(minor, decimals);
+}
+
 export function kobo(minor: number, decimals: 0 | 2 = 0): string {
     return `₦${(minor / 100).toLocaleString('en-NG', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
 }

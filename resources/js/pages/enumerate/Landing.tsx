@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { HexField } from '@/components/AuthLayouts';
 import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
-import { companyType, kobo, type Prices } from '@/lib/enumerate';
+import { companyType, kobo, priceLabel, type Prices } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
 
@@ -103,7 +103,7 @@ function Hero({ tier1 }: { tier1: number }) {
  * says so instead of pretending.
  */
 function SearchBox({ tier1 }: { tier1: number }) {
-    const [by, setBy] = useState<SearchBy>('name');
+    const [by, setBy] = useState<SearchBy>('rc');
     const [q, setQ] = useState('');
     const [state, setState] = useState<'idle' | 'searching' | 'done' | 'error'>('idle');
     const [matches, setMatches] = useState<Match[]>([]);
@@ -144,7 +144,7 @@ function SearchBox({ tier1 }: { tier1: number }) {
     };
 
     const placeholder =
-        by === 'name' ? 'Search a business name, e.g. Kora Build Supplies' : by === 'rc' ? 'CAC number, e.g. RC 1482093' : 'Tax ID (TIN)';
+        by === 'rc' ? 'CAC number, e.g. RC 1482093 or BN 3300112' : 'Tax ID (TIN)';
 
     return (
         <div className="mt-7 max-w-[560px]">
@@ -158,7 +158,6 @@ function SearchBox({ tier1 }: { tier1: number }) {
                 <div role="tablist" aria-label="Search by" className="flex gap-1">
                     {(
                         [
-                            ['name', 'Business name'],
                             ['rc', 'CAC number'],
                             ['tin', 'TIN'],
                         ] as const
@@ -203,7 +202,7 @@ function SearchBox({ tier1 }: { tier1: number }) {
                 </div>
                 {by === 'tin' && (
                     <p className="mt-2 text-label text-muted">
-                        The TIN is confirmed with FIRS in every registry check. Search by name or CAC number to find the
+                        The TIN is confirmed with FIRS in every registry check. Search by CAC number to find the
                         business first.
                     </p>
                 )}
@@ -214,7 +213,7 @@ function SearchBox({ tier1 }: { tier1: number }) {
                     <Tick className="text-green" /> Search is free
                 </li>
                 <li className="flex items-center gap-1.5">
-                    <Tick className="text-green" /> Registry check from {kobo(tier1)}
+                    <Tick className="text-green" /> Registry check {tier1 === 0 ? 'free' : `from ${kobo(tier1)}`}
                 </li>
                 <li className="flex items-center gap-1.5">
                     <Tick className="text-green" /> PDF report for every check
@@ -231,7 +230,7 @@ function SearchBox({ tier1 }: { tier1: number }) {
                 <div className="mt-3 rounded-card border border-rule bg-raised shadow-card">
                     {matches.length === 0 ? (
                         <p className="px-4 py-3 text-ui text-muted">
-                            Nothing on the register under that {by === 'name' ? 'name' : 'number'}. Check the spelling, or
+                            Nothing on the register under that number. Check it, or
                             try the CAC number from an invoice or letterhead.
                         </p>
                     ) : (
@@ -333,7 +332,7 @@ function SourcesStrip() {
 
 function HowItWorks() {
     const steps = [
-        ['01', 'Search the business', 'Enter a business name, CAC (RC/BN) number or TIN. We match it against the official registers.'],
+        ['01', 'Search the business', 'Enter the CAC (RC or BN) number. We pull the business name, status and directors from the official register.'],
         ['02', 'Choose how deep to check', 'A quick registry check, a site visit with photos, or up to 30 days of activity monitoring by our officers.'],
         ['03', 'Get a report you can share', 'Track progress on the verification page, then download a QR checkable PDF report.'],
     ];
@@ -367,7 +366,7 @@ function Ladder({ tier1, tier2, tier3 }: { tier1: number; tier2: number; tier3: 
         {
             tier: 'Tier 1',
             title: 'Registry check',
-            price: kobo(tier1),
+            price: priceLabel(tier1),
             when: 'Instant',
             items: ['CAC status, date and directors', 'TIN matched with FIRS', 'Name and address consistency'],
             cta: 'Run a check',
@@ -376,7 +375,7 @@ function Ladder({ tier1, tier2, tier3 }: { tier1: number; tier2: number; tier3: 
         {
             tier: 'Tier 2',
             title: 'Location verification',
-            price: kobo(tier2),
+            price: priceLabel(tier2),
             when: '24 to 48 hours',
             items: ['Everything in Tier 1', 'Officer visits the address', 'GPS fix and time-stamped photos', 'Signage and premises check'],
             cta: 'Verify a location',
@@ -386,7 +385,7 @@ function Ladder({ tier1, tier2, tier3 }: { tier1: number; tier2: number; tier3: 
         {
             tier: 'Tier 3',
             title: 'Daily activity',
-            price: kobo(tier3),
+            price: priceLabel(tier3),
             when: 'Up to 30 days',
             items: ['Everything in Tier 1 and 2', 'Repeat visits in trading hours', 'Daily log of hours, staff, stock', 'Interim and final reports'],
             cta: 'Start monitoring',
@@ -749,7 +748,7 @@ function Faq({ tier1 }: { tier1: number }) {
         ],
         [
             'What do the tiers mean?',
-            `Tier 1 checks the registers: CAC status and directors, and the TIN with FIRS, from ${kobo(tier1)}. Tier 2 adds an officer visit to the address with GPS and photos. Tier 3 adds up to 30 days of visits in trading hours with a daily log.`,
+            `Tier 1 checks the registers: CAC status and directors, and the TIN with FIRS, ${tier1 === 0 ? 'free for now' : `from ${kobo(tier1)}`}. Tier 2 adds an officer visit to the address with GPS and photos. Tier 3 adds up to 30 days of visits in trading hours with a daily log.`,
         ],
         ['Is Enumerate free to use?', 'Searching is free. You pay for a check from your wallet, and field fees are held until the visit is done.'],
         [

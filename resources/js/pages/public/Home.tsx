@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CityBackdrop } from '@/components/CityBackdrop';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 import { HexField } from '@/components/AuthLayouts';
@@ -236,6 +236,7 @@ function BrowserFrame({ children, dark = false }: { children: ReactNode; dark?: 
 }
 
 function BusinessPortal() {
+    const portalOpen = usePage().props.surfaces.portal;
     return (
         <section className="bg-sunken">
             <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -295,11 +296,15 @@ function BusinessPortal() {
                         ))}
                     </ul>
                     <div className="mt-6 flex flex-wrap gap-3">
-                        <Link href="/portal/register" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
-                            Register a business
-                        </Link>
+                        {portalOpen ? (
+                            <Link href="/portal/register" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
+                                Register a business
+                            </Link>
+                        ) : (
+                            <span className="rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">Business registration opens soon</span>
+                        )}
                         <Link href="/directory" className="rounded-full border border-rule-strong px-5 py-2.5 text-ui font-extrabold text-ink hover:border-ink">
-                            Find yours to claim
+                            {portalOpen ? 'Find yours to claim' : 'Explore the registry'}
                         </Link>
                     </div>
                 </div>
@@ -504,6 +509,7 @@ function Steps() {
 }
 
 function Closing() {
+    const portalOpen = usePage().props.surfaces.portal;
     return (
         <section className="bg-raised px-4 pb-16 sm:px-6">
             <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[#0E4A44] px-6 py-10 text-inverse sm:px-10">
@@ -514,8 +520,8 @@ function Closing() {
                     <p className="mt-2 text-ui text-inverse/80">Register your business, or explore what has already been mapped.</p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <Link href="/portal/register" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
-                        Get started
+                    <Link href={portalOpen ? '/portal/register' : '/enumerate'} className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
+                        {portalOpen ? 'Get started' : 'Verify a business'}
                     </Link>
                     <Link href="/directory" className="rounded-full bg-white px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white/90">
                         Explore the registry
