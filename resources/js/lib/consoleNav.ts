@@ -29,6 +29,7 @@ export type ConsoleView =
     | 'escalations'
     | 'audit'
     | 'people'
+    | 'agentApplications'
     | 'mandates'
     | 'clients'
     | 'campaigns'
@@ -215,6 +216,14 @@ const ADMIN_VIEWS: ConsoleNavItem[] = [
         caption: 'Staff, and their handsets',
         // A person, and a second behind them.
         icon: 'M6 7.4a2.1 2.1 0 1 0 0-4.2 2.1 1 0 1 0 0 4.2M2.4 13.2c0-2.2 1.6-3.6 3.6-3.6s3.6 1.4 3.6 3.6M10.8 3.6a2.1 2.1 0 0 1 0 4.1M11.4 9.8c1.4.3 2.2 1.5 2.2 3.4',
+    },
+    {
+        key: 'agentApplications',
+        label: 'Agent applications',
+        href: '/admin/agent-applications',
+        caption: 'People asking to join the field team',
+        // A form with a tick.
+        icon: 'M3.4 2.4h9.2v11.2H3.4zM5.6 5.2h4.8M5.6 7.6h2.8M6.2 10.8l1.4 1.4 2.8-2.8',
     },
     {
         key: 'clients',

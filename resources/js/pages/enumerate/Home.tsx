@@ -11,7 +11,16 @@ interface Props {
     complaints: { open: number; repliedAt: string | null };
     recent: RequestRow[];
     live: { reference: string; business: string; days: number; dayToday: number | null; calendar: CalendarDay[] } | null;
+    agentApplication: 'draft' | 'submitted' | 'changes_requested' | 'approved' | 'rejected' | null;
 }
+
+const AGENT_LINE: Record<NonNullable<Props['agentApplication']>, string> = {
+    draft: 'Your agent application is saved but not sent yet. Pick up where you left off.',
+    submitted: 'Your agent application has been sent. We will email you when we have looked at it.',
+    changes_requested: 'We asked for a change to your agent application. Open it to see what.',
+    approved: 'You have been approved as a GeoVerify agent. Open it for your next steps.',
+    rejected: 'We could not take your agent application forward. Open it to see why.',
+};
 
 function Card({ figure, tone, title, body, href, cta }: { figure: string; tone: string; title: string; body: string; href: string; cta: string }) {
     return (
@@ -30,7 +39,7 @@ function Card({ figure, tone, title, body, href, cta }: { figure: string; tone: 
  * Home, to board 28: a quick lookup, the new-verification card, where things
  * stand, and the latest requests. Complaints join this row when support does.
  */
-export default function Home({ frame, prices, counts, recent, live, complaints }: Props) {
+export default function Home({ frame, prices, counts, recent, live, complaints, agentApplication }: Props) {
     return (
         <EnumerateShell current="home" frame={frame} title="Home">
             <Head title="Enumerate" />
@@ -98,6 +107,17 @@ export default function Home({ frame, prices, counts, recent, live, complaints }
                     <span className="text-ui font-extrabold whitespace-nowrap text-gold">Open log →</span>
                 </Link>
             )}
+
+            <Link
+                href="/enumerate/agent"
+                className="mt-5 flex flex-wrap items-center gap-3 rounded-card border border-rule bg-raised px-5 py-4 hover:border-rule-strong"
+            >
+                <span className="text-ui font-extrabold text-ink">{agentApplication === null ? 'Want to work with us?' : 'Your agent application'}</span>
+                <span className="min-w-0 flex-1 text-table text-muted">
+                    {agentApplication === null ? 'Become a GeoVerify field agent: visit businesses near you and confirm they are real.' : AGENT_LINE[agentApplication]}
+                </span>
+                <span className="text-ui font-extrabold whitespace-nowrap text-gold">{agentApplication === null ? 'Apply' : 'Open'} →</span>
+            </Link>
 
             <section className="mt-5 overflow-hidden rounded-card border border-rule bg-raised">
                 <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4">

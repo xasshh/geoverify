@@ -14,7 +14,7 @@ const NAV: NavItem[] = [
         label: 'Products',
         children: [{ label: 'Enumerate', href: '/enumerate', caption: 'Verify any business in Nigeria' }],
     },
-    { label: 'How it works', href: '#how' },
+    { label: 'How it works', href: '/how-it-works' },
     { label: 'Become an agent', href: '/become-an-agent' },
 ];
 
@@ -41,9 +41,7 @@ export default function Home({ prices }: { prices: Prices }) {
             <InvestPortal />
             {portalOpen && <QuickCheck />}
             <Coverage />
-            <Steps />
-            <Closing />
-            <FieldAgents />
+            <HowItWorksTeaser />
             <SiteFooter />
         </div>
     );
@@ -245,38 +243,17 @@ function BusinessPortal() {
     return (
         <section className="bg-sunken">
             <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
-                <BrowserFrame>
-                    <div aria-hidden="true" className="grid grid-cols-[1fr_1.2fr] gap-3 p-4">
-                        <div className="flex flex-col gap-2">
-                            <div className="h-9 rounded-sm bg-sunken" />
-                            {[0, 1, 2, 3].map((i) => (
-                                <div key={i} className={cx('rounded-sm border p-2.5', i === 0 ? 'border-gold-dark bg-green-soft/50' : 'border-rule')}>
-                                    <div className="h-2.5 w-3/4 rounded bg-ink/70" />
-                                    <div className="mt-1.5 h-2 w-1/2 rounded bg-faint/50" />
-                                    <div className="mt-2 flex gap-1">
-                                        <span className="h-3.5 w-12 rounded-sm bg-gold-dark/70" />
-                                        <span className="h-3.5 w-10 rounded-sm bg-sunken" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="relative rounded-sm bg-[linear-gradient(135deg,#e3ece7,#cfe0d8)]">
-                            {[
-                                [30, 25],
-                                [62, 40],
-                                [45, 62],
-                                [72, 72],
-                                [20, 78],
-                            ].map(([x, y], i) => (
-                                <span
-                                    key={i}
-                                    className={cx('absolute size-3.5 rounded-full ring-2 ring-white', i === 0 ? 'bg-gold-dark' : 'bg-green')}
-                                    style={{ left: `${String(x)}%`, top: `${String(y)}%` }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </BrowserFrame>
+                <picture>
+                    <source srcSet="/media/business-portal.webp" type="image/webp" />
+                    <img
+                        src="/media/business-portal.png"
+                        alt="A business owner choosing options on a set of phone screens: a map, a location pin and a start button"
+                        width={1200}
+                        height={1200}
+                        loading="lazy"
+                        className="mx-auto w-full max-w-[560px] rounded-[24px] bg-white"
+                    />
+                </picture>
                 <div>
                     <Eyebrow>For business owners</Eyebrow>
                     <h2 className="mt-2 font-display text-[2rem] leading-[1.1] font-extrabold tracking-[-0.02em] sm:text-[2.4rem]">
@@ -486,87 +463,25 @@ function Coverage() {
     );
 }
 
-function Steps() {
+/** The steps, the closing call and the field network live on /how-it-works now. */
+function HowItWorksTeaser() {
     return (
-        <section id="how" className="scroll-mt-20 bg-raised">
-            <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6">
-                <SectionHeading
-                    align="center"
-                    title={<span className="text-gold-dark">From application to a verified point on the map</span>}
-                    intro="Three steps take a business from a written application to a GPS-confirmed, publicly discoverable record."
-                />
-                <div className="mt-10 grid gap-4 md:grid-cols-3">
-                    {[
-                        ['01', 'Register', 'Create an account and submit your business details along with its physical address.'],
-                        ['02', 'Verify', 'A trained field officer visits the site, confirms it exists, and captures its exact coordinates.'],
-                        ['03', 'Get listed', 'Your business appears as a verified point on the national map, discoverable by buyers and investors.'],
-                    ].map(([n, title, body]) => (
-                        <div key={n} className="rounded-card border border-gold-dark/30 p-6">
-                            <p className="font-display text-[3rem] leading-none font-extrabold text-gold-dark">{n}</p>
-                            <p className="mt-4 font-display text-[1.4rem] font-extrabold text-ink">{title}</p>
-                            <p className="mt-2 text-ui text-muted">{body}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function Closing() {
-    const portalOpen = usePage().props.surfaces.portal;
-    return (
-        <section className="bg-raised px-4 pb-16 sm:px-6">
+        <section className="bg-raised px-4 py-16 sm:px-6">
             <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-6 rounded-[24px] bg-[#0E4A44] px-6 py-10 text-inverse sm:px-10">
                 <div className="max-w-[56ch]">
-                    <h2 className="font-display text-[1.8rem] leading-tight font-extrabold tracking-[-0.02em]">
-                        Be part of Nigeria's first geo-verified business registry.
-                    </h2>
-                    <p className="mt-2 text-ui text-inverse/80">Register your business, or explore what has already been mapped.</p>
+                    <h2 className="font-display text-[1.8rem] leading-tight font-extrabold tracking-[-0.02em]">New here? See how it all works.</h2>
+                    <p className="mt-2 text-ui text-inverse/80">
+                        A short, plain walk through: how a business gets checked, what each check means, and how to join as a field agent.
+                    </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <Link href={portalOpen ? '/portal/register' : '/enumerate'} className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
-                        {portalOpen ? 'Get started' : 'Verify a business'}
+                    <Link href="/how-it-works" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
+                        How it works
                     </Link>
-                    <Link href="/directory" className="rounded-full bg-white px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white/90">
-                        Explore the registry
-                    </Link>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function FieldAgents() {
-    return (
-        <section id="field-network" className="scroll-mt-20 bg-raised">
-            <div className="mx-auto grid max-w-[1200px] items-center gap-10 px-4 pb-20 sm:px-6 lg:grid-cols-2">
-                <div>
-                    <Eyebrow>Field network</Eyebrow>
-                    <h2 className="mt-2 font-display text-[2rem] leading-[1.1] font-extrabold tracking-[-0.02em] sm:text-[2.4rem]">
-                        Become a GeoVerify field officer
-                    </h2>
-                    <p className="mt-4 max-w-[54ch] text-body text-muted">
-                        Join the on-ground network confirming business addresses across Nigeria. Field officers are the
-                        reason a GeoVerify listing means something: every pin on the map has been visited by someone real.
-                    </p>
-                    <Link href="/become-an-agent" className="mt-6 inline-flex rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
+                    <Link href="/become-an-agent" className="rounded-full bg-white px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white/90">
                         Become an agent
                     </Link>
                 </div>
-                <ul className="grid gap-3 sm:grid-cols-2">
-                    {[
-                        ['Clear daily work', 'A set of map cells a day, with the buildings to visit already drawn.'],
-                        ['Works offline', 'The app keeps your day on the phone until there is signal.'],
-                        ['Trained and supported', 'A supervisor reviews your work and messages you in the app.'],
-                        ['Your own area', 'Cells near you, assigned a day at a time.'],
-                    ].map(([title, body]) => (
-                        <li key={title} className="rounded-card border border-rule p-4">
-                            <p className="text-ui font-extrabold text-ink">{title}</p>
-                            <p className="mt-1 text-label text-muted">{body}</p>
-                        </li>
-                    ))}
-                </ul>
             </div>
         </section>
     );

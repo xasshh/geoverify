@@ -6,7 +6,7 @@ import { SiteFooter, SiteHeader, type NavItem } from '@/components/PublicSite';
 const NAV: NavItem[] = [
     { label: 'Registry', href: '/directory' },
     { label: 'Products', children: [{ label: 'Enumerate', href: '/enumerate', caption: 'Verify any business in Nigeria' }] },
-    { label: 'How it works', href: '/#how' },
+    { label: 'How it works', href: '/how-it-works' },
     { label: 'Become an agent', href: '/become-an-agent' },
 ];
 

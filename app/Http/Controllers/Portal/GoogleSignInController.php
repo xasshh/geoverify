@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\GoogleProvider;
 use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\User;
 use RuntimeException;
@@ -34,7 +35,7 @@ final class GoogleSignInController extends Controller
             $request->session()->put(EnsurePortalAccount::INTENDED, url('/enumerate'));
         }
 
-        /** @var \Laravel\Socialite\Two\GoogleProvider $google */
+        /** @var GoogleProvider $google */
         $google = Socialite::driver('google');
 
         return $google->scopes(['openid', 'email', 'profile'])->redirect();

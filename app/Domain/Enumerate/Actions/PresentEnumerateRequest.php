@@ -281,7 +281,8 @@ final class PresentEnumerateRequest
         $confirmed = $visits->firstWhere('status', EnumerateVisit::ACCEPTED);
 
         $steps = [
-            ['key' => 'paid', 'label' => 'Paid', 'at' => $request->paid_at],
+            // A free check (launch mode) was asked for, not paid for.
+            ['key' => 'paid', 'label' => $request->price_minor === 0 ? 'Requested' : 'Paid', 'at' => $request->paid_at],
             ['key' => 'registry', 'label' => 'Registry check', 'at' => $decided],
         ];
 
@@ -353,7 +354,7 @@ final class PresentEnumerateRequest
             ->limit(20)
             ->get()
             ->map(static fn (VerificationEvent $e): array => [
-                'label' => self::UPDATES[$e->event].(isset($e->evidence['day']) ? ' · day '.(int) $e->evidence['day'] : ''),
+                'label' => ($e->event === 'enumerate.paid' && $request->price_minor === 0 ? 'Requested, free of charge' : self::UPDATES[$e->event]).(isset($e->evidence['day']) ? ' · day '.(int) $e->evidence['day'] : ''),
                 'at' => $e->occurred_at->toIso8601String(),
             ])
             ->values()

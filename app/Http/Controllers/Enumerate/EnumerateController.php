@@ -14,6 +14,7 @@ use App\Domain\Enumerate\Models\EnumerateRequest;
 use App\Domain\Enumerate\Models\EnumerateTicket;
 use App\Domain\Enumerate\Models\EnumerateTicketMessage;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Staff\Models\AgentApplication;
 use App\Http\Controllers\Portal\SignInController;
 use App\Http\Middleware\EnsurePortalAccount;
 use Illuminate\Http\RedirectResponse;
@@ -84,6 +85,8 @@ final class EnumerateController
             ],
             // The newest Tier 3 under way, for the live strip under the cards.
             'live' => $this->live((clone $requests)->where('status', RequestStatus::Monitoring->value)->latest('paid_at')->first()),
+            // An application to become an agent, so home can say where it stands.
+            'agentApplication' => AgentApplication::query()->where('portal_account_id', $account->id)->value('status'),
             'recent' => (clone $requests)->orderByDesc('paid_at')->orderByDesc('id')->limit(5)->get()
                 ->map(fn (EnumerateRequest $r): array => $this->present->row($r))->values()->all(),
         ]);

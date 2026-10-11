@@ -105,7 +105,7 @@ final class RequestController
         }
 
         return redirect()->route('enumerate.requests.show', $placed->reference)
-            ->with('status', 'Paid. We are checking the registers now.');
+            ->with('status', $placed->price_minor === 0 ? 'Done. We are checking the registers now.' : 'Paid. We are checking the registers now.');
     }
 
     public function index(Request $request): Response

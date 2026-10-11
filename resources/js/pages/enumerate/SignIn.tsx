@@ -1,6 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { HexField } from '@/components/AuthLayouts';
+import { HexField, PeoplePhoto } from '@/components/AuthLayouts';
 import { GoogleButton } from '@/components/GoogleButton';
 import { Button } from '@/components/Button';
 import { EnumerateLockup } from '@/components/EnumerateShell';
@@ -67,7 +67,14 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
                         ))}
                     </ul>
 
-                    <p className="mt-auto hidden pt-10 text-table text-inverse/60 lg:block">
+                    <PeoplePhoto
+                        name="people-shop-owner"
+                        alt="A smiling shop owner behind the counter of her provisions shop, holding a phone"
+                        caption="Check a business before you pay it"
+                        className="mt-8 hidden h-[240px] max-w-[440px] lg:block"
+                    />
+
+                    <p className="mt-auto hidden pt-8 text-table text-inverse/60 lg:block">
                         Organisations: custom enumeration projects with your own data fields and a live monitoring portal.
                     </p>
                 </div>

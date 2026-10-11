@@ -246,6 +246,27 @@ export function OrRule({ label = 'or' }: { label?: string }) {
 }
 
 /** The left panel while these pages serve Enumerate. */
+/**
+ * A photograph of a person, for the doors people walk through. The people are
+ * generated, not customers or staff, so nothing beside a photograph may name
+ * them or put words in their mouth: the caption describes the product.
+ */
+export function PeoplePhoto({ name, alt, caption, className }: { name: string; alt: string; caption?: string; className?: string }) {
+    return (
+        <figure className={cx('relative overflow-hidden rounded-[20px] shadow-[0_18px_48px_rgb(0_0_0/0.35)]', className)}>
+            <picture>
+                <source srcSet={`/media/${name}.webp`} type="image/webp" />
+                <img src={`/media/${name}.jpg`} alt={alt} width={1200} height={1600} loading="lazy" className="size-full object-cover object-[50%_25%]" />
+            </picture>
+            {caption !== undefined && (
+                <figcaption className="absolute inset-x-3 bottom-3 rounded-full bg-[#0F1A17]/80 px-4 py-2 text-table font-bold text-inverse backdrop-blur">
+                    {caption}
+                </figcaption>
+            )}
+        </figure>
+    );
+}
+
 function EnumerateShowcase() {
     const free = usePage().props.enumerateFree;
 
@@ -273,7 +294,13 @@ function EnumerateShowcase() {
                     </li>
                 ))}
             </ul>
-            {free && <p className="mt-auto pt-10 text-table text-inverse/70">Free while Enumerate launches.</p>}
+            <PeoplePhoto
+                name="people-agent-street"
+                alt="A GeoVerify field agent in a teal vest photographing a shop front with his phone"
+                caption="A real visit, with photos and a GPS fix"
+                className="mt-8 h-[260px] max-w-[420px]"
+            />
+            {free && <p className="mt-auto pt-8 text-table text-inverse/70">Free while Enumerate launches.</p>}
         </div>
     );
 }

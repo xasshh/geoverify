@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Coverage\Actions\CheckSpatialStack;
+use App\Http\Controllers\Admin\AgentApplicationController as AdminAgentApplicationController;
 use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CampaignBuildController;
 use App\Http\Controllers\Admin\CampaignCaptureController;
@@ -36,6 +37,7 @@ use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\Desk\DeskController;
 use App\Http\Controllers\DirectoryController;
+use App\Http\Controllers\Enumerate\AgentApplicationController;
 use App\Http\Controllers\Enumerate\EnumerateController;
 use App\Http\Controllers\Enumerate\LandingController as EnumerateLandingController;
 use App\Http\Controllers\Enumerate\OrganisationController as EnumerateOrganisationController;
@@ -89,9 +91,15 @@ use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
-// Becoming a field agent: a placeholder until the application is specified.
-// Applying will never create an account; staff do not self register.
+// Becoming a field agent. Applying happens inside Enumerate (enumerate.agent)
+// on a portal account; only an administrator approving it makes an officer,
+// because staff do not self register.
 Route::get('become-an-agent', fn () => Inertia::render('public/BecomeAgent'))->name('become-agent');
+Route::get('become-an-agent/guarantor-form', fn () => view('agent.guarantor-form'))->name('become-agent.guarantor-form');
+
+// How the whole thing works, for a first time visitor. The finer points of a
+// check stay on the directory's own page (directory.how).
+Route::get('how-it-works', fn () => Inertia::render('public/HowGeoVerifyWorks'))->name('how-it-works');
 
 // The privacy policy and terms, linked from Google's sign in consent screen.
 Route::get('privacy', fn () => Inertia::render('public/Privacy', ['contactEmail' => config('geoverify.contact_email')]))->name('privacy');
@@ -231,6 +239,13 @@ Route::middleware(['auth', 'administers'])->prefix('admin')->name('admin.')->gro
     Route::post('escalations/{observation}', [EscalationController::class, 'decide'])->name('escalations.decide');
 
     Route::get('audit', [AuditController::class, 'index'])->name('audit');
+
+    // Applications to become a field agent. Approving creates the officer.
+    Route::get('agent-applications', [AdminAgentApplicationController::class, 'index'])->name('agent-applications');
+    Route::get('agent-applications/{application}', [AdminAgentApplicationController::class, 'show'])->name('agent-applications.show');
+    Route::get('agent-applications/{application}/files/{file}', [AdminAgentApplicationController::class, 'file'])
+        ->middleware('throttle:60,1')->name('agent-applications.file');
+    Route::post('agent-applications/{application}/decide', [AdminAgentApplicationController::class, 'decide'])->name('agent-applications.decide');
 
     Route::get('people', [PeopleController::class, 'index'])->name('people');
     Route::post('people', [PeopleController::class, 'store'])->name('people.store');
@@ -680,6 +695,21 @@ Route::prefix('enumerate')->name('enumerate.')->group(function (): void {
             Route::get('projects', [EnumerateOrganisationController::class, 'projectsPage'])->name('.projects');
             Route::post('projects', [EnumerateOrganisationController::class, 'storeProject'])->middleware('throttle:10,1')->name('.projects.store');
             Route::get('projects/{reference}', [EnumerateOrganisationController::class, 'project'])->name('.project');
+        });
+
+        // Applying to become a field agent. Always the signed in person's own
+        // application, so no route here names one. One generous limit for the
+        // group: the limiter shares a counter across routes, and a form saved
+        // part by part with six uploads must not trip it on the last button.
+        Route::prefix('agent')->name('agent')->middleware('throttle:60,1')->group(function (): void {
+            Route::get('/', [AgentApplicationController::class, 'show']);
+            Route::post('start', [AgentApplicationController::class, 'start'])->name('.start');
+            Route::post('about', [AgentApplicationController::class, 'about'])->name('.about');
+            Route::post('background', [AgentApplicationController::class, 'background'])->name('.background');
+            Route::post('files', [AgentApplicationController::class, 'file'])->name('.file');
+            Route::post('device', [AgentApplicationController::class, 'device'])->name('.device');
+            Route::post('agree', [AgentApplicationController::class, 'agree'])->name('.agree');
+            Route::post('submit', [AgentApplicationController::class, 'submit'])->name('.submit');
         });
 
         // Support and complaints.

@@ -489,6 +489,17 @@ correction to the ledger is a posted movement, made by somebody who has looked.
 Seeders: `FieldTeamSeeder` (staff sign in), `VerificationPricingSeeder` (prices
 and ledger accounts), `CampaignSeeder`, `FieldDaySeeder`.
 
+### Deployment
+
+Production is one Hostinger VPS, and `docs/deploy-hostinger.md` is its runbook.
+An update is section 11 there: pull `main`, build, migrate, cache, then
+`queue:restart`. Two things differ from what the runbook says. The server runs
+PHP 8.5, so the service is `php8.5-fpm`. The `deploy` user that owns the app
+has no sudo, so reloading FPM and restarting the `geoverify-queue` and
+`geoverify-imagery` units has to be done as root. Launch mode and the
+third-party keys (Resend, Prembly, Google) are set in the server's `.env`,
+never in code, and the runbook has a section for each.
+
 Setup, including the h3-pg build, is in `docs/setup.md`. The development machine
 has no Docker runtime: it runs Homebrew PostgreSQL 17 with PostGIS 3.6 and a
 native Redis (option B there), and photographs go to a private local disk rather
