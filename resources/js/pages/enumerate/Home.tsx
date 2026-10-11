@@ -1,8 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { EnumerateShell } from '@/components/EnumerateShell';
 import { QuickLookup, RequestTable } from '@/components/EnumerateParts';
 import { DAY_TONE, type CalendarDay, type EnumerateFrame, type Prices, type RequestRow } from '@/lib/enumerate';
 import { cx } from '@/lib/cx';
+import { guidePoster, guideVideo } from '@/lib/guides';
 
 interface Props {
     frame: EnumerateFrame;
@@ -35,6 +37,65 @@ function Card({ figure, tone, title, body, href, cta }: { figure: string; tone: 
     );
 }
 
+const WELCOME_KEY = 'gv.enumerate.welcome-dismissed';
+
+/**
+ * The tour video, for somebody who has not run a check yet. Hiding it is a
+ * convenience remembered in this browser only; the Help page always has it.
+ */
+function Welcome() {
+    const [hidden, setHidden] = useState(() => {
+        try {
+            return window.localStorage.getItem(WELCOME_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+
+    if (hidden) return null;
+
+    return (
+        <section className="mb-5 grid gap-5 rounded-card border border-gold/40 bg-raised p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center">
+            <video
+                controls
+                preload="none"
+                playsInline
+                poster={guidePoster('dashboard-tour')}
+                src={guideVideo('dashboard-tour')}
+                className="aspect-video w-full rounded-sm bg-[#0F1A17]"
+                aria-label="A quick tour of your dashboard"
+            />
+            <div>
+                <p className="text-label font-extrabold tracking-[0.05em] text-gold uppercase">New here?</p>
+                <h2 className="mt-1 font-display text-[1.375rem] font-extrabold text-ink">Watch a one minute tour</h2>
+                <p className="mt-1 text-ui text-muted">
+                    See where everything is before your first check. There are more short videos, with the steps written
+                    down, on your Help page.
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <Link href="/enumerate/help" className="rounded-full bg-gold px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold-dark">
+                        All help videos
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            try {
+                                window.localStorage.setItem(WELCOME_KEY, '1');
+                            } catch {
+                                // Storage refused (private window): hide it for this visit only.
+                            }
+                            setHidden(true);
+                        }}
+                        className="text-ui font-bold text-muted hover:text-ink"
+                    >
+                        Hide this
+                    </button>
+                </div>
+            </div>
+        </section>
+    );
+}
+
 /**
  * Home, to board 28: a quick lookup, the new-verification card, where things
  * stand, and the latest requests. Complaints join this row when support does.
@@ -43,6 +104,8 @@ export default function Home({ frame, prices, counts, recent, live, complaints, 
     return (
         <EnumerateShell current="home" frame={frame} title="Home">
             <Head title="Enumerate" />
+
+            {counts.inProgress + counts.completed === 0 && <Welcome />}
 
             <QuickLookup tier1Minor={prices.tier1} />
 

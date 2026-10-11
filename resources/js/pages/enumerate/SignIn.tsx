@@ -5,7 +5,7 @@ import { GoogleButton } from '@/components/GoogleButton';
 import { Button } from '@/components/Button';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
-import { priceLabel, type Prices } from '@/lib/enumerate';
+import type { Prices } from '@/lib/enumerate';
 
 const INPUT =
     'h-[52px] w-full rounded-sm border border-rule-strong bg-raised px-4 text-body text-ink placeholder:text-faint focus:border-gold focus:ring-4 focus:ring-gold-soft focus:outline-none';
@@ -21,7 +21,8 @@ type Mode = 'password' | 'code';
  * person creates an account with their email (or, with SMS switched on,
  * starts with a code to their phone).
  */
-export default function SignIn({ prices, smsEnabled = false }: { prices: Prices; smsEnabled?: boolean }) {
+// `prices` still arrives from the controller; the tier list it fed was taken off the door.
+export default function SignIn({ smsEnabled = false }: { prices: Prices; smsEnabled?: boolean }) {
     const status = usePage().props.flash.status;
     const google = usePage().props.googleSignIn;
     const [who, setWho] = useState<'individual' | 'organisation'>('individual');
@@ -31,12 +32,6 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
     // "buyer" is the portal's word for somebody acting for themselves rather
     // than for a business, which is exactly what a requester is.
     const code = useForm({ phone: '', intent: 'sign-in', audience: 'buyer' });
-
-    const tiers: [string, string, string, number][] = [
-        ['Tier 1', 'Registry check', 'CAC + TIN · same day', prices.tier1],
-        ['Tier 2', 'Location verification', 'Agent visit + geo-tagged photos', prices.tier2],
-        ['Tier 3', 'Daily activity', 'Monitored for up to 30 days', prices.tier3['30'] ?? 0],
-    ];
 
     return (
         <div data-mode="daylight" className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1fr)]">
@@ -54,24 +49,12 @@ export default function SignIn({ prices, smsEnabled = false }: { prices: Prices;
                         Check CAC and TIN, send an agent to the address, or monitor daily activity for up to 30 days.
                     </p>
 
-                    <ul className="mt-8 hidden max-w-[440px] flex-col gap-3 lg:flex">
-                        {tiers.map(([tier, title, body, price]) => (
-                            <li key={tier} className="flex items-center gap-4 rounded-card border border-white/10 bg-white/5 px-4 py-3.5">
-                                <span className="shrink-0 rounded-[6px] bg-gold-soft px-2 py-1 text-[0.6875rem] font-extrabold tracking-[0.04em] whitespace-nowrap text-gold-dark uppercase">{tier}</span>
-                                <span className="flex min-w-0 flex-col">
-                                    <span className="text-ui font-extrabold">{title}</span>
-                                    <span className="text-table text-inverse/65">{body}</span>
-                                </span>
-                                <span className="ml-auto font-display text-body font-extrabold text-logo">{priceLabel(price)}</span>
-                            </li>
-                        ))}
-                    </ul>
 
                     <PeoplePhoto
                         name="people-shop-owner"
                         alt="A smiling shop owner behind the counter of her provisions shop, holding a phone"
                         caption="Check a business before you pay it"
-                        className="mt-8 hidden h-[240px] max-w-[440px] lg:block"
+                        className="mt-10 hidden h-[340px] max-w-[460px] lg:block"
                     />
 
                     <p className="mt-auto hidden pt-8 text-table text-inverse/60 lg:block">

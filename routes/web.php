@@ -712,6 +712,9 @@ Route::prefix('enumerate')->name('enumerate.')->group(function (): void {
             Route::post('submit', [AgentApplicationController::class, 'submit'])->name('.submit');
         });
 
+        // Help: the guide videos and the same steps written down.
+        Route::get('help', [EnumerateController::class, 'help'])->name('help');
+
         // Support and complaints.
         Route::get('support', [EnumerateSupportController::class, 'index'])->name('support');
         Route::post('support', [EnumerateSupportController::class, 'store'])

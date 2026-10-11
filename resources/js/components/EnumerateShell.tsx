@@ -21,6 +21,7 @@ const ICON = {
     wallet: 'M3.5 6.5h17v12h-17zM3.5 10h17M16 14.5h1.5',
     chat: 'M4 5h16v11H9l-5 4z',
     layers: 'M12 3 3 8l9 5 9-5zM3 13l9 5 9-5',
+    play: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM10 8.5v7l5.5-3.5z',
     people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M16 4.3a3.5 3.5 0 0 1 0 6.4M17.5 14.3c2.3.6 4 2.6 4 5.7',
 };
 
@@ -32,6 +33,7 @@ const PERSONAL: NavItem[] = [
     { key: 'wallet', label: 'Wallet', href: '/enumerate/wallet', icon: ICON.wallet },
     { key: 'support', label: 'Complaints', href: '/enumerate/support', icon: ICON.chat },
     { key: 'agent', label: 'Become an agent', href: '/enumerate/agent', icon: ICON.people },
+    { key: 'guide', label: 'Help & videos', href: '/enumerate/help', icon: ICON.play },
 ];
 
 /** Acting for an organisation: board 34's sidebar. */
@@ -43,6 +45,7 @@ const ORGANISATION: NavItem[] = [
     { key: 'wallet', label: 'Wallet', href: '/enumerate/wallet', icon: ICON.wallet },
     { key: 'team', label: 'Team & roles', href: '/enumerate/organisation/team', icon: ICON.people },
     { key: 'support', label: 'Complaints', href: '/enumerate/support', icon: ICON.chat },
+    { key: 'guide', label: 'Help & videos', href: '/enumerate/help', icon: ICON.play },
 ];
 
 function Icon({ path }: { path: string }) {

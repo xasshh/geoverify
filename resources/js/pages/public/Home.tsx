@@ -117,10 +117,10 @@ function TwoViews() {
                 <div className="relative mx-auto w-full max-w-[420px]">
                     <div aria-hidden="true" className="absolute -inset-4 -z-0 rounded-[32px] bg-green-soft/70" />
                     <picture>
-                        <source srcSet="/media/registry-in-hand.webp" type="image/webp" />
+                        <source srcSet="/media/people-market-phone.webp" type="image/webp" />
                         <img
-                            src="/media/registry-in-hand.jpg"
-                            alt="A woman holding up a phone showing the GeoVerify registry"
+                            src="/media/people-market-phone.jpg"
+                            alt="A woman in a market holding up her phone, showing a map with business locations"
                             width={900}
                             height={1200}
                             loading="lazy"
@@ -243,17 +243,15 @@ function BusinessPortal() {
     return (
         <section className="bg-sunken">
             <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
-                <picture>
-                    <source srcSet="/media/business-portal.webp" type="image/webp" />
-                    <img
-                        src="/media/business-portal.png"
-                        alt="A business owner choosing options on a set of phone screens: a map, a location pin and a start button"
-                        width={1200}
-                        height={1200}
-                        loading="lazy"
-                        className="mx-auto w-full max-w-[560px] rounded-[24px] bg-white"
-                    />
-                </picture>
+                {/* Storyset (rafiki), recoloured to the brand teal with the skin darkened. */}
+                <img
+                    src="/illustrations/user-flow.svg"
+                    alt="A business owner choosing options on a set of phone screens: a map, a location pin and a start button"
+                    width={500}
+                    height={500}
+                    loading="lazy"
+                    className="mx-auto w-full max-w-[560px] rounded-[24px] bg-white"
+                />
                 <div>
                     <Eyebrow>For business owners</Eyebrow>
                     <h2 className="mt-2 font-display text-[2rem] leading-[1.1] font-extrabold tracking-[-0.02em] sm:text-[2.4rem]">

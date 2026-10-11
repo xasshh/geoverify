@@ -300,7 +300,13 @@ export function SiteFooter() {
             <div className="border-t border-white/10">
                 <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-4 py-5 text-label text-inverse/55 sm:px-6">
                     <span>© {new Date().getFullYear()} GeoVerify. All rights reserved.</span>
-                    <span>Registry data from CAC and FIRS. Imagery contains modified Copernicus Sentinel data.</span>
+                    <span>
+                        Registry data from CAC and FIRS. Imagery contains modified Copernicus Sentinel data. Illustrations by{' '}
+                        <a href="https://storyset.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-inverse">
+                            Storyset
+                        </a>
+                        .
+                    </span>
                 </div>
             </div>
         </footer>

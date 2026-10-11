@@ -331,10 +331,10 @@ function SourcesStrip() {
 }
 
 function HowItWorks() {
-    const steps = [
-        ['01', 'Search the business', 'Enter the CAC (RC or BN) number. We pull the business name, status and directors from the official register.'],
-        ['02', 'Choose how deep to check', 'A quick registry check, a site visit with photos, or up to 30 days of activity monitoring by our officers.'],
-        ['03', 'Get a report you can share', 'Track progress on the verification page, then download a QR checkable PDF report.'],
+    const steps: Array<[string, string, string, string]> = [
+        ['01', 'Search the business', 'Enter the CAC (RC or BN) number. We pull the business name, status and directors from the official register.', 'search'],
+        ['02', 'Choose how deep to check', 'A quick registry check, a site visit with photos, or up to 30 days of activity monitoring by our officers.', 'checking-boxes'],
+        ['03', 'Get a report you can share', 'Track progress on the verification page, then download a QR checkable PDF report.', 'online-report'],
     ];
 
     return (
@@ -348,8 +348,9 @@ function HowItWorks() {
                     </p>
                 </div>
                 <div className="mt-10 grid gap-4 md:grid-cols-3">
-                    {steps.map(([number, title, body]) => (
+                    {steps.map(([number, title, body, art]) => (
                         <div key={number} className="rounded-card bg-sunken p-6">
+                            <Illustration name={art} className="mb-4 h-44 rounded-sm bg-white" />
                             <p className="font-display text-[3rem] leading-none font-extrabold text-gold/35">{number}</p>
                             <p className="mt-4 text-body font-extrabold text-ink">{title}</p>
                             <p className="mt-1.5 text-ui text-muted">{body}</p>
@@ -587,20 +588,20 @@ function WhoItsFor() {
             title: 'Individuals',
             body: 'Hiring a contractor, paying a supplier or renting from a landlord? Check they are who they say they are before money changes hands.',
             tags: ['Contractors', 'Landlords', 'Online sellers'],
-            art: <Scene tone="#E4EFE9" accent="#2F8F6B" kind="market" />,
+            art: <Illustration name="shopping" className="h-full bg-white" />,
         },
         {
             title: 'Business owners',
             body: 'Vet suppliers and partners in minutes, and get your own business verified so customers can find and trust you.',
             tags: ['Supplier checks', 'Get verified', 'Partner vetting'],
-            art: <Scene tone="#F1E9DD" accent="#B7791F" kind="shop" />,
+            art: <Illustration name="business-deal" className="h-full bg-white" />,
         },
         {
             title: 'Organisations',
             body: 'Run vendor onboarding, KYB and due diligence at scale, or commission a custom enumeration with your own data fields and a live project portal.',
             tags: ['Vendor onboarding', 'KYB', 'Custom datasets'],
             dark: true,
-            art: <Scene tone="#1B2B26" accent="#4BB8B0" kind="grid" />,
+            art: <Illustration name="team-checklist" className="h-full bg-white" />,
         },
     ];
 
@@ -634,53 +635,13 @@ function WhoItsFor() {
     );
 }
 
-/** A small drawn scene in place of a stock photograph. */
-function Scene({ tone, accent, kind }: { tone: string; accent: string; kind: 'market' | 'shop' | 'grid' }) {
-    return (
-        <svg viewBox="0 0 320 160" preserveAspectRatio="xMidYMid slice" className="h-full w-full" aria-hidden="true">
-            <rect width="320" height="160" fill={tone} />
-            {kind === 'market' && (
-                <>
-                    {[30, 110, 190, 270].map((x, i) => (
-                        <g key={x}>
-                            <path d={`M${String(x - 30)} 70 L${String(x)} 50 L${String(x + 30)} 70 Z`} fill={i % 2 === 0 ? accent : '#D9A441'} opacity="0.85" />
-                            <rect x={x - 26} y="70" width="52" height="50" fill="#fff" opacity="0.8" />
-                            <rect x={x - 18} y="88" width="36" height="8" fill={accent} opacity="0.35" />
-                        </g>
-                    ))}
-                    <rect y="120" width="320" height="40" fill={accent} opacity="0.12" />
-                </>
-            )}
-            {kind === 'shop' && (
-                <>
-                    <rect x="40" y="40" width="240" height="100" fill="#fff" opacity="0.85" />
-                    <rect x="40" y="40" width="240" height="22" fill={accent} opacity="0.8" />
-                    <rect x="64" y="78" width="70" height="62" fill={accent} opacity="0.18" />
-                    <rect x="150" y="78" width="106" height="38" fill={accent} opacity="0.12" />
-                    <circle cx="250" cy="34" r="16" fill="#2F8F6B" />
-                    <path d="m243 34 5 5 9-10" stroke="#fff" strokeWidth="3" fill="none" />
-                </>
-            )}
-            {kind === 'grid' && (
-                <>
-                    {Array.from({ length: 7 }, (_, r) =>
-                        Array.from({ length: 12 }, (_, c) => (
-                            <rect
-                                key={`${String(r)}-${String(c)}`}
-                                x={14 + c * 25}
-                                y={12 + r * 20}
-                                width="20"
-                                height="15"
-                                rx="2"
-                                fill={accent}
-                                opacity={(r * 7 + c * 3) % 5 === 0 ? 0.85 : 0.18}
-                            />
-                        )),
-                    )}
-                </>
-            )}
-        </svg>
-    );
+/**
+ * A Storyset illustration (rafiki style), recoloured to the brand teal with the
+ * people's skin darkened, served from public/illustrations. Storyset's free
+ * licence asks for the credit SiteFooter carries.
+ */
+function Illustration({ name, className }: { name: string; className?: string }) {
+    return <img src={`/illustrations/${name}.svg`} alt="" aria-hidden="true" loading="lazy" className={cx('w-full object-contain', className)} />;
 }
 
 function FieldNetwork({ covered }: { covered: string[] }) {
@@ -811,7 +772,8 @@ function Closing() {
     return (
         <section className="bg-raised px-4 pb-20 sm:px-6">
             <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-6 rounded-[24px] bg-gold-dark px-6 py-10 text-on-accent sm:px-10">
-                <div>
+                <Illustration name="verified" className="hidden h-36 w-auto rounded-[18px] bg-white p-2 md:block" />
+                <div className="flex-1">
                     <h2 className="font-display text-[1.8rem] font-extrabold tracking-[-0.02em]">Check a business before you trust it.</h2>
                     <p className="mt-1 text-ui opacity-85">Create a free account in minutes. Pay only for the checks you run.</p>
                 </div>

@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import { Link, usePage } from '@inertiajs/react';
-import { cx } from '@/lib/cx';
-import { EnumerateLockup } from '@/components/EnumerateShell';
-import { GeoVerifyLockup, GeoVerifyMark } from '@/components/GeoVerifyMark';
+import type { ReactNode } from "react";
+import { Link, usePage } from "@inertiajs/react";
+import { cx } from "@/lib/cx";
+import { EnumerateLockup } from "@/components/EnumerateShell";
+import { GeoVerifyLockup, GeoVerifyMark } from "@/components/GeoVerifyMark";
 
 /**
  * The sign-in screens from the login mockups (September 2026).
@@ -17,9 +17,20 @@ import { GeoVerifyLockup, GeoVerifyMark } from '@/components/GeoVerifyMark';
 /** A honeycomb, drawn once as a pattern, for the dark panels. */
 export function HexField({ className }: { className?: string }) {
     return (
-        <svg aria-hidden="true" className={cx('pointer-events-none absolute inset-0 h-full w-full', className)}>
+        <svg
+            aria-hidden="true"
+            className={cx(
+                "pointer-events-none absolute inset-0 h-full w-full",
+                className,
+            )}
+        >
             <defs>
-                <pattern id="gv-hex-field" width="56" height="97" patternUnits="userSpaceOnUse">
+                <pattern
+                    id="gv-hex-field"
+                    width="56"
+                    height="97"
+                    patternUnits="userSpaceOnUse"
+                >
                     <path
                         d="M28 0 56 16.2v32.4L28 64.8 0 48.6V16.2zM28 64.8V97"
                         fill="none"
@@ -40,8 +51,8 @@ export function HexField({ className }: { className?: string }) {
  */
 export function BusinessAuthLayout({
     topRight,
-    mobileTitle = 'Welcome back',
-    mobileSubtitle = 'Verified businesses. Payment-protected orders.',
+    mobileTitle = "Welcome back",
+    mobileSubtitle = "Verified businesses. Payment-protected orders.",
     showcase,
     bare = false,
     children,
@@ -60,7 +71,10 @@ export function BusinessAuthLayout({
     const enumerate = !usePage().props.surfaces.portal;
 
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div
+            data-mode="daylight"
+            className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+        >
             <aside className="relative hidden overflow-hidden bg-[#0F1A17] text-inverse lg:flex lg:min-h-dvh lg:flex-col">
                 <HexField />
                 <div
@@ -68,36 +82,64 @@ export function BusinessAuthLayout({
                     className="pointer-events-none absolute top-[27%] right-[-18%] size-[560px] rounded-full bg-[#16302A]/70"
                 />
                 <div className="relative flex flex-1 flex-col px-14 pt-12 pb-10">
-                    <a href={enumerate ? '/enumerate' : '/'} aria-label={enumerate ? 'Enumerate' : 'GeoVerify home'} className="self-start">
-                        {enumerate ? <EnumerateLockup size={46} tone="light" /> : <GeoVerifyLockup size={46} tone="light" />}
+                    <a
+                        href={enumerate ? "/enumerate" : "/"}
+                        aria-label={enumerate ? "Enumerate" : "GeoVerify home"}
+                        className="self-start"
+                    >
+                        {enumerate ? (
+                            <EnumerateLockup size={46} tone="light" />
+                        ) : (
+                            <GeoVerifyLockup size={46} tone="light" />
+                        )}
                     </a>
-                    {showcase ?? (enumerate ? <EnumerateShowcase /> : <BusinessShowcase />)}
+                    {showcase ??
+                        (enumerate ? (
+                            <EnumerateShowcase />
+                        ) : (
+                            <BusinessShowcase />
+                        ))}
                 </div>
             </aside>
 
             {/* The phone band. */}
-            <div className={cx('relative overflow-hidden bg-[#0F1A17] px-6 pt-8 pb-16 text-inverse lg:hidden', bare && 'hidden')}>
+            <div
+                className={cx(
+                    "relative overflow-hidden bg-[#0F1A17] px-6 pt-8 pb-16 text-inverse lg:hidden",
+                    bare && "hidden",
+                )}
+            >
                 <HexField />
                 <div className="relative">
                     <span className="flex items-center gap-2.5">
                         <a href="/" aria-label="GeoVerify home">
                             <GeoVerifyMark size={40} ink="light" />
                         </a>
-                        <span className="font-wordmark text-[1.5rem] font-bold text-logo">{enumerate ? 'Enumerate' : 'GeoVerify'}</span>
+                        <span className="font-wordmark text-[1.5rem] font-bold text-logo">
+                            {enumerate ? "Enumerate" : "GeoVerify"}
+                        </span>
                     </span>
-                    <p className="mt-6 font-display text-display-l">{mobileTitle}</p>
-                    <p className="mt-2 text-ui text-inverse/75">{mobileSubtitle}</p>
+                    <p className="mt-6 font-display text-display-l">
+                        {mobileTitle}
+                    </p>
+                    <p className="mt-2 text-ui text-inverse/75">
+                        {mobileSubtitle}
+                    </p>
                 </div>
             </div>
 
             <main
                 className={cx(
-                    'relative flex flex-col bg-raised px-6 pb-8 lg:mt-0 lg:min-h-dvh lg:rounded-none lg:px-14 lg:pt-10',
-                    bare ? 'min-h-dvh pt-8' : '-mt-8 min-h-[60dvh] rounded-t-[28px] pt-6',
+                    "relative flex flex-col bg-raised px-6 pb-8 lg:mt-0 lg:min-h-dvh lg:rounded-none lg:px-14 lg:pt-10",
+                    bare
+                        ? "min-h-dvh pt-8"
+                        : "-mt-8 min-h-[60dvh] rounded-t-[28px] pt-6",
                 )}
             >
                 {topRight !== undefined && (
-                    <div className="hidden justify-end text-ui text-muted lg:flex">{topRight}</div>
+                    <div className="hidden justify-end text-ui text-muted lg:flex">
+                        {topRight}
+                    </div>
                 )}
                 <div className="flex flex-1 flex-col lg:items-center lg:justify-center">
                     <div className="w-full lg:max-w-[460px]">{children}</div>
@@ -120,8 +162,8 @@ function BusinessShowcase() {
                 Every business here was verified on the ground.
             </h1>
             <p className="mt-5 max-w-[46ch] text-body text-inverse/80">
-                Field agents visit, photograph and geo-tag each listing. Payments stay held until the
-                order arrives.
+                Field agents visit, photograph and geo-tag each listing.
+                Payments stay held until the order arrives.
             </p>
 
             <div className="relative mt-14 h-[270px] max-w-[600px]">
@@ -130,38 +172,60 @@ function BusinessShowcase() {
                         <span className="rounded-full bg-gold-soft px-2.5 py-1 text-table font-bold text-gold-dark">
                             Verified · 12 Jun 2026
                         </span>
-                        <span className="text-table font-bold text-gold-dark">Open now</span>
+                        <span className="text-table font-bold text-gold-dark">
+                            Open now
+                        </span>
                     </div>
-                    <p className="mt-3 text-body font-extrabold">Amaka Fresh Foods</p>
-                    <p className="mt-1 text-ui text-muted">Groceries · Wuse 2, Abuja</p>
+                    <p className="mt-3 text-body font-extrabold">
+                        Amaka Fresh Foods
+                    </p>
+                    <p className="mt-1 text-ui text-muted">
+                        Groceries · Wuse 2, Abuja
+                    </p>
                     <p className="mt-1.5 flex items-center justify-between numeric-mono text-[0.75rem] text-muted">
                         <span>cell 881f1d4a3bfffff · agent FA-0231</span>
-                        <span className="font-sans text-[0.6875rem] font-bold tracking-[0.05em] text-faint uppercase">Example</span>
+                        <span className="font-sans text-[0.6875rem] font-bold tracking-[0.05em] text-faint uppercase">
+                            Example
+                        </span>
                     </p>
                 </div>
                 <div className="absolute top-[146px] left-[262px] w-[335px] rounded-[18px] border border-white/10 bg-[#1B2724] p-5 shadow-[0_18px_48px_rgb(0_0_0/0.35)]">
                     <p className="flex items-center gap-2 text-table font-extrabold tracking-[0.03em] text-logo uppercase">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            aria-hidden="true"
+                        >
                             <path d="M5.5 10.5h13v10h-13zM8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5" />
                         </svg>
                         Held until delivery
                     </p>
-                    <p className="mt-2 font-display text-[1.875rem] font-extrabold">₦211,500</p>
-                    <p className="mt-1 text-ui text-inverse/75">Released after the buyer confirms delivery</p>
+                    <p className="mt-2 font-display text-[1.875rem] font-extrabold">
+                        ₦211,500
+                    </p>
+                    <p className="mt-1 text-ui text-inverse/75">
+                        Released after the buyer confirms delivery
+                    </p>
                 </div>
             </div>
 
             <div className="mt-auto grid grid-cols-3 gap-6 border-t border-white/10 pt-7">
                 {(
                     [
-                        ['Geo-tagged', 'Every listing pinned on site'],
-                        ['Agent-verified', 'Photos, ID and CAC checks'],
-                        ['Payment-protected', 'Money held until delivery'],
+                        ["Geo-tagged", "Every listing pinned on site"],
+                        ["Agent-verified", "Photos, ID and CAC checks"],
+                        ["Payment-protected", "Money held until delivery"],
                     ] as const
                 ).map(([title, body]) => (
                     <div key={title}>
                         <p className="text-ui font-extrabold">{title}</p>
-                        <p className="mt-1 text-table text-inverse/65">{body}</p>
+                        <p className="mt-1 text-table text-inverse/65">
+                            {body}
+                        </p>
                     </div>
                 ))}
             </div>
@@ -174,26 +238,45 @@ function BusinessShowcase() {
  * an inset panel on the right. The panel's content is handed in, because it
  * shows the live register.
  */
-export function InvestorAuthLayout({ panel, children }: { panel: ReactNode; children: ReactNode }) {
+export function InvestorAuthLayout({
+    panel,
+    children,
+}: {
+    panel: ReactNode;
+    children: ReactNode;
+}) {
     return (
-        <div data-mode="daylight" className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+        <div
+            data-mode="daylight"
+            className="min-h-dvh bg-raised text-ink lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
+        >
             <main className="flex min-h-dvh flex-col px-6 pt-8 pb-8 sm:px-14 lg:pt-10">
                 <div className="flex items-center justify-between gap-4">
                     <a href="/" aria-label="GeoVerify home">
-                        <GeoVerifyLockup size={42} caption="Investor & discovery" />
+                        <GeoVerifyLockup
+                            size={42}
+                            caption="Investor & discovery"
+                        />
                     </a>
-                    <Link href="/directory" className="text-ui font-bold text-ink hover:text-gold">
+                    <Link
+                        href="/directory"
+                        className="text-ui font-bold text-ink hover:text-gold"
+                    >
                         Business directory <span aria-hidden="true">→</span>
                     </Link>
                 </div>
                 <div className="flex flex-1 flex-col justify-center py-10">
-                    <div className="w-full max-w-[460px] lg:ml-20">{children}</div>
+                    <div className="w-full max-w-[460px] lg:ml-20">
+                        {children}
+                    </div>
                 </div>
             </main>
 
             <aside className="relative m-4 hidden overflow-hidden rounded-[28px] bg-[#0F1A17] text-inverse lg:block">
                 <HexField />
-                <div className="relative flex h-full flex-col px-12 pt-14 pb-12">{panel}</div>
+                <div className="relative flex h-full flex-col px-12 pt-14 pb-12">
+                    {panel}
+                </div>
             </aside>
         </div>
     );
@@ -204,15 +287,19 @@ export function AudienceTabs({
     value,
     onChange,
 }: {
-    value: 'buyer' | 'business';
-    onChange: (value: 'buyer' | 'business') => void;
+    value: "buyer" | "business";
+    onChange: (value: "buyer" | "business") => void;
 }) {
     return (
-        <div role="tablist" aria-label="Who is signing in" className="grid grid-cols-2 gap-1 rounded-[14px] bg-sunken p-1.5">
+        <div
+            role="tablist"
+            aria-label="Who is signing in"
+            className="grid grid-cols-2 gap-1 rounded-[14px] bg-sunken p-1.5"
+        >
             {(
                 [
-                    ['buyer', 'I’m buying'],
-                    ['business', 'I run a business'],
+                    ["buyer", "I’m buying"],
+                    ["business", "I run a business"],
                 ] as const
             ).map(([key, label]) => (
                 <button
@@ -224,8 +311,10 @@ export function AudienceTabs({
                         onChange(key);
                     }}
                     className={cx(
-                        'min-h-touch-lg rounded-[10px] text-ui transition-colors',
-                        value === key ? 'bg-raised font-extrabold text-ink shadow-card' : 'font-semibold text-muted hover:text-ink',
+                        "min-h-touch-lg rounded-[10px] text-ui transition-colors",
+                        value === key
+                            ? "bg-raised font-extrabold text-ink shadow-card"
+                            : "font-semibold text-muted hover:text-ink",
                     )}
                 >
                     {label}
@@ -235,9 +324,12 @@ export function AudienceTabs({
     );
 }
 
-export function OrRule({ label = 'or' }: { label?: string }) {
+export function OrRule({ label = "or" }: { label?: string }) {
     return (
-        <div className="flex items-center gap-4 text-table text-muted" role="separator">
+        <div
+            className="flex items-center gap-4 text-table text-muted"
+            role="separator"
+        >
             <span className="h-px flex-1 bg-rule" />
             {label}
             <span className="h-px flex-1 bg-rule" />
@@ -251,12 +343,41 @@ export function OrRule({ label = 'or' }: { label?: string }) {
  * generated, not customers or staff, so nothing beside a photograph may name
  * them or put words in their mouth: the caption describes the product.
  */
-export function PeoplePhoto({ name, alt, caption, className }: { name: string; alt: string; caption?: string; className?: string }) {
+export function PeoplePhoto({
+    name,
+    alt,
+    caption,
+    className,
+    bare = false,
+    focus = "50% 25%",
+}: {
+    name: string;
+    alt: string;
+    caption?: string;
+    className?: string;
+    bare?: boolean;
+    /** object-position: which part of the photograph survives the crop. */
+    focus?: string;
+}) {
     return (
-        <figure className={cx('relative overflow-hidden rounded-[20px] shadow-[0_18px_48px_rgb(0_0_0/0.35)]', className)}>
+        <figure
+            className={cx(
+                "relative overflow-hidden",
+                !bare && "rounded-[20px] shadow-[0_18px_48px_rgb(0_0_0/0.35)]",
+                className,
+            )}
+        >
             <picture>
                 <source srcSet={`/media/${name}.webp`} type="image/webp" />
-                <img src={`/media/${name}.jpg`} alt={alt} width={1200} height={1600} loading="lazy" className="size-full object-cover object-[50%_25%]" />
+                <img
+                    src={`/media/${name}.jpg`}
+                    alt={alt}
+                    width={1200}
+                    height={1600}
+                    loading="lazy"
+                    className="size-full object-cover"
+                    style={{ objectPosition: focus }}
+                />
             </picture>
             {caption !== undefined && (
                 <figcaption className="absolute inset-x-3 bottom-3 rounded-full bg-[#0F1A17]/80 px-4 py-2 text-table font-bold text-inverse backdrop-blur">
@@ -276,31 +397,20 @@ function EnumerateShowcase() {
                 Verify any business in Nigeria, on paper and on the ground.
             </h1>
             <p className="mt-4 max-w-[44ch] text-body text-inverse/80">
-                Check a business against CAC and FIRS, send a trained officer to the address, or watch it trade for up to
-                30 days.
+                Check a business against CAC and FIRS, send a trained officer to
+                the address, or watch it trade for up to 30 days.
             </p>
-            <ul className="mt-10 flex max-w-[420px] flex-col gap-3">
-                {[
-                    ['Tier 1', 'Registry check', 'CAC status, directors and TIN'],
-                    ['Tier 2', 'Location verification', 'Agent visit with geo-tagged photos'],
-                    ['Tier 3', 'Daily activity', 'Monitored for up to 30 days'],
-                ].map(([tier, title, body]) => (
-                    <li key={tier} className="flex items-center gap-4 rounded-card border border-white/10 bg-white/5 px-4 py-3.5">
-                        <span className="shrink-0 rounded-[6px] bg-gold-soft px-2 py-1 text-[0.6875rem] font-extrabold tracking-[0.04em] text-gold-dark uppercase">{tier}</span>
-                        <span className="flex min-w-0 flex-col">
-                            <span className="text-ui font-extrabold">{title}</span>
-                            <span className="text-table text-inverse/65">{body}</span>
-                        </span>
-                    </li>
-                ))}
-            </ul>
             <PeoplePhoto
                 name="people-agent-street"
                 alt="A GeoVerify field agent in a teal vest photographing a shop front with his phone"
                 caption="A real visit, with photos and a GPS fix"
-                className="mt-8 h-[260px] max-w-[420px]"
+                className="mt-10 h-[340px] max-w-[440px]"
             />
-            {free && <p className="mt-auto pt-8 text-table text-inverse/70">Free while Enumerate launches.</p>}
+            {free && (
+                <p className="mt-auto pt-8 text-table text-inverse/70">
+                    Free while Enumerate launches.
+                </p>
+            )}
         </div>
     );
 }

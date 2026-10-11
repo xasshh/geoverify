@@ -148,6 +148,12 @@ final class EnumerateController
     }
 
     /** The switcher: act as oneself, or for one of one's organisations. */
+    /** The guide videos, for anybody signed in, acting for themselves or an organisation. */
+    public function help(Request $request): Response
+    {
+        return Inertia::render('enumerate/Help', ['frame' => $this->frame($request, self::account($request))]);
+    }
+
     public function switch(Request $request): RedirectResponse
     {
         $account = self::account($request);
