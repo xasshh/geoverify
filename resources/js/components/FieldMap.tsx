@@ -3,7 +3,8 @@ import { Map as MapLibre, type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
 import { registerProtocol } from '@/lib/pmtilesProtocol';
-import { fieldStyle, readPalette } from '@/lib/mapStyle';
+import { FIELD_FOOTPRINTS, fieldStyle, readPalette } from '@/lib/mapStyle';
+import { addFootprintImage } from '@/lib/footprints';
 import { openPack } from '@/lib/offline/pack';
 import { openImagery, type BasemapChoice } from '@/lib/offline/imagery';
 import type { LocalImagery, LocalPack } from '@/lib/offline/db';
@@ -135,6 +136,11 @@ export function FieldMap({
         instance.touchZoomRotate.disableRotation();
         instance.on('dragstart', () => {
             following.current = false;
+        });
+        instance.on('styleimagemissing', (event: { id: string }) => {
+            if (event.id === FIELD_FOOTPRINTS) {
+                addFootprintImage(instance, FIELD_FOOTPRINTS, readPalette(element).gold);
+            }
         });
         instance.on('load', () => {
             setReady(true);

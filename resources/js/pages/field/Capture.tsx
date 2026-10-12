@@ -93,6 +93,19 @@ export default function Capture({
 }: CaptureProps) {
     const [stage, setStage] = useState<Stage>('map');
     const [openStructure, setOpenStructure] = useState<CapturedStructure | null>(null);
+    // A short word on the map after an edit is saved, so a tap on "Save changes"
+    // visibly did something. It clears itself.
+    const [notice, setNotice] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (notice === null) return;
+        const t = window.setTimeout(() => {
+            setNotice(null);
+        }, 4000);
+        return () => {
+            window.clearTimeout(t);
+        };
+    }, [notice]);
     const [recorded, setRecorded] = useState<CapturedStructure[]>(structures);
     const [sessionId, setSessionId] = useState<number | null>(null);
     const trace = useTrace(true);
@@ -222,6 +235,15 @@ export default function Capture({
     return (
         <div data-mode="daylight" className="h-dvh bg-surface text-ink">
             <Head title={`Capture · ${cell.mandate}`} />
+
+            {notice !== null && stage === 'map' && (
+                <p
+                    role="status"
+                    className="fixed inset-x-4 top-24 z-50 mx-auto max-w-sm rounded-sm bg-green-soft px-4 py-3 text-center text-ui font-semibold text-green shadow-card"
+                >
+                    {notice}
+                </p>
+            )}
 
             {stage === 'map' && (
                 <MapChrome
@@ -429,13 +451,21 @@ export default function Capture({
                     onClose={() => {
                         setStage('map');
                     }}
-                    onSaved={(structure) => {
+                    onSaved={(structure, edited) => {
                         flushFixes();
-                        setOpenStructure(structure);
                         setRecorded((r) => [
                             structure,
                             ...r.filter((s) => s.clientUuid !== structure.clientUuid),
                         ]);
+                        if (edited) {
+                            // An edit is finished work: back to the map, and say so.
+                            setOpenStructure(null);
+                            setStage('map');
+                            setNotice('Changes saved. They sync on their own when there is signal.');
+                        } else {
+                            // A first save moves on to photos and businesses.
+                            setOpenStructure(structure);
+                        }
                     }}
                     onCaptureEnterprise={(structure) => {
                         setOpenStructure(structure);
@@ -484,7 +514,8 @@ interface StructureSheetProps {
     externalFootprintId: number | null;
     consentScript: { version: string; text: string };
     onClose: () => void;
-    onSaved: (structure: CapturedStructure) => void;
+    /** `edited` is true when an existing capture was changed rather than first saved. */
+    onSaved: (structure: CapturedStructure, edited: boolean) => void;
     onCaptureEnterprise: (structure: CapturedStructure) => void;
 }
 
@@ -608,7 +639,7 @@ function StructureSheet({
                 resolvedWard: stored?.resolvedWard ?? null,
                 enterprises: existing?.enterprises ?? [],
                 priorObservation: existing?.priorObservation ?? null,
-            });
+            }, existing !== null);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'That did not save to this device.');
         } finally {

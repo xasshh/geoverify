@@ -7,6 +7,7 @@ import {
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@/lib/maplibre';
+import { addFootprintImage, footprintLayer } from '@/lib/footprints';
 
 /*
  * The Live operations map, moved here unchanged so Team today can show the
@@ -158,17 +159,11 @@ export function useLiveMap({ live, bounds, filters }: { live: Live; bounds: [num
                 data: officersToGeoJSON(live.officers),
             });
 
-            instance.addLayer({
-                id: 'trace-line',
-                type: 'line',
-                source: 'traces',
-                layout: { 'line-cap': 'round', 'line-join': 'round' },
-                paint: {
-                    'line-color': ['case', ['get', 'active'], '#4DB8B0', '#5F6B66'],
-                    'line-width': 1.8,
-                    'line-opacity': 0.85,
-                },
-            });
+            // Each officer's walk as footprints: teal while they are active,
+            // grey once they have gone quiet.
+            addFootprintImage(instance, 'footprints-active', '#4DB8B0');
+            addFootprintImage(instance, 'footprints-idle', '#5F6B66');
+            instance.addLayer(footprintLayer('trace-steps', 'traces', ['case', ['get', 'active'], 'footprints-active', 'footprints-idle'], 0.95));
 
             instance.addLayer({
                 id: 'officer-halo',

@@ -1,4 +1,8 @@
 import type { StyleSpecification } from 'maplibre-gl';
+import { footprintLayer } from '@/lib/footprints';
+
+/** The image id the field style's trace layer stamps. */
+export const FIELD_FOOTPRINTS = 'footprints';
 
 /**
  * The field map's style.
@@ -246,13 +250,9 @@ export function fieldStyle(options: StyleOptions): StyleSpecification {
             },
         },
 
-        {
-            id: 'trace-line',
-            type: 'line',
-            source: 'trace',
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': palette.gold, 'line-width': 2, 'line-opacity': 0.45 },
-        },
+        // The officer's path as footprints, not a line: a walk, not a drawing.
+        // The stamp is registered by FieldMap when the style first asks for it.
+        footprintLayer('trace-steps', 'trace', FIELD_FOOTPRINTS, 0.8),
 
         // The accuracy ring is the officer's warning that the fix is soft. Sized
         // from the reported accuracy so a 40 m ring looks like 40 m on the ground.
