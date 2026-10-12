@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Guarantor form: GeoVerify field agent</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
     <style>
         :root { color-scheme: light; }
         body { font-family: Georgia, 'Times New Roman', serif; color: #111; background: #fff; margin: 0; }
