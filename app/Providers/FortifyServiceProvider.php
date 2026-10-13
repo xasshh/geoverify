@@ -30,9 +30,10 @@ final class FortifyServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        Fortify::loginView(fn () => Inertia::render('auth/Login', [
-            'status' => session('status'),
-        ]));
+        // The field portal's door moved to /agent (AgentPortalController), where
+        // applicants sign in too. /login stays as Fortify's POST and as the
+        // address the auth middleware sends people to, and forwards them on.
+        Fortify::loginView(fn () => redirect()->route('agent.sign-in'));
 
         Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/ForgotPassword', [
             'status' => session('status'),

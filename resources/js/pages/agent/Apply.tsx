@@ -1,10 +1,10 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/Button';
-import { EnumerateShell } from '@/components/EnumerateShell';
+import { AgentShell, type AgentFrame } from '@/components/AgentShell';
 import { SelectField, TextField } from '@/components/Field';
-import type { EnumerateFrame } from '@/lib/enumerate';
 import { cx } from '@/lib/cx';
+import { AGENT_GUIDE, guidePoster, guideVideo } from '@/lib/guides';
 
 type Part = 'about' | 'background' | 'phone' | 'agreements';
 
@@ -69,7 +69,7 @@ interface Application {
 }
 
 interface Props {
-    frame: EnumerateFrame;
+    frame: AgentFrame;
     application: Application | null;
     choices: Choices;
     adultBefore: string;
@@ -87,19 +87,83 @@ function useErrors(): Record<string, string | undefined> {
 }
 
 /**
- * Applying to become a field agent, inside the Enumerate dashboard.
+ * Applying to become a field agent, inside the field portal (/agent/apply).
  *
  * Four parts, each saved on its own so it can be finished over a few sittings
  * on a phone, then one button to send. Every field says why it is asked for,
  * in the words the onboarding brief used, because an applicant who knows why
  * we want a guarantor is an applicant who finds one.
  */
-export default function AgentApplication({ frame, application, choices, adultBefore }: Props) {
+export default function Apply({ frame, application, choices, adultBefore }: Props) {
     return (
-        <EnumerateShell current="agent" frame={frame} title="Become an agent">
-            <Head title="Become an agent" />
-            {application === null ? <Start /> : <Applying application={application} choices={choices} adultBefore={adultBefore} />}
-        </EnumerateShell>
+        <AgentShell frame={frame} title="My application">
+            <Head title="My application" />
+            <div className="flex flex-col gap-5">
+                {!frame.proved && <ConfirmEmail email={frame.email} />}
+                {application?.status !== 'approved' && <GettingStarted />}
+                {application === null ? <Start /> : <Applying application={application} choices={choices} adultBefore={adultBefore} />}
+            </div>
+        </AgentShell>
+    );
+}
+
+/** Nothing can be saved until the address is proved: it becomes the officer's. */
+function ConfirmEmail({ email }: { email: string | null }) {
+    const errors = useErrors();
+    const [busy, setBusy] = useState(false);
+
+    return (
+        <section className="rounded-card border border-amber/40 bg-amber-soft px-5 py-4">
+            <h2 className="text-body font-extrabold text-ink">Confirm your email first</h2>
+            <p className="mt-1 text-ui text-ink">
+                We sent a link to <strong>{email}</strong>. Open it, then come back here to fill in your application. Check your
+                spam folder if you cannot see it.
+            </p>
+            {errors.email !== undefined && <p className="mt-2 text-ui text-alert">{errors.email}</p>}
+            <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                    setBusy(true);
+                    router.post('/portal/email/resend', {}, { preserveScroll: true, onFinish: () => { setBusy(false); } });
+                }}
+                className="mt-3 rounded-full bg-raised px-4 py-2 text-ui font-extrabold text-ink shadow-card hover:bg-white disabled:opacity-60"
+            >
+                {busy ? 'Sending' : 'Send it again'}
+            </button>
+        </section>
+    );
+}
+
+/** The onboarding video, with its steps written down for anyone who cannot play sound. */
+function GettingStarted() {
+    return (
+        <section id="getting-started" className="grid gap-5 rounded-card border border-rule bg-raised p-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+            <video
+                controls
+                preload="none"
+                playsInline
+                poster={guidePoster(AGENT_GUIDE.slug)}
+                src={guideVideo(AGENT_GUIDE.slug)}
+                className="aspect-video w-full rounded-sm bg-[#0F1A17]"
+                aria-label={AGENT_GUIDE.title}
+            />
+            <div>
+                <p className="text-label font-extrabold tracking-[0.05em] text-gold uppercase">Start here · {AGENT_GUIDE.minutes}</p>
+                <h2 className="mt-1 text-body font-extrabold text-ink">{AGENT_GUIDE.title}</h2>
+                <p className="mt-1 text-ui text-muted">{AGENT_GUIDE.blurb}</p>
+                <ol className="mt-4 flex list-none flex-col gap-2.5 p-0">
+                    {AGENT_GUIDE.steps.map((step, n) => (
+                        <li key={step} className="flex gap-3 text-ui text-ink">
+                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gold-soft text-[0.75rem] font-extrabold text-gold-dark">
+                                {n + 1}
+                            </span>
+                            <span>{step}</span>
+                        </li>
+                    ))}
+                </ol>
+            </div>
+        </section>
     );
 }
 
@@ -136,7 +200,7 @@ function Start() {
                     <Button
                         variant="primary"
                         onClick={() => {
-                            router.post('/enumerate/agent/start');
+                            router.post('/agent/apply/start');
                         }}
                     >
                         Start my application
@@ -153,7 +217,7 @@ function WhatHappensNext({ current }: { current: number }) {
         ['Fill in the form', 'Four short parts. Save each one as you go.'],
         ['We check your details', 'Our team looks at your application, usually within a week. We email you either way.'],
         ['Training and a short test', 'We show you how the app works, how to visit a business politely, and how to stay safe.'],
-        ['Start work', 'You get your own agent sign in and your first area to visit, close to where you live.'],
+        ['Start work', 'The locked parts of this portal open, with your first area to visit, close to where you live.'],
     ];
 
     return (
@@ -208,8 +272,18 @@ function StatusBanner({ application }: { application: Application }) {
             title: 'Congratulations, you are a GeoVerify agent',
             body: (
                 <>
-                    Your agent number is <strong>{application.staffRef}</strong>. We will invite you to training and give you your
-                    first password there. After that, you sign in to the agent app at <strong>/login</strong> with {application.email}.
+                    Your agent number is <strong>{application.staffRef}</strong>. Your work is ready: sign in again with the same email
+                    ({application.email}) and password, and the field app opens.
+                    <span className="mt-3 block">
+                        <Button
+                            variant="primary"
+                            onClick={() => {
+                                router.post('/agent/start-work');
+                            }}
+                        >
+                            Start work
+                        </Button>
+                    </span>
                 </>
             ),
         },
@@ -302,7 +376,7 @@ function Applying({ application, choices, adultBefore }: { application: Applicat
                                 variant="primary"
                                 disabled={!ready}
                                 onClick={() => {
-                                    router.post('/enumerate/agent/submit', {}, { preserveScroll: true });
+                                    router.post('/agent/apply/submit', {}, { preserveScroll: true });
                                 }}
                             >
                                 Send my application
@@ -354,7 +428,7 @@ function AboutYou({ application, choices, adultBefore }: { application: Applicat
                     origin_state_id: d.origin_state_id === '' ? null : Number(d.origin_state_id),
                     origin_lga_id: d.origin_lga_id === '' ? null : Number(d.origin_lga_id),
                 }));
-                form.post('/enumerate/agent/about', { preserveScroll: true });
+                form.post('/agent/apply/about', { preserveScroll: true });
             }}
         >
             <Locked application={application} />
@@ -452,7 +526,7 @@ function Upload({ application, kind, title, help, capture, accept = 'image/*,app
     const send = (file: File) => {
         setBusy(true);
         router.post(
-            '/enumerate/agent/files',
+            '/agent/apply/files',
             { kind, label: labels === undefined ? null : label, file },
             {
                 forceFormData: true,
@@ -531,7 +605,7 @@ function Background({ application, choices }: { application: Application; choice
             onSubmit={(e) => {
                 e.preventDefault();
                 form.transform((d) => ({ ...d, experience_years: d.experience_years === '' ? null : Number(d.experience_years) }));
-                form.post('/enumerate/agent/background', {
+                form.post('/agent/apply/background', {
                     preserveScroll: true,
                     onSuccess: () => {
                         form.setData((d) => ({ ...d, nin: '', bvn: '' }));
@@ -696,7 +770,7 @@ function PhoneCheck({ application }: { application: Application }) {
             storageFree = null;
         }
         router.post(
-            '/enumerate/agent/device',
+            '/agent/apply/device',
             {
                 ownership,
                 power_bank: powerBank === 'yes',
@@ -805,7 +879,7 @@ function Agreements({ application, choices }: { application: Application; choice
                         disabled={agreed.length < all.length || name.trim().length < 3}
                         onClick={() => {
                             setBusy(true);
-                            router.post('/enumerate/agent/agree', { agreed, signed_name: name }, { preserveScroll: true, onFinish: () => { setBusy(false); } });
+                            router.post('/agent/apply/agree', { agreed, signed_name: name }, { preserveScroll: true, onFinish: () => { setBusy(false); } });
                         }}
                     >
                         I agree, save

@@ -4,7 +4,7 @@ import { cx } from '@/lib/cx';
 import { GeoVerifyMark } from '@/components/GeoVerifyMark';
 import { kobo, type EnumerateFrame } from '@/lib/enumerate';
 
-type NavKey = 'home' | 'new' | 'requests' | 'wallet' | 'support' | 'overview' | 'projects' | 'team' | 'agent' | 'guide';
+type NavKey = 'home' | 'new' | 'requests' | 'wallet' | 'support' | 'overview' | 'projects' | 'team' | 'guide';
 
 interface NavItem {
     key: NavKey;
@@ -32,7 +32,6 @@ const PERSONAL: NavItem[] = [
     { key: 'requests', label: 'My verifications', href: '/enumerate/verifications', icon: ICON.shield },
     { key: 'wallet', label: 'Wallet', href: '/enumerate/wallet', icon: ICON.wallet },
     { key: 'support', label: 'Complaints', href: '/enumerate/support', icon: ICON.chat },
-    { key: 'agent', label: 'Become an agent', href: '/enumerate/agent', icon: ICON.people },
     { key: 'guide', label: 'Help & videos', href: '/enumerate/help', icon: ICON.play },
 ];
 

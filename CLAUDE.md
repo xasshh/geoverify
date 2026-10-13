@@ -38,7 +38,10 @@ for it yet.
   Officers, supervisors and admins are created by an admin. Parties in the
   portal do self register, on their own guard, against `party_users`. The
   `users` table stays the staff table: `Role` is never widened to admit a
-  member of the public.
+  member of the public. Somebody who signs up as an agent at `/agent/sign-up`
+  gets a portal account and an `agent_applications` row, never a `users` row;
+  `DecideAgentApplication::approve` (an admin) is what makes the officer, and
+  copies the applicant's password hash so they sign in with what they chose.
 - **A business may publish photographs of itself; an officer's never leave.**
   Both live in `media`, kept apart by the `media_one_author` check constraint
   (exactly one of `captured_by` and `uploaded_by_party_id`). What publishes them
@@ -145,6 +148,13 @@ against `client_users`) and `investor` (investor organisations, against
 `investor_users`). A portal, client or investor session cannot satisfy
 `supervises` by construction rather than by check, which is the entire reason
 there are four rather than one table with a wider `Role`.
+
+The field portal's door is `/agent` (2026-10-13): Fortify's `GET /login`
+redirects there, and `AgentPortalController` sends a staff email through
+Fortify's own pipeline (throttle, two-factor) and anybody else with a portal
+account to their application at `/agent/apply`, behind `applicant`
+(`EnsureAgentApplicant`, on the portal guard). An applicant sees the field
+sections locked; nothing under `/field` is reachable without a staff account.
 
 Seven surfaces, seven middleware aliases, all registered in `bootstrap/app.php`:
 `field` (`/field`), `supervises` (`/console`), `administers` (`/admin`),

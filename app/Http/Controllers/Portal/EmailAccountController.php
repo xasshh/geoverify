@@ -10,6 +10,7 @@ use App\Domain\Party\Actions\RegisterByEmail;
 use App\Domain\Party\Actions\SendPortalEmailVerification;
 use App\Domain\Party\Enums\PartyKind;
 use App\Domain\Party\Models\PortalAccount;
+use App\Domain\Staff\Models\AgentApplication;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsurePortalAccount;
 use App\Http\Middleware\EnsureSurfaceOpen;
@@ -156,6 +157,11 @@ final class EmailAccountController extends Controller
 
             return redirect()->to(is_string($intended) && $this->ours($intended) ? $intended : route('portal.dashboard'))
                 ->with('status', 'Your email is verified. Welcome.');
+        }
+
+        // On another device: an applicant signs in at the field portal, not here.
+        if (AgentApplication::query()->where('portal_account_id', $account->id)->exists()) {
+            return redirect()->route('agent.sign-in')->with('status', 'Your email is confirmed. Sign in to carry on with your application.')->with('email', $account->email);
         }
 
         return redirect()->route('portal.sign-in')->with('status', 'Your email is verified. Sign in to continue.');

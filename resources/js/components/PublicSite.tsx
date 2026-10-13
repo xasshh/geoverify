@@ -242,12 +242,12 @@ export function SiteFooter() {
                 ? [
                       { label: 'Create a business account', href: '/portal/register' },
                       { label: 'Sign in to your business', href: '/portal/sign-in' },
-                      { label: 'Staff sign in', href: '/login' },
+                      { label: 'Field portal sign in', href: '/agent' },
                   ]
                 : [
                       { label: 'Create an account', href: '/portal/register?as=buyer&next=enumerate' },
                       { label: 'Sign in to Enumerate', href: '/enumerate/sign-in' },
-                      { label: 'Staff sign in', href: '/login' },
+                      { label: 'Field portal sign in', href: '/agent' },
                   ],
         },
         {

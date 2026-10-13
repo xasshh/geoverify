@@ -120,13 +120,12 @@ final class AgentApplicationController
                     $note,
                 );
 
-                // Shown once, as on the People page, and never stored readable.
-                return redirect()->route('admin.agent-applications')->with('status', sprintf(
-                    '%s approved as %s. First password: %s',
-                    $result['user']->name,
-                    $result['user']->staff_ref ?? '',
-                    $result['password'],
-                ));
+                // A generated password is shown once, as on the People page, and
+                // never stored readable. Usually there is none: the applicant
+                // keeps the password they signed up with.
+                return redirect()->route('admin.agent-applications')->with('status', $result['password'] === null
+                    ? sprintf('%s approved as %s. They sign in at /agent with the email and password they applied with.', $result['user']->name, $result['user']->staff_ref ?? '')
+                    : sprintf('%s approved as %s. First password: %s', $result['user']->name, $result['user']->staff_ref ?? '', $result['password']));
             }
 
             $data['decision'] === 'send_back'

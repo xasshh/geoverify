@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\EnsureAdministers;
+use App\Http\Middleware\EnsureAgentApplicant;
 use App\Http\Middleware\EnsureCapturesInTheField;
 use App\Http\Middleware\EnsureClientUser;
 use App\Http\Middleware\EnsureDigitises;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'supervises' => EnsureSupervises::class,
             'field' => EnsureCapturesInTheField::class,
             'portal' => EnsurePortalAccount::class,
+            'applicant' => EnsureAgentApplicant::class,
             'administers' => EnsureAdministers::class,
             'digitises' => EnsureDigitises::class,
             'client' => EnsureClientUser::class,

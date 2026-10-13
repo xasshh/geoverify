@@ -15,6 +15,6 @@ final class LogoutResponse implements LogoutResponseContract
     {
         return $request->wantsJson()
             ? new JsonResponse('', 204)
-            : redirect()->route('login');
+            : redirect()->route('agent.sign-in');
     }
 }

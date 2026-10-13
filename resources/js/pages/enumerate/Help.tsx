@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { EnumerateShell } from '@/components/EnumerateShell';
 import type { EnumerateFrame } from '@/lib/enumerate';
-import { GUIDES, guidePoster, guideVideo } from '@/lib/guides';
+import { ENUMERATE_GUIDES, guidePoster, guideVideo } from '@/lib/guides';
 
 /**
  * Help: the guide videos, each with the same steps written down beneath it,
@@ -17,7 +17,7 @@ export default function Help({ frame }: { frame: EnumerateFrame }) {
             </p>
 
             <div className="mt-6 flex flex-col gap-5">
-                {GUIDES.map((g, i) => (
+                {ENUMERATE_GUIDES.map((g, i) => (
                     <section key={g.slug} id={g.slug} className="grid gap-5 rounded-card border border-rule bg-raised p-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
                         <video
                             controls

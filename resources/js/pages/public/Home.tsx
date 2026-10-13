@@ -99,8 +99,8 @@ function Hero() {
                         <Link href="/enumerate" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
                             Find a location
                         </Link>
-                        <Link href="/become-an-agent" className="rounded-full border border-white/50 px-5 py-2.5 text-ui font-extrabold hover:bg-white/10">
-                            Become an agent
+                        <Link href="/agent/sign-up" className="rounded-full border border-white/50 px-5 py-2.5 text-ui font-extrabold hover:bg-white/10">
+                            Sign up as an agent
                         </Link>
                     </div>
                 </div>

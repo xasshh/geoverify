@@ -15,9 +15,12 @@ use RuntimeException;
  * An administrator's ruling on an application to become a field agent.
  *
  * Approving is the only way an applicant becomes staff, and it goes through
- * CreateStaffMember like any other new colleague, so the officer gets the same
- * generated first password and the next number in the series. The application
- * keeps which officer it became; the portal account stays what it was.
+ * CreateStaffMember like any other new colleague, so the officer gets the next
+ * number in the series. The password is then the one the applicant chose when
+ * they signed up at /agent (copied as its hash, never read), so they sign in to
+ * their work with the details they already have; an applicant with no password
+ * keeps the generated one, handed over as before. The application keeps which
+ * officer it became; the portal account stays what it was.
  *
  * Sending it back or turning it down needs a reason, because the applicant
  * reads it.
@@ -28,7 +31,7 @@ final class DecideAgentApplication
 
     /**
      * @param  list<string>  $captureModes
-     * @return array{user: User, password: string}
+     * @return array{user: User, password: string|null} null when the applicant's own password carried over
      */
     public function approve(User $admin, AgentApplication $application, Role $role, array $captureModes, ?int $assessmentScore, ?string $note): array
     {
@@ -46,6 +49,14 @@ final class DecideAgentApplication
 
         return DB::transaction(function () use ($admin, $application, $role, $captureModes, $assessmentScore, $note, $account): array {
             $result = ($this->create)($admin, $application->fullName(), (string) $account->email, $role, $application->phone);
+
+            $chosen = $account->password;
+            if (is_string($chosen) && $chosen !== '') {
+                // Already a hash: written past the model's `hashed` cast so it
+                // is not hashed a second time.
+                DB::table('users')->where('id', $result['user']->id)->update(['password' => $chosen]);
+                $result['password'] = null;
+            }
 
             $application->forceFill([
                 'status' => AgentApplication::APPROVED,

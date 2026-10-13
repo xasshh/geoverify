@@ -171,16 +171,17 @@ export default function Home({ frame, prices, counts, recent, live, complaints, 
                 </Link>
             )}
 
-            <Link
-                href="/enumerate/agent"
-                className="mt-5 flex flex-wrap items-center gap-3 rounded-card border border-rule bg-raised px-5 py-4 hover:border-rule-strong"
-            >
-                <span className="text-ui font-extrabold text-ink">{agentApplication === null ? 'Want to work with us?' : 'Your agent application'}</span>
-                <span className="min-w-0 flex-1 text-table text-muted">
-                    {agentApplication === null ? 'Become a GeoVerify field agent: visit businesses near you and confirm they are real.' : AGENT_LINE[agentApplication]}
-                </span>
-                <span className="text-ui font-extrabold whitespace-nowrap text-gold">{agentApplication === null ? 'Apply' : 'Open'} →</span>
-            </Link>
+            {/* Applying moved to the field portal; somebody who started here is pointed there. */}
+            {agentApplication !== null && (
+                <a
+                    href="/agent/apply"
+                    className="mt-5 flex flex-wrap items-center gap-3 rounded-card border border-rule bg-raised px-5 py-4 hover:border-rule-strong"
+                >
+                    <span className="text-ui font-extrabold text-ink">Your agent application</span>
+                    <span className="min-w-0 flex-1 text-table text-muted">{AGENT_LINE[agentApplication]} It is now in the field portal.</span>
+                    <span className="text-ui font-extrabold whitespace-nowrap text-gold">Open →</span>
+                </a>
+            )}
 
             <section className="mt-5 overflow-hidden rounded-card border border-rule bg-raised">
                 <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4">

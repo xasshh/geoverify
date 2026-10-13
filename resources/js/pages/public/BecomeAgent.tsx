@@ -10,20 +10,21 @@ const NAV: NavItem[] = [
     { label: 'Become an agent', href: '/become-an-agent' },
 ];
 
-const APPLY = '/enumerate/agent';
+const APPLY = '/agent/sign-up';
 
 /**
  * Becoming a field agent, for somebody deciding whether to apply.
  *
- * Applying happens inside Enumerate on an ordinary portal account: one sign up,
- * one email to prove. That account never becomes staff by itself. An
- * administrator approving the application is what creates the officer.
+ * Applying happens in the field portal (/agent/sign-up, then /agent/apply) on
+ * an ordinary portal account: one sign up, one email to prove. That account
+ * never becomes staff by itself. An administrator approving the application
+ * is what creates the officer.
  */
 export default function BecomeAgent() {
     return (
         <div data-mode="daylight" className="min-h-dvh bg-raised text-ink">
             <Head title="Become a GeoVerify agent" />
-            <SiteHeader brand={<GeoVerifyLockup size={36} />} links={NAV} signIn={{ label: 'Sign in', href: '/enumerate/sign-in' }} />
+            <SiteHeader brand={<GeoVerifyLockup size={36} />} links={NAV} signIn={{ label: 'Sign in', href: '/agent' }} />
 
             <section className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2">
                 <div>
@@ -44,8 +45,8 @@ export default function BecomeAgent() {
                     </div>
                     <p className="mt-4 text-label text-muted">
                         Already an agent?{' '}
-                        <Link href="/login" className="font-bold text-gold-dark underline underline-offset-2">
-                            Sign in to the agent app
+                        <Link href="/agent" className="font-bold text-gold-dark underline underline-offset-2">
+                            Sign in to the field portal
                         </Link>
                         .
                     </p>
@@ -80,10 +81,10 @@ export default function BecomeAgent() {
                     <SectionHeading align="center" eyebrow="How to apply" title="Four steps from applying to your first day" />
                     <ol className="mt-10 grid list-none gap-4 p-0 md:grid-cols-4">
                         {[
-                            ['Open a free account', 'Sign up with your email address and confirm it from the link we send you. This is the same account used to check businesses on Enumerate.'],
+                            ['Open a free account', 'Press Sign up as an agent, give your name, email and a password, and confirm your email from the link we send you. Your application opens in the field portal.'],
                             ['Fill in the application', 'Four short parts: about you, background checks, a quick test of your phone, and the agreements. Save as you go and come back any time.'],
                             ['We check your details', 'Our team looks at your application, usually within a week, and emails you. If something is missing, we tell you exactly what.'],
-                            ['Training, then work', 'We train you on the app and on visiting businesses safely, with a short test. Then you get your agent sign in and your first area.'],
+                            ['Training, then work', 'We train you on the app and on visiting businesses safely, with a short test. Then your work in the field portal unlocks, with your first area.'],
                         ].map(([title, body], i) => (
                             <li key={title} className="rounded-card bg-raised p-5">
                                 <span className="flex size-9 items-center justify-center rounded-full bg-gold-soft text-ui font-extrabold text-gold-dark">{i + 1}</span>

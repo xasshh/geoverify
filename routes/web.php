@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\InvestorController as AdminInvestorController;
 use App\Http\Controllers\Admin\MandateController;
 use App\Http\Controllers\Admin\PeopleController;
 use App\Http\Controllers\Admin\ReviewModerationController;
+use App\Http\Controllers\Agent\AgentApplicationController;
+use App\Http\Controllers\Agent\AgentPortalController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
 use App\Http\Controllers\Client\LandController as ClientLandController;
 use App\Http\Controllers\Client\SignInController as ClientSignInController;
@@ -37,7 +39,6 @@ use App\Http\Controllers\Console\TeamTodayController;
 use App\Http\Controllers\Console\VerificationOrderController;
 use App\Http\Controllers\Desk\DeskController;
 use App\Http\Controllers\DirectoryController;
-use App\Http\Controllers\Enumerate\AgentApplicationController;
 use App\Http\Controllers\Enumerate\EnumerateController;
 use App\Http\Controllers\Enumerate\LandingController as EnumerateLandingController;
 use App\Http\Controllers\Enumerate\OrganisationController as EnumerateOrganisationController;
@@ -91,11 +92,44 @@ use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
-// Becoming a field agent. Applying happens inside Enumerate (enumerate.agent)
-// on a portal account; only an administrator approving it makes an officer,
-// because staff do not self register.
+// Becoming a field agent: what the work is, and the guarantor form to print.
 Route::get('become-an-agent', fn () => Inertia::render('public/BecomeAgent'))->name('become-agent');
 Route::get('become-an-agent/guarantor-form', fn () => view('agent.guarantor-form'))->name('become-agent.guarantor-form');
+
+/*
+| The field portal's door. /agent is where staff sign in (Fortify's /login
+| sends here) and where somebody signs up as an agent. Signing up opens a
+| portal account and an application, never a staff account: the field client
+| stays behind `field` on the staff guard, and only an administrator approving
+| the application makes an officer. Until then the applicant sees the field
+| portal's work locked, and their application.
+*/
+Route::prefix('agent')->name('agent.')->group(function (): void {
+    Route::get('/', [AgentPortalController::class, 'signInForm'])->name('sign-in');
+    Route::post('/', [AgentPortalController::class, 'signIn'])->middleware('throttle:20,1')->name('sign-in.submit');
+    Route::get('sign-up', [AgentPortalController::class, 'signUpForm'])->name('sign-up');
+    Route::post('sign-up', [AgentPortalController::class, 'signUp'])->middleware('throttle:6,1')->name('sign-up.submit');
+    Route::post('sign-out', [AgentPortalController::class, 'signOut'])->name('sign-out');
+
+    Route::middleware('applicant')->group(function (): void {
+        Route::get('apply', [AgentApplicationController::class, 'show'])->name('apply');
+        Route::post('start-work', [AgentPortalController::class, 'startWork'])->name('start-work');
+
+        // Always the signed in person's own application, so no route here
+        // names one. One generous limit for the group: the limiter shares a
+        // counter across routes, and a form saved part by part with six
+        // uploads must not trip it on the last button.
+        Route::prefix('apply')->name('apply.')->middleware(['applicant:proved', 'throttle:60,1'])->group(function (): void {
+            Route::post('start', [AgentApplicationController::class, 'start'])->name('start');
+            Route::post('about', [AgentApplicationController::class, 'about'])->name('about');
+            Route::post('background', [AgentApplicationController::class, 'background'])->name('background');
+            Route::post('files', [AgentApplicationController::class, 'file'])->name('file');
+            Route::post('device', [AgentApplicationController::class, 'device'])->name('device');
+            Route::post('agree', [AgentApplicationController::class, 'agree'])->name('agree');
+            Route::post('submit', [AgentApplicationController::class, 'submit'])->name('submit');
+        });
+    });
+});
 
 // How the whole thing works, for a first time visitor. The finer points of a
 // check stay on the directory's own page (directory.how).
@@ -697,20 +731,8 @@ Route::prefix('enumerate')->name('enumerate.')->group(function (): void {
             Route::get('projects/{reference}', [EnumerateOrganisationController::class, 'project'])->name('.project');
         });
 
-        // Applying to become a field agent. Always the signed in person's own
-        // application, so no route here names one. One generous limit for the
-        // group: the limiter shares a counter across routes, and a form saved
-        // part by part with six uploads must not trip it on the last button.
-        Route::prefix('agent')->name('agent')->middleware('throttle:60,1')->group(function (): void {
-            Route::get('/', [AgentApplicationController::class, 'show']);
-            Route::post('start', [AgentApplicationController::class, 'start'])->name('.start');
-            Route::post('about', [AgentApplicationController::class, 'about'])->name('.about');
-            Route::post('background', [AgentApplicationController::class, 'background'])->name('.background');
-            Route::post('files', [AgentApplicationController::class, 'file'])->name('.file');
-            Route::post('device', [AgentApplicationController::class, 'device'])->name('.device');
-            Route::post('agree', [AgentApplicationController::class, 'agree'])->name('.agree');
-            Route::post('submit', [AgentApplicationController::class, 'submit'])->name('.submit');
-        });
+        // Applying moved to the field portal (/agent/apply) on 2026-10-13.
+        Route::redirect('agent', '/agent/apply')->name('agent');
 
         // Help: the guide videos and the same steps written down.
         Route::get('help', [EnumerateController::class, 'help'])->name('help');

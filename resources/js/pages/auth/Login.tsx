@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SubmitEventHandler } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { Button } from '@/components/Button';
 import { TextField } from '@/components/Field';
 import { CityBackdrop } from '@/components/CityBackdrop';
@@ -15,19 +15,26 @@ interface LoginProps {
      * every load of this page drew an empty status bar above the form.
      */
     status?: string | null;
+    /** Filled in when somebody is sent back here to sign in again, as on approval. */
+    email?: string;
 }
 
-export default function Login({ status }: LoginProps) {
+/**
+ * The field portal's door, at /agent: staff and approved agents sign in here,
+ * and so do people part way through an application (AgentPortalController
+ * decides which side they land on).
+ */
+export default function Login({ status, email = '' }: LoginProps) {
     const [showPassword, setShowPassword] = useState(false);
     const { data, setData, post, processing, errors } = useForm({
-        email: '',
+        email,
         password: '',
         remember: false,
     });
 
     const submit: SubmitEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
-        post('/login');
+        post('/agent');
     };
 
     return (
@@ -35,7 +42,7 @@ export default function Login({ status }: LoginProps) {
             data-mode="daylight"
             className="relative flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-12"
         >
-            <Head title="Sign in" />
+            <Head title="Field portal" />
 
             <CityBackdrop />
 
@@ -50,6 +57,7 @@ export default function Login({ status }: LoginProps) {
                             />
                         </a>
                         <h1 className="font-wordmark text-[1.75rem] leading-none font-bold text-logo">GeoVerify</h1>
+                        <p className="mt-2 text-ui font-bold text-muted">Field portal</p>
                     </div>
 
                     {/* A hairline, not the black keyline that used to box the
@@ -118,8 +126,11 @@ export default function Login({ status }: LoginProps) {
                     </form>
                 </div>
 
-                <p className="mt-4 text-center text-label text-white/80">
-                    Accounts are created by an administrator. There is no self sign up.
+                <p className="mt-4 text-center text-ui text-white/90">
+                    New here?{' '}
+                    <Link href="/agent/sign-up" className="font-extrabold text-white underline underline-offset-2">
+                        Sign up as an agent
+                    </Link>
                 </p>
             </div>
         </div>

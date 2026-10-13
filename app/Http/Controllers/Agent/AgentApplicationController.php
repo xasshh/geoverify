@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers\Enumerate;
+namespace App\Http\Controllers\Agent;
 
 use App\Domain\Identity\Models\IdentityClaim;
+use App\Domain\Party\Models\PortalAccount;
 use App\Domain\Staff\Actions\ManageAgentApplication;
 use App\Domain\Staff\Actions\PresentAgentApplication;
 use App\Domain\Staff\Models\AgentApplication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -19,27 +21,32 @@ use InvalidArgumentException;
 use RuntimeException;
 
 /**
- * Applying to become a field agent, from inside the Enumerate dashboard.
+ * Applying to become a field agent, inside the field portal at /agent/apply.
  *
- * Somebody applies with the same portal account they would verify a business
- * with, so there is one sign up and one inbox to prove. The application is
- * always the signed in person's own: no route here takes an application id.
+ * An applicant is a portal account, not staff: the account is the kind
+ * Enumerate uses, opened at /agent/sign-up, and nothing in the field client is
+ * reachable from it. Approval by an administrator is what makes an officer
+ * (DecideAgentApplication). The application is always the signed in person's
+ * own: no route here takes an application id.
  */
 final class AgentApplicationController
 {
     public function __construct(
         private readonly ManageAgentApplication $manage,
         private readonly PresentAgentApplication $present,
-        private readonly EnumerateController $enumerate,
     ) {}
 
     public function show(Request $request): Response
     {
-        $account = EnumerateController::account($request);
+        $account = self::account();
         $application = $this->manage->forAccount($account);
 
-        return Inertia::render('enumerate/AgentApplication', [
-            'frame' => $this->enumerate->frame($request, $account),
+        return Inertia::render('agent/Apply', [
+            'frame' => [
+                'name' => $account->name,
+                'email' => $account->email,
+                'proved' => $account->isProved(),
+            ],
             'application' => $application === null ? null : $this->present->page($application),
             'choices' => PresentAgentApplication::choices(),
             'adultBefore' => now()->subYears(18)->toDateString(),
@@ -48,9 +55,9 @@ final class AgentApplicationController
 
     public function start(Request $request): RedirectResponse
     {
-        $this->manage->start(EnumerateController::account($request));
+        $this->manage->start(self::account());
 
-        return redirect()->route('enumerate.agent');
+        return redirect()->route('agent.apply');
     }
 
     public function about(Request $request): RedirectResponse
@@ -186,10 +193,10 @@ final class AgentApplicationController
     /** Runs a change against the signed in person's own application. */
     private function attempt(Request $request, string $key, callable $change, string $done = 'Saved.'): RedirectResponse
     {
-        $application = $this->manage->forAccount(EnumerateController::account($request));
+        $application = $this->manage->forAccount(self::account());
 
         if ($application === null) {
-            return redirect()->route('enumerate.agent');
+            return redirect()->route('agent.apply');
         }
 
         try {
@@ -199,5 +206,14 @@ final class AgentApplicationController
         }
 
         return back()->with('status', $done);
+    }
+
+    /** The applicant, put there by the `applicant` middleware. */
+    public static function account(): PortalAccount
+    {
+        $account = Auth::guard('portal')->user();
+        abort_unless($account instanceof PortalAccount, 403);
+
+        return $account;
     }
 }
