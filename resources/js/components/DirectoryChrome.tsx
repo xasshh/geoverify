@@ -93,7 +93,7 @@ export function DirectoryChrome({
                                 href="/enumerate"
                                 className="inline-flex min-h-touch items-center rounded-sm bg-gold px-4 text-ui font-extrabold text-on-accent hover:bg-gold-dark"
                             >
-                                Verify a business
+                                Find a location
                             </Link>
                         )}
                         {surfaces.portal && signedIn && (
