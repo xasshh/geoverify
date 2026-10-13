@@ -110,6 +110,8 @@ Route::prefix('agent')->name('agent.')->group(function (): void {
     Route::get('sign-up', [AgentPortalController::class, 'signUpForm'])->name('sign-up');
     Route::post('sign-up', [AgentPortalController::class, 'signUp'])->middleware('throttle:6,1')->name('sign-up.submit');
     Route::post('sign-out', [AgentPortalController::class, 'signOut'])->name('sign-out');
+    Route::get('forgot-password', [AgentPortalController::class, 'forgotForm'])->name('forgot-password');
+    Route::post('forgot-password', [AgentPortalController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('forgot-password.send');
 
     Route::middleware('applicant')->group(function (): void {
         Route::get('apply', [AgentApplicationController::class, 'show'])->name('apply');

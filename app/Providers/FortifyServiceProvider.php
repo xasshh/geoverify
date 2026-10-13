@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\LogoutResponse;
 use App\Models\User;
@@ -33,11 +34,17 @@ final class FortifyServiceProvider extends ServiceProvider
         // The field portal's door moved to /agent (AgentPortalController), where
         // applicants sign in too. /login stays as Fortify's POST and as the
         // address the auth middleware sends people to, and forwards them on.
-        Fortify::loginView(fn () => redirect()->route('agent.sign-in'));
+        // Reflashed, so "your password has been reset" survives the extra hop.
+        Fortify::loginView(function () {
+            session()->reflash();
 
-        Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/ForgotPassword', [
-            'status' => session('status'),
-        ]));
+            return redirect()->route('agent.sign-in');
+        });
+
+        // Asking for a link happens at /agent/forgot-password, which serves
+        // staff and applicants from one form.
+        Fortify::requestPasswordResetLinkView(fn () => redirect()->route('agent.forgot-password'));
+        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/ResetPassword', [
             'email' => $request->input('email'),

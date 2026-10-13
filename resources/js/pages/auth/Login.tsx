@@ -97,15 +97,20 @@ export default function Login({ status, email = '' }: LoginProps) {
                                 }}
                                 {...(errors.password === undefined ? {} : { error: errors.password })}
                             />
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowPassword((v) => !v);
-                                }}
-                                className="self-start text-label text-muted underline underline-offset-2 hover:text-ink"
-                            >
-                                {showPassword ? 'Hide password' : 'Show password'}
-                            </button>
+                            <div className="flex items-center justify-between gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowPassword((v) => !v);
+                                    }}
+                                    className="text-label text-muted underline underline-offset-2 hover:text-ink"
+                                >
+                                    {showPassword ? 'Hide password' : 'Show password'}
+                                </button>
+                                <Link href="/agent/forgot-password" className="text-label font-bold text-gold-dark underline underline-offset-2 hover:text-ink">
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
 
                         <label className="flex items-center gap-2.5 text-ui text-muted">

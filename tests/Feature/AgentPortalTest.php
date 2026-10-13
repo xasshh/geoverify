@@ -7,7 +7,13 @@ use App\Domain\Staff\Actions\DecideAgentApplication;
 use App\Domain\Staff\Models\AgentApplication;
 use App\Enums\Role;
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -113,4 +119,41 @@ it('lets an approved agent in with the password they applied with', function () 
 
     $this->post('/agent', ['email' => 'ngozi@example.ng', 'password' => 'a-long-password'])->assertRedirect('/field');
     expect(Auth::guard('web')->user()?->email)->toBe('ngozi@example.ng');
+});
+
+it('sends a staff member a reset link through Fortify, and lets them choose a new password', function () {
+    Notification::fake();
+    $officer = User::query()->create([
+        'name' => 'Active officer', 'email' => 'active@geoverify.test', 'password' => 'correct-horse-battery',
+        'role' => Role::Officer, 'status' => User::STATUS_ACTIVE,
+    ]);
+
+    $this->get('/forgot-password')->assertRedirect('/agent/forgot-password');
+    $this->get('/agent/forgot-password')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('agent/ForgotPassword'));
+    $this->post('/agent/forgot-password', ['email' => 'Active@geoverify.test'])->assertSessionHas('status');
+    Notification::assertSentTo($officer, ResetPassword::class);
+
+    $token = Password::broker('users')->createToken($officer);
+    $this->get("/reset-password/{$token}?email=active@geoverify.test")->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->component('auth/ResetPassword'));
+    $this->post('/reset-password', [
+        'token' => $token, 'email' => 'active@geoverify.test',
+        'password' => 'a-brand-new-password', 'password_confirmation' => 'a-brand-new-password',
+    ])->assertRedirect('/login');
+
+    expect(Hash::check('a-brand-new-password', (string) $officer->fresh()?->password))->toBeTrue();
+});
+
+it('sends an applicant their link through the portal, and answers the same for nobody', function () {
+    Mail::fake();
+    Notification::fake();
+    $account = PortalAccount::query()->create(['name' => 'Ngozi', 'email' => 'ngozi@example.ng', 'password' => 'a-long-password', 'status' => 'active']);
+
+    $this->post('/agent/forgot-password', ['email' => 'ngozi@example.ng'])->assertSessionHas('status');
+    expect(DB::table('portal_password_reset_tokens')->where('email', 'ngozi@example.ng')->exists())->toBeTrue()
+        ->and(DB::table('password_reset_tokens')->exists())->toBeFalse();
+
+    $this->post('/agent/forgot-password', ['email' => 'nobody@example.ng'])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('status');
 });

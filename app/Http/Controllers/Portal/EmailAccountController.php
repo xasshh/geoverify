@@ -234,6 +234,11 @@ final class EmailAccountController extends Controller
         Auth::guard('portal')->login($signedIn);
         $request->session()->regenerate();
 
+        // An applicant goes back to their application in the field portal.
+        if (AgentApplication::query()->where('portal_account_id', $signedIn->id)->exists()) {
+            return redirect()->route('agent.apply')->with('status', 'Your password is set.');
+        }
+
         return redirect()->route('portal.dashboard')->with('status', 'Your password is set.');
     }
 

@@ -13,6 +13,7 @@ use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -24,6 +25,7 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Requests\LoginRequest;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
+use Throwable;
 
 /**
  * The field portal's door, at /agent.
@@ -138,6 +140,33 @@ final class AgentPortalController
         return redirect()->route('agent.apply')->with('status', $result['mailed']
             ? 'Welcome. We have sent a link to '.$result['account']->email.'. Open it to confirm your email, then fill in your application.'
             : 'Welcome. The confirmation email did not go. Press "Send it again" in a minute.');
+    }
+
+    public function forgotForm(): Response
+    {
+        return Inertia::render('agent/ForgotPassword');
+    }
+
+    /**
+     * One form for both kinds of account, staff first, as at sign in. A staff
+     * link resets through Fortify (/reset-password/{token}); an applicant's
+     * through the portal's own broker. The answer is the same whether or not
+     * the address has an account, so the form cannot find out who is here.
+     */
+    public function sendResetLink(Request $request): RedirectResponse
+    {
+        $email = mb_strtolower(trim((string) $request->validate(['email' => ['required', 'email', 'max:180']])['email']));
+        $staff = User::query()->whereRaw('lower(email) = ?', [$email])->exists();
+
+        try {
+            Password::broker($staff ? 'users' : 'portal_accounts')->sendResetLink(['email' => $email]);
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['email' => 'The email could not be sent just now. Try again in a few minutes.']);
+        }
+
+        return back()->with('status', 'If that email has an account, a link to choose a new password is on its way. Check your spam folder too.');
     }
 
     /** Leaves the applicant's session. A staff session signs out through Fortify. */
