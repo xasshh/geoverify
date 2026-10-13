@@ -375,7 +375,7 @@ function Enumerate() {
                         href="/enumerate"
                         className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold"
                     >
-                        Verify a business
+                        Find a location
                     </Link>
                 </div>
             </div>
