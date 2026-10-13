@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from "@inertiajs/react";
+import type { ReactNode } from "react";
 import { PeoplePhoto } from "@/components/AuthLayouts";
 import { GeoVerifyLockup } from "@/components/GeoVerifyMark";
 import {
@@ -6,12 +7,10 @@ import {
     SectionHeading,
     SiteFooter,
     SiteHeader,
-    Tick,
     type NavItem,
 } from "@/components/PublicSite";
 
 const NAV: NavItem[] = [
-    { label: "Registry", href: "/directory" },
     {
         label: "Products",
         children: [
@@ -30,9 +29,8 @@ const NAV: NavItem[] = [
  * How GeoVerify works, for somebody who has never used anything like it.
  *
  * The steps, the closing call and the field network used to sit at the foot of
- * the home page. They live here now, with the plainest account we can give of
- * who the site is for and what each word on it means. The finer points of a
- * check (tiers, how long one stays current) stay on the directory's own page.
+ * the home page. They live here now, opened by the whole flow drawn once, from
+ * a registration to a dated report, with who does each part.
  */
 export default function HowGeoVerifyWorks() {
     return (
@@ -47,7 +45,7 @@ export default function HowGeoVerifyWorks() {
             <section className="mx-auto max-w-[1000px] px-4 pt-14 pb-6 text-center sm:px-6">
                 <Eyebrow>How it works</Eyebrow>
                 <h1 className="mt-2 font-display text-[2.4rem] leading-[1.05] font-extrabold tracking-[-0.02em] sm:text-[3rem]">
-                    How GeoVerify works, in plain words
+                    How GeoVerify works
                 </h1>
                 <p className="mx-auto mt-4 max-w-[60ch] text-body text-muted">
                     Anybody can put a business name on paper. GeoVerify sends a
@@ -58,10 +56,9 @@ export default function HowGeoVerifyWorks() {
                 </p>
             </section>
 
-            <Paths />
+            <Flow />
             <Steps />
             <Enumerate />
-            <Words />
             <FieldAgents />
             <Closing />
             <SiteFooter />
@@ -69,86 +66,211 @@ export default function HowGeoVerifyWorks() {
     );
 }
 
-/** Three doors, one for each kind of visitor. */
-function Paths() {
+/** A line drawing at 24px in the current colour, for the infographic and the cards. */
+function Icon({ children }: { children: ReactNode }) {
+    return (
+        <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            {children}
+        </svg>
+    );
+}
+
+const ICONS = {
+    building: (
+        <Icon>
+            <path d="M4 21V5l8-3 8 3v16" />
+            <path d="M9 21v-4h6v4M8 8h2M14 8h2M8 12h2M14 12h2M2 21h20" />
+        </Icon>
+    ),
+    search: (
+        <Icon>
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m20 20-4.2-4.2" />
+        </Icon>
+    ),
+    visit: (
+        <Icon>
+            <path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 1 1 13 0c0 5.2-6.5 11-6.5 11z" />
+            <circle cx="12" cy="10" r="2.3" />
+        </Icon>
+    ),
+    review: (
+        <Icon>
+            <path d="M12 2.5 4.5 5.5v5.7c0 4.6 3.2 8.6 7.5 10.3 4.3-1.7 7.5-5.7 7.5-10.3V5.5z" />
+            <path d="m8.8 12 2.2 2.2 4.4-4.6" />
+        </Icon>
+    ),
+    report: (
+        <Icon>
+            <path d="M6 2.5h8l4 4V21.5H6z" />
+            <path d="M14 2.5v4h4M9 11h6M9 14.5h3" />
+            <rect x="12.5" y="16" width="3.5" height="3.5" rx="0.5" />
+        </Icon>
+    ),
+    calendar: (
+        <Icon>
+            <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+            <path d="M3.5 10h17M8 3v4M16 3v4" />
+            <path d="m9.5 15 1.8 1.8 3.4-3.6" />
+        </Icon>
+    ),
+    offline: (
+        <Icon>
+            <path d="M2.5 8.5a14 14 0 0 1 5-2.9M12 5.2a14 14 0 0 1 9.5 3.3M5.5 12a9 9 0 0 1 4-2.2M15 10.2a9 9 0 0 1 3.5 1.8M8.8 15.3a4.5 4.5 0 0 1 6.4 0" />
+            <circle cx="12" cy="19" r="0.6" fill="currentColor" />
+            <path d="m3 3 18 18" />
+        </Icon>
+    ),
+    training: (
+        <Icon>
+            <path d="m2.5 9 9.5-4.5L21.5 9 12 13.5z" />
+            <path d="M6.5 11v4.5c1.5 1.5 3.5 2.2 5.5 2.2s4-.7 5.5-2.2V11M21.5 9v5" />
+        </Icon>
+    ),
+    home: (
+        <Icon>
+            <path d="M3.5 11 12 4l8.5 7" />
+            <path d="M5.5 9.5V20h13V9.5" />
+            <path d="M12 17.5s-2.6-2.3-2.6-4.3a2.6 2.6 0 0 1 5.2 0c0 2-2.6 4.3-2.6 4.3z" />
+        </Icon>
+    ),
+};
+
+/**
+ * The whole flow, drawn once: who does what, from a registration to a report
+ * anyone can confirm. A row of five on a wide screen, a line down the side on
+ * a phone.
+ */
+function Flow() {
     const portalOpen = usePage().props.surfaces.portal;
-    const paths: Array<{
+    const steps: Array<{
+        icon: ReactNode;
         who: string;
-        want: string;
-        href: string;
-        cta: string;
-        open: boolean;
-        photo: string;
-        alt: string;
+        title: string;
+        line: string;
     }> = [
         {
-            who: "I want to check a business",
-            want: "Before you send money or sign a deal, find out if a business is registered and really at its address.",
+            icon: ICONS.building,
+            who: "The business",
+            title: "Registers",
+            line: "Gets its RC or BN number from CAC.",
+        },
+        {
+            icon: ICONS.search,
+            who: "You",
+            title: "Look it up",
+            line: "Enter that number on Enumerate.",
+        },
+        {
+            icon: ICONS.visit,
+            who: "A field agent",
+            title: "Visits",
+            line: "Goes to the address, takes photos and a GPS position.",
+        },
+        {
+            icon: ICONS.review,
+            who: "GeoVerify",
+            title: "Reviews",
+            line: "A supervisor checks the agent's work.",
+        },
+        {
+            icon: ICONS.report,
+            who: "You",
+            title: "Get a report",
+            line: "Dated, with a QR code anyone can scan.",
+        },
+    ];
+    const doors: Array<{ who: string; label: string; href: string | null }> = [
+        {
+            who: "Checking a business?",
+            label: "Find a location",
             href: "/enumerate",
-            cta: "Verify a business",
-            open: true,
-            photo: "people-checking",
-            alt: "A man in a cafe checking a business on his phone before paying an invoice",
         },
         {
-            who: "I own a business",
-            want: 'Claim your business on the map, choose what people can see, and get a "verified" badge.',
-            href: "/portal/register",
-            cta: "Register a business",
-            open: portalOpen,
-            photo: "people-shop-owner",
-            alt: "A shop owner behind the counter of her provisions shop",
+            who: "Own a business?",
+            label: portalOpen ? "EasyBuzi" : "EasyBuzi opens soon",
+            href: portalOpen ? "/portal/register" : null,
         },
         {
-            who: "I want to work with GeoVerify",
-            want: "Join as a field agent. You visit businesses near you and confirm they are real, using our phone app.",
+            who: "Want to work with us?",
+            label: "Become an agent",
             href: "/become-an-agent",
-            cta: "Become an agent",
-            open: true,
-            photo: "people-agent-street",
-            alt: "A field agent in a teal vest photographing a shop front with his phone",
         },
     ];
 
     return (
         <section className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">
-            <h2 className="text-center font-display text-[1.6rem] font-extrabold">
-                Start with what you want to do
-            </h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-                {paths.map((p) => (
-                    <div
-                        key={p.who}
-                        className="flex flex-col overflow-hidden rounded-card border border-rule bg-raised shadow-card"
-                    >
-                        <PeoplePhoto
-                            name={p.photo}
-                            alt={p.alt}
-                            bare
-                            className="h-52"
-                        />
-                        <div className="flex flex-1 flex-col p-6">
-                            <p className="font-display text-[1.25rem] font-extrabold text-ink">
-                                {p.who}
-                            </p>
-                            <p className="mt-2 flex-1 text-ui text-muted">
-                                {p.want}
-                            </p>
-                            {p.open ? (
-                                <Link
-                                    href={p.href}
-                                    className="mt-5 inline-flex w-fit rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold"
-                                >
-                                    {p.cta}
-                                </Link>
-                            ) : (
-                                <span className="mt-5 inline-flex w-fit rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">
-                                    Opens soon
+            <div className="rounded-[24px] bg-sunken px-5 py-10 sm:px-10">
+                <h2 className="text-center font-display text-[1.6rem] font-extrabold">
+                    From paper to proof, in five steps
+                </h2>
+                <ol className="relative mt-10 grid list-none gap-8 p-0 md:grid-cols-5 md:gap-4">
+                    {/* The thread joining the steps: across on a wide screen, down on a phone. */}
+                    <span
+                        aria-hidden="true"
+                        className="absolute top-0 bottom-0 left-7 w-0.5 bg-gold-dark/25 md:top-7 md:right-[10%] md:bottom-auto md:left-[10%] md:h-0.5 md:w-auto"
+                    />
+                    {steps.map((step, i) => (
+                        <li
+                            key={step.title}
+                            className="relative flex gap-4 md:flex-col md:items-center md:text-center"
+                        >
+                            <span className="relative flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-gold-dark bg-raised text-gold-dark shadow-card">
+                                {step.icon}
+                                <span className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-gold-dark text-[0.7rem] font-extrabold text-on-accent">
+                                    {i + 1}
                                 </span>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                            </span>
+                            <span className="md:mt-3">
+                                <span className="block text-[0.7rem] font-extrabold tracking-[0.08em] text-gold-dark uppercase">
+                                    {step.who}
+                                </span>
+                                <span className="mt-0.5 block font-display text-[1.15rem] font-extrabold text-ink">
+                                    {step.title}
+                                </span>
+                                <span className="mt-1 block text-ui text-muted">
+                                    {step.line}
+                                </span>
+                            </span>
+                        </li>
+                    ))}
+                </ol>
+                <div className="mt-10 flex flex-wrap justify-center gap-3 border-t border-rule pt-8">
+                    {doors.map((door) =>
+                        door.href === null ? (
+                            <span
+                                key={door.who}
+                                className="flex items-center gap-2 rounded-full bg-raised px-4 py-2 text-ui text-muted"
+                            >
+                                {door.who}{" "}
+                                <strong className="font-extrabold">
+                                    {door.label}
+                                </strong>
+                            </span>
+                        ) : (
+                            <Link
+                                key={door.who}
+                                href={door.href}
+                                className="flex items-center gap-2 rounded-full bg-raised px-4 py-2 text-ui text-muted shadow-card hover:text-ink"
+                            >
+                                {door.who}{" "}
+                                <strong className="font-extrabold text-gold-dark">
+                                    {door.label}
+                                </strong>
+                            </Link>
+                        ),
+                    )}
+                </div>
             </div>
         </section>
     );
@@ -223,21 +345,18 @@ function Enumerate() {
                 />
                 <ol className="mt-8 grid list-none gap-4 p-0 md:grid-cols-4">
                     {[
+                        ["Sign up", "A free account with your email."],
                         [
-                            "Sign up",
-                            "Open a free account with your email address. We send you a link to confirm it is yours.",
+                            "Choose how to check",
+                            "Search by the business's CAC number.",
                         ],
                         [
-                            "Enter the CAC number",
-                            "We look the business up on the official CAC register and show you its name, status and directors.",
-                        ],
-                        [
-                            "Choose how deep to check",
-                            "A records check is instant. A site visit sends an agent to the address. Monitoring has an agent visit every trading day.",
+                            "Deep dive",
+                            "Records only, an agent visit, or daily visits.",
                         ],
                         [
                             "Get your report",
-                            "Follow the progress on your dashboard, then download a report with a QR code anyone can scan to confirm it is genuine.",
+                            "Download it. Its QR code proves it is genuine.",
                         ],
                     ].map(([title, body], i) => (
                         <li key={title} className="rounded-card bg-raised p-5">
@@ -258,69 +377,7 @@ function Enumerate() {
                     >
                         Verify a business
                     </Link>
-                    <Link
-                        href="/directory/how-verification-works"
-                        className="text-ui font-bold text-gold-dark underline underline-offset-2"
-                    >
-                        What each check means, in detail
-                    </Link>
                 </div>
-            </div>
-        </section>
-    );
-}
-
-/** The words the site uses, said once in everyday language. */
-function Words() {
-    const words: Array<[string, string]> = [
-        [
-            "CAC number",
-            "The number the Corporate Affairs Commission gives a registered business. It starts with RC for a company or BN for a business name.",
-        ],
-        [
-            "Field agent",
-            "A trained person who visits a business in person and records what they find, using the GeoVerify app on their phone.",
-        ],
-        [
-            "Verified",
-            "A field agent went to the address, the business was there, and a supervisor checked their work. The date of the visit is always shown.",
-        ],
-        [
-            "Claimed",
-            "The owner proved the business is theirs and chose to show it publicly.",
-        ],
-        [
-            "Registry",
-            "The list of businesses GeoVerify has recorded, shown on a map. A business only appears in full once its owner agrees.",
-        ],
-        [
-            "Report",
-            "A document you can download and share that says what was checked, what was found and when.",
-        ],
-    ];
-
-    return (
-        <section className="bg-raised">
-            <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6">
-                <SectionHeading
-                    eyebrow="Words you will see"
-                    title="What our words mean"
-                />
-                <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {words.map(([word, meaning]) => (
-                        <div
-                            key={word}
-                            className="rounded-card border border-rule p-5"
-                        >
-                            <dt className="text-body font-extrabold text-ink">
-                                {word}
-                            </dt>
-                            <dd className="mt-1 text-ui text-muted">
-                                {meaning}
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
             </div>
         </section>
     );
@@ -349,29 +406,37 @@ function FieldAgents() {
                     </Link>
                 </div>
                 <ul className="grid gap-3 sm:grid-cols-2">
-                    {[
+                    {(
                         [
-                            "Clear daily work",
-                            "Each day you get a small area on the map, with the buildings to visit already marked.",
-                        ],
-                        [
-                            "Works without data",
-                            "The app keeps your work on the phone until you have signal again.",
-                        ],
-                        [
-                            "Trained and supported",
-                            "We train you first, and a supervisor checks your work and messages you in the app.",
-                        ],
-                        [
-                            "Near where you live",
-                            "You work in your own area, a day at a time.",
-                        ],
-                    ].map(([title, body]) => (
+                            [
+                                ICONS.calendar,
+                                "Clear daily work",
+                                "Each day you get a small area on the map, with the buildings to visit already marked.",
+                            ],
+                            [
+                                ICONS.offline,
+                                "Works without data",
+                                "The app keeps your work on the phone until you have signal again.",
+                            ],
+                            [
+                                ICONS.training,
+                                "Trained and supported",
+                                "We train you first, and a supervisor checks your work and messages you in the app.",
+                            ],
+                            [
+                                ICONS.home,
+                                "Near where you live",
+                                "You work in your own area, a day at a time.",
+                            ],
+                        ] as Array<[ReactNode, string, string]>
+                    ).map(([icon, title, body]) => (
                         <li
                             key={title}
                             className="flex gap-3 rounded-card border border-rule bg-raised p-4"
                         >
-                            <Tick className="mt-0.5 text-green" />
+                            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gold-soft text-gold-dark">
+                                {icon}
+                            </span>
                             <span>
                                 <span className="block text-ui font-extrabold text-ink">
                                     {title}
@@ -399,8 +464,8 @@ function Closing() {
                         registry.
                     </h2>
                     <p className="mt-2 text-ui text-inverse/80">
-                        Register your business, or explore what has already been
-                        mapped.
+                        Check a business before you pay, or join us as a field
+                        agent.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -408,13 +473,13 @@ function Closing() {
                         href={portalOpen ? "/portal/register" : "/enumerate"}
                         className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white"
                     >
-                        {portalOpen ? "Get started" : "Verify a business"}
+                        {portalOpen ? "Get started" : "Find a location"}
                     </Link>
                     <Link
-                        href="/directory"
+                        href="/become-an-agent"
                         className="rounded-full bg-white px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white/90"
                     >
-                        Explore the registry
+                        Become an agent
                     </Link>
                 </div>
             </div>

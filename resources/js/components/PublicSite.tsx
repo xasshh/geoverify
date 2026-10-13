@@ -253,7 +253,8 @@ export function SiteFooter() {
         {
             title: 'Products',
             links: [
-                { label: 'Business directory', href: '/directory' },
+                // The directory opens with the business portal.
+                ...(portalOpen ? [{ label: 'Business directory', href: '/directory' }] : []),
                 { label: 'Enumerate', href: '/enumerate' },
                 ...(portalOpen ? [{ label: 'EasyBuzi', href: '/portal/sign-in' }] : []),
             ],
@@ -261,7 +262,7 @@ export function SiteFooter() {
         {
             title: 'Company',
             links: [
-                { label: 'How it works', href: '/directory/how-verification-works' },
+                { label: 'How it works', href: '/how-it-works' },
                 { label: 'Become an agent', href: '/become-an-agent' },
                 { label: 'Pricing', href: '/enumerate#pricing' },
                 { label: 'Privacy policy', href: '/privacy' },
