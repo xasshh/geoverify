@@ -1,7 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
-import { RegistryFacts } from '@/components/EnumerateParts';
+import { RegistryFacts, RegistryLocation } from '@/components/EnumerateParts';
 import { EnumerateShell } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
 import { day, kobo, priceLabel, registration, type EnumerateFrame, type Prices, type RegistryMatch } from '@/lib/enumerate';
@@ -204,6 +204,7 @@ export default function New({ frame, prices, start }: Props) {
                                         );
                                     })}
                                 </ul>
+                                {picked !== null && <RegistryLocation match={picked} />}
                             </div>
                         )}
                     </section>

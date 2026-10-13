@@ -4,7 +4,6 @@ import { CityBackdrop } from '@/components/CityBackdrop';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 import { HexField } from '@/components/AuthLayouts';
 import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
-import { kobo, type Prices } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
 
@@ -26,7 +25,7 @@ const NAV: NavItem[] = [
  * that works today, the quick check searches the real directory, and the
  * field app is shown as it looks now rather than described.
  */
-export default function Home({ prices }: { prices: Prices }) {
+export default function Home() {
     // The directory searches open with the business portal.
     const portalOpen = usePage().props.surfaces.portal;
 
@@ -36,7 +35,7 @@ export default function Home({ prices }: { prices: Prices }) {
 
             <Hero />
             <TwoViews />
-            <Enumerate tier1={prices.tier1} />
+            <Enumerate />
             <BusinessPortal />
             <InvestPortal />
             {portalOpen && <QuickCheck />}
@@ -113,23 +112,22 @@ function Hero() {
 function TwoViews() {
     return (
         <section className="bg-raised">
-            <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
-                <div className="relative mx-auto w-full max-w-[420px]">
+            <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
+                {/* GeoVerify in a minute: built in ~/geoverify-guides/overview, narrated by a stock voice until the team records its own. */}
+                <div className="relative mx-auto w-full max-w-[640px]">
                     <div aria-hidden="true" className="absolute -inset-4 -z-0 rounded-[32px] bg-green-soft/70" />
-                    <picture>
-                        <source srcSet="/media/people-market-phone.webp" type="image/webp" />
-                        <img
-                            src="/media/people-market-phone.jpg"
-                            alt="A woman in a market holding up her phone, showing a map with business locations"
-                            width={900}
-                            height={1200}
-                            loading="lazy"
-                            className="relative aspect-[3/4] w-full rounded-[24px] object-cover shadow-card"
-                        />
-                    </picture>
-                    <span className="absolute bottom-5 left-5 flex items-center gap-2 rounded-full bg-raised/95 px-3 py-1.5 text-label font-extrabold text-ink shadow-card backdrop-blur">
-                        <Tick className="text-green" /> The registry, in your hand
-                    </span>
+                    <video
+                        className="relative aspect-video w-full rounded-[20px] bg-[#0F1A17] shadow-card"
+                        src="/media/geoverify-overview.mp4"
+                        poster="/media/geoverify-overview.jpg"
+                        controls
+                        playsInline
+                        preload="none"
+                        aria-label="GeoVerify in a minute: field agents, Enumerate, EasyBuzi and how to join as an agent"
+                    />
+                    <p className="relative mt-3 flex items-center gap-2 text-label font-extrabold text-ink">
+                        <Tick className="text-green" /> GeoVerify in a minute. Press play, sound on.
+                    </p>
                 </div>
                 <div>
                     <SectionHeading eyebrow="One record, two views" title={<>A registered business and a verified place.</>} />
@@ -143,10 +141,7 @@ function TwoViews() {
                         deep its verification goes before you pay, partner or invest.
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
-                        <Link href="/directory" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
-                            Explore the registry
-                        </Link>
-                        <Link href="/enumerate" className="rounded-full border border-rule-strong px-5 py-2.5 text-ui font-extrabold text-ink hover:border-ink">
+                        <Link href="/enumerate" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
                             Verify a business
                         </Link>
                     </div>
@@ -179,7 +174,7 @@ function PhoneDemo() {
     );
 }
 
-function Enumerate({ tier1 }: { tier1: number }) {
+function Enumerate() {
     return (
         <section className="relative overflow-hidden bg-[#0F1A17] text-inverse">
             <HexField />
@@ -210,9 +205,8 @@ function Enumerate({ tier1 }: { tier1: number }) {
                     </ul>
                     <div className="mt-7 flex flex-wrap items-center gap-4">
                         <Link href="/enumerate" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
-                            Verify a business
+                            Find a location
                         </Link>
-                        <span className="text-label text-inverse/60">Registry checks from {kobo(tier1)}</span>
                     </div>
                 </div>
                 <div>
@@ -255,7 +249,7 @@ function BusinessPortal() {
                 <div>
                     <Eyebrow>For business owners</Eyebrow>
                     <h2 className="mt-2 font-display text-[2rem] leading-[1.1] font-extrabold tracking-[-0.02em] sm:text-[2.4rem]">
-                        The business portal
+                        EasyBuzi
                     </h2>
                     <p className="mt-4 text-body text-muted">
                         Claim the listing our officers recorded, or register a new one. Then keep it right, choose what the
@@ -283,9 +277,11 @@ function BusinessPortal() {
                         ) : (
                             <span className="rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">Business registration opens soon</span>
                         )}
-                        <Link href="/directory" className="rounded-full border border-rule-strong px-5 py-2.5 text-ui font-extrabold text-ink hover:border-ink">
-                            {portalOpen ? 'Find yours to claim' : 'Explore the registry'}
-                        </Link>
+                        {portalOpen && (
+                            <Link href="/directory" className="rounded-full border border-rule-strong px-5 py-2.5 text-ui font-extrabold text-ink hover:border-ink">
+                                Find yours to claim
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

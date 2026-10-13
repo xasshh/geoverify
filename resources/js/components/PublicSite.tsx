@@ -255,7 +255,7 @@ export function SiteFooter() {
             links: [
                 { label: 'Business directory', href: '/directory' },
                 { label: 'Enumerate', href: '/enumerate' },
-                ...(portalOpen ? [{ label: 'Business portal', href: '/portal/sign-in' }] : []),
+                ...(portalOpen ? [{ label: 'EasyBuzi', href: '/portal/sign-in' }] : []),
             ],
         },
         {

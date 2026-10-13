@@ -129,3 +129,42 @@ export function RegistryFacts({ match }: { match: RegistryMatch }) {
         </span>
     );
 }
+
+/**
+ * Where the register says the business is: a map search for its name and
+ * registered address, as Directions works in the directory. It shows what CAC
+ * holds, which is not always where the business trades; a site visit is what
+ * confirms the place.
+ */
+export function RegistryLocation({ match }: { match: RegistryMatch }) {
+    const where = match.address ?? match.place;
+
+    if (where === null) {
+        return null;
+    }
+
+    const query = encodeURIComponent(`${match.name}, ${where}`);
+
+    return (
+        <div className="mt-3 overflow-hidden rounded-card border border-rule">
+            <iframe
+                title={`Map of ${match.name}`}
+                src={`https://www.google.com/maps?q=${query}&output=embed`}
+                className="block h-[220px] w-full border-0 bg-sunken"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-sunken px-3 py-2 text-label">
+                <span className="text-muted">The address on the CAC register. A site visit confirms where it trades.</span>
+                <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${query}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-extrabold text-gold-dark hover:text-ink"
+                >
+                    Open in Google Maps
+                </a>
+            </div>
+        </div>
+    );
+}

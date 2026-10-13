@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { HexField } from '@/components/AuthLayouts';
 import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
-import { RegistryFacts } from '@/components/EnumerateParts';
+import { RegistryFacts, RegistryLocation } from '@/components/EnumerateParts';
 import { kobo, priceLabel, type Prices, type RegistryMatch } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
@@ -245,6 +245,7 @@ function SearchBox({ tier1 }: { tier1: number }) {
                                             )}
                                         </p>
                                         <RegistryFacts match={match} />
+                                        {matches.length === 1 && <RegistryLocation match={match} />}
                                     </div>
                                     <Link
                                         href={`/enumerate/verify?by=rc&q=${encodeURIComponent(match.rcNumber)}&tier=1`}
