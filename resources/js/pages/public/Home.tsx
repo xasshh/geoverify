@@ -97,7 +97,7 @@ function Hero() {
                     )}
                     <div className="mt-5 flex flex-wrap justify-center gap-3">
                         <Link href="/enumerate" className="rounded-full bg-logo px-5 py-2.5 text-ui font-extrabold text-ink hover:bg-white">
-                            Verify a business
+                            Find a location
                         </Link>
                         <Link href="/become-an-agent" className="rounded-full border border-white/50 px-5 py-2.5 text-ui font-extrabold hover:bg-white/10">
                             Become an agent
@@ -142,7 +142,7 @@ function TwoViews() {
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
                         <Link href="/enumerate" className="rounded-full bg-gold-dark px-5 py-2.5 text-ui font-extrabold text-on-accent hover:bg-gold">
-                            Verify a business
+                            Find a location
                         </Link>
                     </div>
                 </div>
