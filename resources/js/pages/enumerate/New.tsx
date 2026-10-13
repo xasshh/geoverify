@@ -1,9 +1,10 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/Button';
+import { RegistryFacts } from '@/components/EnumerateParts';
 import { EnumerateShell } from '@/components/EnumerateShell';
 import { cx } from '@/lib/cx';
-import { companyType, kobo, priceLabel, registration, type EnumerateFrame, type Prices, type RegistryMatch } from '@/lib/enumerate';
+import { day, kobo, priceLabel, registration, type EnumerateFrame, type Prices, type RegistryMatch } from '@/lib/enumerate';
 
 interface Props {
     frame: EnumerateFrame;
@@ -127,7 +128,7 @@ export default function New({ frame, prices, start }: Props) {
             name: picked.name,
             rc_number: picked.rcNumber,
             company_type: picked.companyType,
-            address: picked.place ?? '',
+            address: picked.address ?? picked.place ?? '',
             days: data.tier === 3 ? data.days : null,
         }));
         form.post('/enumerate/verify', { preserveScroll: true });
@@ -184,17 +185,14 @@ export default function New({ frame, prices, start }: Props) {
                                                     aria-checked={on}
                                                     onClick={() => { setPicked(m); }}
                                                     className={cx(
-                                                        'flex w-full items-center gap-4 rounded-card border px-4 py-3.5 text-left',
+                                                        'flex w-full items-start gap-4 rounded-card border px-4 py-3.5 text-left',
                                                         on ? 'border-2 border-gold bg-gold-soft/40' : 'border-rule hover:border-rule-strong',
                                                     )}
                                                 >
                                                     <span className={cx('size-5 shrink-0 rounded-full border-2', on ? 'border-gold bg-[radial-gradient(circle,var(--color-gold)_45%,transparent_50%)]' : 'border-rule-strong')} aria-hidden="true" />
                                                     <span className="flex min-w-0 flex-col">
                                                         <span className="text-ui font-extrabold text-ink uppercase">{m.name}</span>
-                                                        <span className="text-table text-muted">
-                                                            <span className="font-mono">{registration(m.rcNumber, m.companyType)}</span> · {companyType(m.companyType)}
-                                                            {m.place !== null && ` · ${m.place}`}
-                                                        </span>
+                                                        <RegistryFacts match={m} />
                                                     </span>
                                                     {m.status !== null && (
                                                         <span className={cx('ml-auto rounded-full px-2.5 py-1 text-[0.75rem] font-extrabold', m.status === 'Active' ? 'bg-gold-soft text-gold-dark' : 'bg-amber-soft text-amber-ink')}>
@@ -299,6 +297,8 @@ export default function New({ frame, prices, start }: Props) {
                             <>
                                 <p className="text-ui font-extrabold text-ink">{picked.name}</p>
                                 <p className="font-mono text-table text-muted">{registration(picked.rcNumber, picked.companyType)}</p>
+                                {picked.registeredOn !== null && <p className="mt-1 text-table text-muted">Registered {day(picked.registeredOn)}</p>}
+                                {picked.address !== null && <p className="text-table text-muted">{picked.address}</p>}
                             </>
                         )}
                     </div>

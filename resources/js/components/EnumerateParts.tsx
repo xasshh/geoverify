@@ -2,7 +2,7 @@ import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { StatusPill } from '@/components/StatusPill';
 import { cx } from '@/lib/cx';
-import { STATUS_TONE, day, kobo, priceLabel, type RequestRow } from '@/lib/enumerate';
+import { STATUS_TONE, companyType, day, kobo, priceLabel, registration, type RegistryMatch, type RequestRow } from '@/lib/enumerate';
 
 /** "Tier 3 · Activity" on its tier's own ground: the deeper the check, the darker the chip. */
 export function TierBadge({ tier, label }: { tier: 1 | 2 | 3; label: string }) {
@@ -64,11 +64,11 @@ export function RequestTable({ rows, empty }: { rows: RequestRow[]; empty: strin
 }
 
 /**
- * Quick lookup: a name or a CAC number, straight into New verification with
- * the search already run. Tier 1 by default, which is what "quick" means.
+ * Quick lookup: a CAC number, straight into New verification with the search
+ * already run. Tier 1 by default, which is what "quick" means. By number only,
+ * like the other search boxes, until the provider opens search by name.
  */
 export function QuickLookup({ tier1Minor }: { tier1Minor: number }) {
-    const [by, setBy] = useState<'name' | 'rc'>('name');
     const [q, setQ] = useState('');
 
     return (
@@ -76,42 +76,56 @@ export function QuickLookup({ tier1Minor }: { tier1Minor: number }) {
             className="flex flex-col gap-3 rounded-card border border-rule bg-raised px-5 py-4 lg:flex-row lg:items-center"
             onSubmit={(e) => {
                 e.preventDefault();
-                router.get('/enumerate/verify', { by, q, tier: 1 });
+                router.get('/enumerate/verify', { by: 'rc', q, tier: 1 });
             }}
         >
             <div className="lg:w-[170px]">
                 <p className="text-ui font-extrabold text-ink">Quick lookup</p>
                 <p className="text-[0.75rem] text-muted">Tier 1 · CAC + TIN</p>
             </div>
-            <div role="tablist" aria-label="Search by" className="flex rounded-[10px] bg-sunken p-1">
-                {(
-                    [
-                        ['name', 'Business name'],
-                        ['rc', 'CAC number'],
-                    ] as const
-                ).map(([key, label]) => (
-                    <button
-                        key={key}
-                        type="button"
-                        role="tab"
-                        aria-selected={by === key}
-                        onClick={() => { setBy(key); }}
-                        className={cx('min-h-[38px] rounded-[8px] px-3.5 text-table', by === key ? 'bg-raised font-extrabold text-ink shadow-card' : 'font-semibold text-muted')}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
             <input
-                aria-label={by === 'name' ? 'Business name' : 'CAC number'}
+                aria-label="CAC number"
                 value={q}
                 onChange={(e) => { setQ(e.target.value); }}
-                placeholder={by === 'name' ? 'e.g. Kora Build Supplies Ltd' : 'e.g. RC 1482093'}
+                placeholder="CAC number, e.g. RC 1482093 or BN 3300112"
                 className="h-11 min-w-0 flex-1 rounded-sm border border-rule-strong bg-raised px-4 text-ui text-ink placeholder:text-faint focus:border-gold focus:outline-none"
             />
             <button type="submit" disabled={q.trim().length < 3} className="h-11 rounded-sm bg-gold px-5 text-ui font-extrabold whitespace-nowrap text-on-accent hover:bg-gold-dark disabled:bg-sunken disabled:text-muted">
                 Verify · {priceLabel(tier1Minor)}
             </button>
         </form>
+    );
+}
+
+/**
+ * What the register says about a search result, beyond its name: the kind of
+ * entity, when it was registered, where, and what it does. Enough to tell the
+ * right business from a namesake before paying to check it.
+ */
+export function RegistryFacts({ match }: { match: RegistryMatch }) {
+    const facts: Array<[string, string]> = [];
+
+    if (match.registeredOn !== null) facts.push(['Registered', day(match.registeredOn)]);
+    if (match.address !== null) facts.push(['Registered address', match.address]);
+    else if (match.place !== null) facts.push(['Location', match.place]);
+    if (match.business !== null) facts.push(['Line of business', match.business]);
+
+    return (
+        <span className="flex min-w-0 flex-col gap-1">
+            <span className="text-table text-muted">
+                <span className="font-mono">{registration(match.rcNumber, match.companyType)}</span> · {match.kind ?? companyType(match.companyType)}
+                {match.address !== null && match.place !== null && ` · ${match.place}`}
+            </span>
+            {facts.length > 0 && (
+                <span className="mt-1 grid gap-x-4 gap-y-1 text-table sm:grid-cols-[max-content_minmax(0,1fr)]">
+                    {facts.map(([label, value]) => (
+                        <span key={label} className="contents">
+                            <span className="text-muted">{label}</span>
+                            <span className="font-semibold break-words text-ink">{value}</span>
+                        </span>
+                    ))}
+                </span>
+            )}
+        </span>
     );
 }

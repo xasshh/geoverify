@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace App\Domain\Enumerate\Registry;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 /**
  * Prembly (IdentityPass), a licensed provider with links to CAC and FIRS.
  *
  * Chosen on 2026-10-09 in place of Dojah. Endpoints as documented at
- * docs.prembly.com, all POST with a JSON body: CAC basic and advance by
- * registration number and type, TIN by the RC number on the CAC channel, and
+ * docs.prembly.com, all POST with a JSON body: CAC advance by registration
+ * number and type (for the search and the check alike: basic is charged too
+ * and says little more than the name), TIN by the RC number on the CAC channel, and
  * the global company search by name. Authenticated by the x-api-key header,
  * with app-id sent too because the older endpoints ask for it.
  *
@@ -54,28 +58,30 @@ final class PremblyRegistry implements RegistryLookup
         if ($by === 'rc') {
             $number = self::digits($term);
 
-            foreach (self::TYPES as $ours => $theirs) {
-                $entity = self::first($this->post('/verification/cac/basic', ['rc_number' => $number, 'company_type' => $theirs]));
-
-                if ($entity !== null && is_string($entity['company_name'] ?? null)) {
-                    return [new RegistryMatch(
-                        (string) $entity['company_name'],
-                        self::digits((string) ($entity['rc_number'] ?? $number)) ?: $number,
-                        self::ours($entity['company_type'] ?? $entity['entity_type'] ?? null) ?? $ours,
-                        self::status($entity['company_status'] ?? null),
-                        self::place($entity),
-                    )];
-                }
+            if ($number === '') {
+                return [];
             }
 
-            return [];
+            // Every lookup is charged, so an answer is kept for a day: the
+            // register does not change by the hour, and a person who searches,
+            // looks, and searches again should not cost us twice.
+            $cached = Cache::get("registry:prembly:rc:{$number}");
+
+            if (is_array($cached)) {
+                return array_map(static fn (array $m): RegistryMatch => RegistryMatch::fromArray($m), $cached);
+            }
+
+            $matches = $this->searchByNumber($number, self::typeHint($term));
+            Cache::put("registry:prembly:rc:{$number}", array_map(static fn (RegistryMatch $m): array => $m->toArray(), $matches), $matches === [] ? 3_600 : 86_400);
+
+            return $matches;
         }
 
         // Prembly's name search answers 404 "could not be processed" on an
         // account without that product (found on the live key, 2026-10-09),
         // which is not "no such business" and must not read as one.
         try {
-            $response = $this->client()->post('/identitypass/verification/global/company/search', ['country_code' => 'ng', 'company_name' => $term]);
+            $response = $this->client()->post('/verification/global/company/search', ['country_code' => 'ng', 'company_name' => $term]);
         } catch (ConnectionException) {
             throw new RegistryUnavailable('The registry provider could not be reached.');
         }
@@ -109,6 +115,47 @@ final class PremblyRegistry implements RegistryLookup
         return $matches;
     }
 
+    /**
+     * The advance lookup by number, trying the kind the person typed first
+     * (BN 3300112 is a business name) and the others after it. Advance rather
+     * than basic: basic answers with the name and little else, and the person
+     * searching wants to know they have the right business before they pay.
+     * Only what describes the business is kept; the directors stay out of the
+     * search result.
+     *
+     * @return list<RegistryMatch>
+     */
+    private function searchByNumber(string $number, ?string $hint): array
+    {
+        $types = self::TYPES;
+
+        if ($hint !== null) {
+            $types = [$hint => self::TYPES[$hint]] + $types;
+        }
+
+        foreach ($types as $ours => $theirs) {
+            $entity = self::first($this->post('/verification/cac/advance', ['rc_number' => $number, 'company_type' => $theirs]));
+
+            if ($entity === null || ! is_string($entity['company_name'] ?? null)) {
+                continue;
+            }
+
+            return [new RegistryMatch(
+                (string) $entity['company_name'],
+                self::digits((string) ($entity['rc_number'] ?? $number)) ?: $number,
+                self::ours($entity['company_type'] ?? null) ?? self::ours($entity['entity_type'] ?? null) ?? $ours,
+                self::status($entity['company_status'] ?? null),
+                self::place($entity),
+                self::address($entity),
+                self::date($entity['date_of_registration'] ?? $entity['registrationDate'] ?? null),
+                self::kind($entity['entity_type'] ?? $entity['company_type'] ?? null, $ours),
+                self::business($entity['line_of_business'] ?? $entity['nature_of_business'] ?? $entity['natureOfBusiness'] ?? null),
+            )];
+        }
+
+        return [];
+    }
+
     public function company(string $rcNumber, string $companyType): ?CompanyRecord
     {
         $entity = self::first($this->post('/verification/cac/advance', [
@@ -124,6 +171,14 @@ final class PremblyRegistry implements RegistryLookup
 
         foreach (is_array($entity['directors'] ?? null) ? $entity['directors'] : [] as $director) {
             if (! is_array($director)) {
+                continue;
+            }
+
+            // The register keeps everybody who ever held office; the report
+            // names the people who hold it now.
+            $standing = is_string($director['status'] ?? null) ? strtoupper(trim($director['status'])) : '';
+
+            if ($standing !== '' && $standing !== 'ACTIVE') {
                 continue;
             }
 
@@ -151,7 +206,7 @@ final class PremblyRegistry implements RegistryLookup
             // The live API says date_of_registration and address where the
             // documentation says registrationDate and company_address.
             self::date($entity['date_of_registration'] ?? $entity['registrationDate'] ?? null),
-            self::firstText($entity['address'] ?? null, $entity['company_address'] ?? null) ?? self::place($entity),
+            self::address($entity) ?? self::place($entity),
             $directors,
         );
     }
@@ -255,9 +310,78 @@ final class PremblyRegistry implements RegistryLookup
         return is_string($found) ? $found : (array_key_exists(strtoupper($type), self::TYPES) ? strtoupper($type) : null);
     }
 
+    /**
+     * The advance lookup gives midnight in Lagos written as 23:00 the day
+     * before in UTC, so the date is read in Lagos rather than cut from the
+     * string.
+     */
     private static function date(mixed $value): ?string
     {
-        return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}/', $value) === 1 ? substr($value, 0, 10) : null;
+        if (! is_string($value) || preg_match('/^\d{4}-\d{2}-\d{2}/', $value) !== 1) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value)->setTimezone('Africa/Lagos')->toDateString();
+        } catch (Throwable) {
+            return substr($value, 0, 10);
+        }
+    }
+
+    /** @param  array<mixed>  $entity */
+    private static function address(array $entity): ?string
+    {
+        $text = self::firstText($entity['address'] ?? null, $entity['company_address'] ?? null, $entity['branchAddress'] ?? null);
+
+        return $text === null ? null : (string) preg_replace('/\s+/', ' ', $text);
+    }
+
+    /** limited_company to "Limited company"; falls back on the kind of number. */
+    private static function kind(mixed $value, string $ours): string
+    {
+        if (is_string($value) && trim($value) !== '' && ! array_key_exists(strtoupper(trim($value)), self::TYPES) && ! in_array(strtoupper(trim($value)), self::TYPES, true)) {
+            return ucfirst(strtolower(str_replace('_', ' ', trim($value))));
+        }
+
+        return match ($ours) {
+            'BUSINESS_NAME' => 'Business name',
+            'INCORPORATED_TRUSTEES' => 'Incorporated trustees',
+            default => 'Company',
+        };
+    }
+
+    /** The register's line of business: a string, or a list of strings or named entries. */
+    private static function business(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return trim($value) === '' ? null : trim($value);
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $parts = [];
+
+        foreach ($value as $item) {
+            $text = is_array($item) ? self::firstText($item['name'] ?? null, $item['description'] ?? null, $item['natureOfBusiness'] ?? null) : self::firstText($item);
+
+            if ($text !== null) {
+                $parts[] = $text;
+            }
+        }
+
+        return $parts === [] ? null : implode(', ', array_unique($parts));
+    }
+
+    /** RC, BN or IT written before the number, if the person wrote one. */
+    private static function typeHint(string $term): ?string
+    {
+        $prefix = strtoupper(substr((string) preg_replace('/[^A-Za-z]+/', '', $term), 0, 2));
+
+        $found = array_search($prefix, self::TYPES, true);
+
+        return is_string($found) ? $found : null;
     }
 
     private static function firstText(mixed ...$values): ?string
@@ -300,6 +424,6 @@ final class PremblyRegistry implements RegistryLookup
             static fn (mixed $p): bool => is_string($p) && $p !== '',
         );
 
-        return $parts === [] ? null : implode(', ', array_unique($parts));
+        return $parts === [] ? null : implode(', ', array_unique(array_map(static fn (string $p): string => ucwords(strtolower(trim($p))), $parts)));
     }
 }

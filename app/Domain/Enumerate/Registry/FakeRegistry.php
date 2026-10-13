@@ -85,7 +85,8 @@ final class FakeRegistry implements RegistryLookup
             : $term !== '' && str_contains($c['name'], mb_strtoupper($term)));
 
         return array_values(array_map(static fn (array $c): RegistryMatch => new RegistryMatch(
-            $c['name'], $c['rc'], $c['type'], $c['status'], $c['place'],
+            $c['name'], $c['rc'], $c['type'], $c['status'], $c['place'], $c['address'], $c['incorporated'],
+            $c['type'] === 'BUSINESS_NAME' ? 'Business name' : 'Limited company',
         ), $found));
     }
 

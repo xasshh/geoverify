@@ -3,7 +3,8 @@ import { Head, Link } from '@inertiajs/react';
 import { EnumerateLockup } from '@/components/EnumerateShell';
 import { HexField } from '@/components/AuthLayouts';
 import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
-import { companyType, kobo, priceLabel, type Prices } from '@/lib/enumerate';
+import { RegistryFacts } from '@/components/EnumerateParts';
+import { kobo, priceLabel, type Prices, type RegistryMatch } from '@/lib/enumerate';
 import { STATE_TILES } from '@/lib/nigeria';
 import { cx } from '@/lib/cx';
 
@@ -14,13 +15,7 @@ interface Props {
 
 type SearchBy = 'name' | 'rc' | 'tin';
 
-interface Match {
-    name: string;
-    rcNumber: string;
-    companyType: string;
-    status: string | null;
-    place: string | null;
-}
+type Match = RegistryMatch;
 
 const NAV: NavItem[] = [
     { label: 'Registry', href: '/directory' },
@@ -238,15 +233,18 @@ function SearchBox({ tier1 }: { tier1: number }) {
                             {matches.map((match) => (
                                 <li
                                     key={`${match.rcNumber}-${match.companyType}`}
-                                    className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-rule px-4 py-3 last:border-b-0"
+                                    className="flex flex-wrap items-start gap-x-4 gap-y-2 border-b border-rule px-4 py-3 last:border-b-0"
                                 >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-ui font-extrabold text-ink">{match.name}</p>
-                                        <p className="text-label text-muted">
-                                            {companyType(match.companyType)} {match.rcNumber}
-                                            {match.status !== null && ` · ${match.status}`}
-                                            {match.place !== null && ` · ${match.place}`}
+                                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                        <p className="flex flex-wrap items-center gap-2 text-ui font-extrabold text-ink">
+                                            {match.name}
+                                            {match.status !== null && (
+                                                <span className={cx('rounded-full px-2 py-0.5 text-[0.7rem] font-extrabold', match.status === 'Active' ? 'bg-gold-soft text-gold-dark' : 'bg-amber-soft text-amber-ink')}>
+                                                    {match.status}
+                                                </span>
+                                            )}
                                         </p>
+                                        <RegistryFacts match={match} />
                                     </div>
                                     <Link
                                         href={`/enumerate/verify?by=rc&q=${encodeURIComponent(match.rcNumber)}&tier=1`}

@@ -57,6 +57,10 @@ export interface RegistryMatch {
     companyType: string;
     status: string | null;
     place: string | null;
+    address: string | null;
+    registeredOn: string | null;
+    kind: string | null;
+    business: string | null;
 }
 
 export const STATUS_TONE: Record<RequestStatus, StatusTone> = {

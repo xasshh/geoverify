@@ -55,7 +55,7 @@ final class LandingController
         ]);
 
         $term = mb_strtolower(trim(preg_replace('/\s+/', ' ', $input['q']) ?? ''));
-        $key = 'enumerate:public-search:'.$input['by'].':'.sha1($term);
+        $key = 'enumerate:public-search:v2:'.$input['by'].':'.sha1($term);
 
         $cached = Cache::get($key);
 

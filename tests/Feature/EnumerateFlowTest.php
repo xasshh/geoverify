@@ -402,39 +402,43 @@ it('reads Dojah as documented and keeps directors to a name and a role', functio
 
 it('reads Prembly as documented, translates company types, and keeps directors to a name and a role', function () {
     Http::fake([
-        'api.prembly.com/verification/cac/advance' => Http::response([
-            'status' => true, 'response_code' => '00',
-            'data' => [[
-                'rc_number' => '1482093',
-                'company_name' => 'KORA BUILD SUPPLIES LIMITED',
-                'company_status' => 'ACTIVE',
-                'company_address' => 'Plot 7, Ahmadu Bello Way, Garki',
-                'entity_type' => 'RC',
-                'registrationDate' => '2016-03-14T00:00:00Z',
-                'directors' => [[
-                    'surname' => 'Ade', 'firstname' => 'Kolawole', 'otherName' => 'N/A',
-                    'email' => 'k@kora.ng', 'phoneNumber' => '08030000000', 'address' => '4 Home Street',
-                    'affiliateTypeFk' => ['name' => 'DIRECTOR'],
-                ]],
-            ]],
-        ]),
+        // A business name number answers on BN; anything else is the company.
+        'api.prembly.com/verification/cac/advance' => function ($request) {
+            return $request['company_type'] === 'BN'
+                ? Http::response(['status' => true, 'response_code' => '00', 'data' => [[
+                    'rc_number' => '3300112', 'company_name' => 'IYA BOSE PROVISIONS', 'company_status' => 'Active',
+                    'company_type' => 'BN', 'city' => 'Garki', 'state' => 'FCT', 'directors' => [],
+                ]]])
+                : ($request['rc_number'] === '1482093'
+                    ? Http::response([
+                        'status' => true, 'response_code' => '00',
+                        'data' => [[
+                            'rc_number' => '1482093',
+                            'company_name' => 'KORA BUILD SUPPLIES LIMITED',
+                            'company_status' => 'ACTIVE',
+                            'company_address' => 'Plot 7, Ahmadu Bello Way, Garki',
+                            'entity_type' => 'RC',
+                            'registrationDate' => '2016-03-14T00:00:00Z',
+                            'directors' => [[
+                                'surname' => 'Ade', 'firstname' => 'Kolawole', 'otherName' => 'N/A',
+                                'email' => 'k@kora.ng', 'phoneNumber' => '08030000000', 'address' => '4 Home Street',
+                                'affiliateTypeFk' => ['name' => 'DIRECTOR'], 'status' => 'ACTIVE',
+                            ], [
+                                'surname' => 'Gone', 'firstname' => 'Former', 'status' => 'RESIGNED',
+                                'affiliateTypeFk' => ['name' => 'DIRECTOR'],
+                            ]],
+                        ]],
+                    ])
+                    : Http::response([], 400));
+        },
         'api.prembly.com/verification/tin' => Http::response([
             'status' => true, 'response_code' => '00',
             'data' => ['taxpayer_name' => 'KORA BUILD SUPPLIES LIMITED', 'cac_reg_number' => 'RC1482093', 'firstin' => '12392112-0001'],
         ]),
-        'api.prembly.com/identitypass/verification/global/company/search' => Http::response([
+        'api.prembly.com/verification/global/company/search' => Http::response([
             'status' => true, 'response_code' => '00',
             'data' => [['name' => 'KORA BUILD SUPPLIES LIMITED', 'internationalNumber' => 'RC1482093', 'countryCode' => 'ng']],
         ]),
-        // A business name number: not a company, found on the second try.
-        'api.prembly.com/verification/cac/basic' => function ($request) {
-            return $request['company_type'] === 'BN'
-                ? Http::response(['status' => true, 'response_code' => '00', 'data' => [
-                    'rc_number' => '3300112', 'company_name' => 'IYA BOSE PROVISIONS', 'company_status' => 'Active',
-                    'company_type' => 'BN', 'city' => 'Garki', 'state' => 'FCT',
-                ]])
-                : Http::response([], 400);
-        },
     ]);
 
     $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', 'app-456');
@@ -451,11 +455,49 @@ it('reads Prembly as documented, translates company types, and keeps directors t
     $bn = $prembly->search('rc', '3300112');
     expect($bn)->toHaveCount(1)
         ->and($bn[0]->companyType)->toBe('BUSINESS_NAME')
-        ->and($bn[0]->name)->toBe('IYA BOSE PROVISIONS');
+        ->and($bn[0]->name)->toBe('IYA BOSE PROVISIONS')
+        ->and($bn[0]->place)->toBe('Garki, Fct');
 
     Http::assertSent(fn ($request) => $request->hasHeader('x-api-key', 'key-123') && $request->hasHeader('app-id', 'app-456'));
     Http::assertSent(fn ($request) => str_ends_with($request->url(), '/verification/tin') && $request['number'] === 'RC1482093' && $request['channel'] === 'CAC');
     Http::assertSent(fn ($request) => str_ends_with($request->url(), '/verification/cac/advance') && $request['company_type'] === 'RC' && $request['rc_number'] === '1482093');
+});
+
+it('describes a business found by its number, asks for the kind that was typed first, and is charged once a day', function () {
+    Http::fake([
+        'api.prembly.com/verification/cac/advance' => function ($request) {
+            return $request['company_type'] === 'RC'
+                ? Http::response(['status' => true, 'data' => [[
+                    'rc_number' => '208767', 'company_name' => 'DANGOTE CEMENT PLC', 'company_status' => 'ACTIVE',
+                    'company_type' => 'limited_company', 'entity_type' => 'limited_company', 'state' => 'LAGOS',
+                    'date_of_registration' => '1992-11-03T23:00:00.000+00:00',
+                    'address' => 'UNION  MARBLE HOUSE 1, ALFRED REWANE  ROAD FALOMO, IKOYI, LAGOS',
+                    'line_of_business' => [['name' => 'Manufacture of cement']],
+                    'directors' => [['firstname' => 'Ada', 'surname' => 'Obi', 'phoneNumber' => '08031112222', 'status' => 'ACTIVE']],
+                ]]])
+                : Http::response([], 400);
+        },
+    ]);
+
+    $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', '');
+    $found = $prembly->search('rc', 'RC 208767');
+
+    expect($found)->toHaveCount(1)
+        ->and($found[0]->toArray())->toBe([
+            'name' => 'DANGOTE CEMENT PLC',
+            'rcNumber' => '208767',
+            'companyType' => 'COMPANY',
+            'status' => 'Active',
+            'place' => 'Lagos',
+            'address' => 'UNION MARBLE HOUSE 1, ALFRED REWANE ROAD FALOMO, IKOYI, LAGOS',
+            'registeredOn' => '1992-11-04',
+            'kind' => 'Limited company',
+            'business' => 'Manufacture of cement',
+        ]);
+
+    // The same number again is answered from the day's copy, not paid for twice.
+    expect($prembly->search('rc', '208767')[0]->name)->toBe('DANGOTE CEMENT PLC');
+    Http::assertSentCount(1);
 });
 
 it('treats a Prembly refusal as the provider being unavailable, and a miss as no record', function () {
@@ -481,13 +523,13 @@ it('reads Prembly\'s live field names, and says plainly when name search is not 
             'date_of_registration' => '1992-11-03T23:00:00.000+00:00', 'address' => 'Union Marble House, Falomo, Ikoyi',
             'directors' => [],
         ]]]),
-        'api.prembly.com/identitypass/verification/global/company/search' => Http::response(['status' => false, 'detail' => "Verification 'global/company/search' could not be processed at the moment"], 404),
+        'api.prembly.com/verification/global/company/search' => Http::response(['status' => false, 'detail' => "Verification 'global/company/search' could not be processed at the moment"], 404),
     ]);
 
     $prembly = new PremblyRegistry('https://api.prembly.com', 'key-123', '');
     $company = $prembly->company('208767', 'COMPANY');
 
-    expect($company?->incorporatedOn)->toBe('1992-11-03')
+    expect($company?->incorporatedOn)->toBe('1992-11-04')
         ->and($company?->address)->toBe('Union Marble House, Falomo, Ikoyi')
         ->and(fn () => $prembly->search('name', 'dangote'))->toThrow(RegistryUnavailable::class, RegistryUnavailable::NAME_SEARCH_OFF);
 });
