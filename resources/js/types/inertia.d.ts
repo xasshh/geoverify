@@ -60,6 +60,7 @@ declare module '@inertiajs/core' {
             inspections: number;
             deskChecks: number;
             enumerateVisits: number;
+            pollingUnits: number;
             support: number;
             organisations: number;
         } | null;

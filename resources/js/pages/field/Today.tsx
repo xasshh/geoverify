@@ -261,7 +261,7 @@ export default function Today({ day }: { day: OfficerDay }) {
                         >
                             <span className="min-w-0">
                                 <span className="block text-label font-extrabold tracking-[0.05em] text-held-ink uppercase">
-                                    {job.kind === 'daily' ? 'Daily visit' : job.kind === 'verification' ? 'Verification visit' : job.kind === 'site_visit' ? 'Site visit' : 'Product inspection'} · {job.orderRef}
+                                    {job.kind === 'daily' ? 'Daily visit' : job.kind === 'verification' ? 'Verification visit' : job.kind === 'polling_unit' ? 'Polling unit check' : job.kind === 'site_visit' ? 'Site visit' : 'Product inspection'} · {job.orderRef}
                                 </span>
                                 <span className="block truncate text-ui font-bold text-ink">{job.business}</span>
                             </span>

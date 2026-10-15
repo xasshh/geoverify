@@ -462,6 +462,14 @@ export default function CampaignDossier({ campaign, mustAcknowledge, briefUrl, r
                             Land and natural features
                         </Link>
                     )}
+                    {campaign.capture.pollingUnits && (
+                        <Link
+                            href={`/client/campaigns/${String(campaign.id)}/polling-units`}
+                            className="rounded-full bg-gold-dark px-4 py-2 text-ui font-extrabold text-on-accent hover:bg-gold"
+                        >
+                            Polling units
+                        </Link>
+                    )}
                     {!mustAcknowledge && (
                         <button
                             type="button"

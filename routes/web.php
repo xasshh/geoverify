@@ -21,6 +21,7 @@ use App\Http\Controllers\Agent\AgentApplicationController;
 use App\Http\Controllers\Agent\AgentPortalController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
 use App\Http\Controllers\Client\LandController as ClientLandController;
+use App\Http\Controllers\Client\PollingUnitController as ClientPollingUnitController;
 use App\Http\Controllers\Client\SignInController as ClientSignInController;
 use App\Http\Controllers\ConsentReceiptController;
 use App\Http\Controllers\Console\AssignmentController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Console\ExportController;
 use App\Http\Controllers\Console\InspectionController as ConsoleInspectionController;
 use App\Http\Controllers\Console\LiveOperationsController;
 use App\Http\Controllers\Console\MessageController as ConsoleMessageController;
+use App\Http\Controllers\Console\PollingUnitController as ConsolePollingUnitController;
 use App\Http\Controllers\Console\ReviewController;
 use App\Http\Controllers\Console\SupportController as ConsoleSupportController;
 use App\Http\Controllers\Console\TeamTodayController;
@@ -53,6 +55,7 @@ use App\Http\Controllers\Field\CaptureScreenController;
 use App\Http\Controllers\Field\FieldHomeController;
 use App\Http\Controllers\Field\FieldJobController;
 use App\Http\Controllers\Field\FieldMessageController;
+use App\Http\Controllers\Field\FieldPollingUnitController;
 use App\Http\Controllers\Field\FieldVisitController;
 use App\Http\Controllers\Field\MapPackController;
 use App\Http\Controllers\Field\SyncController;
@@ -212,6 +215,16 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     Route::post('desk-checks/{reference}', [DeskCheckController::class, 'decide'])->name('desk-checks.decide');
     Route::post('desk-checks/{reference}/rerun', [DeskCheckController::class, 'rerun'])
         ->middleware('throttle:20,1')->name('desk-checks.rerun');
+
+    // Polling unit checks: load the list, send officers, read what they found.
+    Route::get('polling-units', [ConsolePollingUnitController::class, 'index'])->name('polling-units');
+    Route::post('polling-units/{campaign}/import', [ConsolePollingUnitController::class, 'import'])
+        ->middleware('throttle:10,1')->name('polling-units.import');
+    Route::post('polling-units/{campaign}/assign', [ConsolePollingUnitController::class, 'assign'])->name('polling-units.assign');
+    Route::get('polling-units/{campaign}/export', [ConsolePollingUnitController::class, 'export'])
+        ->middleware('throttle:12,1')->name('polling-units.export');
+    Route::post('polling-units/checks/{check}/review', [ConsolePollingUnitController::class, 'review'])->name('polling-units.review');
+    Route::post('polling-units/checks/{check}/withdraw', [ConsolePollingUnitController::class, 'withdraw'])->name('polling-units.withdraw');
 
     // Enumerate's site visits: pin the premises, send an officer, read the report.
     Route::get('enumerate-visits', [EnumerateVisitController::class, 'index'])->name('enumerate-visits');
@@ -373,6 +386,12 @@ Route::prefix('client')->name('client.')->group(function (): void {
         Route::get('campaigns/{campaign}/land/export', [ClientLandController::class, 'export'])
             ->middleware('throttle:12,1')->name('campaigns.land.export');
         Route::get('campaigns/{campaign}/land/report.pdf', [ClientLandController::class, 'report'])->name('campaigns.land.report');
+        Route::get('campaigns/{campaign}/polling-units', [ClientPollingUnitController::class, 'show'])->name('campaigns.polling-units');
+        Route::get('campaigns/{campaign}/polling-units/points.json', [ClientPollingUnitController::class, 'points'])->name('campaigns.polling-units.points');
+        Route::get('campaigns/{campaign}/polling-units/export', [ClientPollingUnitController::class, 'export'])
+            ->middleware('throttle:12,1')->name('campaigns.polling-units.export');
+        Route::get('campaigns/{campaign}/polling-units/{unit}', [ClientPollingUnitController::class, 'unit'])
+            ->whereNumber('unit')->name('campaigns.polling-units.unit');
     });
 });
 
@@ -777,6 +796,8 @@ Route::middleware(['auth', 'field'])->prefix('field')->name('field.')->group(fun
     Route::get('jobs/{inspection}', [FieldJobController::class, 'show'])->name('jobs.show');
     // A site visit somebody paid for through Enumerate (E2).
     Route::get('visits/{visit}', [FieldVisitController::class, 'show'])->name('visits.show');
+    // A polling unit check (app/Domain/Election).
+    Route::get('polling-units/{check}', [FieldPollingUnitController::class, 'show'])->name('polling-units.show');
     Route::get('assignments/{assignment}/capture', [CaptureScreenController::class, 'show'])->name('capture');
     // Area capture: land, water and the things on it, for campaigns that ask.
     Route::get('assignments/{assignment}/area', [AreaCaptureController::class, 'show'])->name('area');
@@ -829,6 +850,12 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     Route::post('visits/{visit}/photos', [FieldVisitController::class, 'photo'])
         ->middleware('throttle:60,1')->name('visits.photos');
     Route::post('visits/{visit}/report', [FieldVisitController::class, 'report'])->name('visits.report');
+
+    // What a polling unit check's outbox sends, idempotent like a visit's.
+    Route::post('polling-units/{check}/arrive', [FieldPollingUnitController::class, 'arrive'])->name('polling-units.arrive');
+    Route::post('polling-units/{check}/photos', [FieldPollingUnitController::class, 'photo'])
+        ->middleware('throttle:60,1')->name('polling-units.photos');
+    Route::post('polling-units/{check}/report', [FieldPollingUnitController::class, 'report'])->name('polling-units.report');
 });
 
 /*

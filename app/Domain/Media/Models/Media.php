@@ -98,6 +98,24 @@ final class Media extends Model
     ];
 
     /** Held and published. */
+    /**
+     * A polling unit check's photographs (app/Domain/Election): the site from
+     * outside, the way in, and anything else. Public places, but taken with
+     * people kept out of frame; the client sees the site and the entrance,
+     * asked for by name (PollingUnitCheck::clientPhotos).
+     */
+    public const KIND_PU_SITE = 'pu_site';
+
+    public const KIND_PU_ENTRANCE = 'pu_entrance';
+
+    public const KIND_PU_OTHER = 'pu_other';
+
+    public const PU_KINDS = [
+        self::KIND_PU_SITE,
+        self::KIND_PU_ENTRANCE,
+        self::KIND_PU_OTHER,
+    ];
+
     public const STATUS_STORED = 'stored';
 
     /**

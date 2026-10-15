@@ -128,6 +128,7 @@ export type QueueCounts = {
     inspections: number;
     deskChecks: number;
     enumerateVisits: number;
+    pollingUnits: number;
     support: number;
     organisations: number;
 };

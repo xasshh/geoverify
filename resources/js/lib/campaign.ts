@@ -122,6 +122,7 @@ export interface CampaignDossier {
     capture: {
         modes: Array<{ value: string; label: string }>;
         areaFeatures: boolean;
+        pollingUnits: boolean;
         settings: {
             minMappingUnitHa: number | null;
             fieldMaxAccuracyM: number | null;

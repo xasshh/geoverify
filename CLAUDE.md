@@ -224,7 +224,7 @@ Local sign in after `php artisan db:seed --class=FieldTeamSeeder`:
 ## Layout
 
 Domain code lives under
-`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Enumerate,Field,Identity,Imagery,Investment,Ledger,Media,Party,Registry,Sms,Staff,Sync,Verification}`.
+`app/Domain/{Campaign,Catalogue,Claim,Commerce,Coverage,Election,Enumerate,Field,Identity,Imagery,Investment,Ledger,Media,Party,Registry,Sms,Staff,Sync,Verification}`.
 `Enumerate` is the verification portal at `/enumerate` (flow document:
 "Enumerate Platform: How the Three Portals Work Together"): anybody pays from a
 prepaid wallet to have any business checked by its CAC number. The same portal
@@ -294,6 +294,12 @@ connection from the clearest free Sentinel-2 scene of each tile
 vector packs and never inside `/api/field/packs`, whose answer a shipped
 handset depends on. A mandate can also come from an uploaded boundary file
 (`CreateCoverageAreaFromBoundary`, `coverage_areas.boundary_source`).
+`Election` is polling unit checks (`_plan/polling-units/00-plan.md`): a list
+of units imported into a campaign whose capture modes include `polling_units`,
+checks an officer files through the same job outbox as a site visit, and a
+supervisor's acceptance that confirms each unit at the officer's position.
+The client sees findings, a map and exports through `SummarisePollingUnits`
+and `ExportPollingUnits`, never an officer's name.
 `Staff` is the in-house side: creating, suspending and reinstating the people
 who work this system. Portal accounts are opened and proved by email (decided
 2026-10-09: no SMS anywhere): `RegisterByEmail`, a signed link from

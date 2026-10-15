@@ -58,7 +58,7 @@ final class ReadOfficerDay
     }
 
     /**
-     * Inspections, site visits and Enumerate visits given to this officer and
+     * Inspections, site visits, Enumerate visits and polling unit checks given to this officer and
      * not yet reported. Each carries the page it opens, which is also the page
      * the field shell stores for offline use.
      *
@@ -99,7 +99,22 @@ final class ReadOfficerDay
              ORDER BY v.assigned_at
         SQL, [$officer->id]));
 
-        return [...$inspections, ...$visits];
+        $pollingUnits = array_map(static fn (object $r): array => [
+            'id' => (int) $r->id,
+            'kind' => 'polling_unit',
+            'business' => (string) $r->name,
+            'orderRef' => (string) $r->inec_code,
+            'requestedFor' => null,
+            'href' => '/field/polling-units/'.(int) $r->id,
+        ], DB::select(<<<'SQL'
+            SELECT c.id, u.name, u.inec_code
+              FROM polling_unit_checks c
+              JOIN polling_units u ON u.id = c.polling_unit_id
+             WHERE c.agent_id = ? AND c.status = 'assigned'
+             ORDER BY u.listed_lga, u.listed_ward, u.inec_code
+        SQL, [$officer->id]));
+
+        return [...$inspections, ...$visits, ...$pollingUnits];
     }
 
     /** @return array{name: string, code: string, area: string|null, day: int|null, days: int|null}|null */

@@ -22,6 +22,7 @@ export type ConsoleView =
     | 'orders'
     | 'deskChecks'
     | 'enumerateVisits'
+    | 'pollingUnits'
     | 'support'
     | 'enumerateOrganisations'
     | 'live'
@@ -39,7 +40,7 @@ export type ConsoleView =
     | 'reviews';
 
 /** Which waiting count belongs against a view, where one does. */
-export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections' | 'deskChecks' | 'enumerateVisits' | 'support' | 'organisations';
+export type ConsoleQueue = 'review' | 'claims' | 'corrections' | 'escalations' | 'orders' | 'messages' | 'inspections' | 'deskChecks' | 'enumerateVisits' | 'pollingUnits' | 'support' | 'organisations';
 
 export interface ConsoleNavItem {
     key: ConsoleView;
@@ -106,6 +107,15 @@ const VIEWS: ConsoleNavItem[] = [
         href: '/console/coverage',
         caption: 'The ground, and who holds it',
         icon: 'M8 1.6 13.4 4.8v6.4L8 14.4 2.6 11.2V4.8z',
+    },
+    {
+        key: 'pollingUnits',
+        label: 'Polling units',
+        href: '/console/polling-units',
+        caption: 'Load the list, send, confirm',
+        // A ballot box with a paper going in.
+        icon: 'M2.6 8.2h10.8v5.4H2.6zM5.4 8.2V3.4h5.2v4.8M6.8 5.6h2.4',
+        queue: 'pollingUnits',
     },
     {
         key: 'brief',

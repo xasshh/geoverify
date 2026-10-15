@@ -270,6 +270,7 @@ final class AssembleCampaignDossier
         return [
             'modes' => array_map(static fn (CaptureMode $m): array => ['value' => $m->value, 'label' => $m->label()], $modes),
             'areaFeatures' => $campaign->captures(CaptureMode::AreaFeatures),
+            'pollingUnits' => $campaign->captures(CaptureMode::PollingUnits),
             'settings' => [
                 'minMappingUnitHa' => $campaign->min_mapping_unit_ha === null ? null : (float) $campaign->min_mapping_unit_ha,
                 'fieldMaxAccuracyM' => $campaign->field_max_accuracy_m,

@@ -10,6 +10,7 @@ use App\Domain\Claim\Models\PartyBusiness;
 use App\Domain\Commerce\Enums\PurchaseStatus;
 use App\Domain\Commerce\Models\Inspection;
 use App\Domain\Commerce\Models\PurchaseOrder;
+use App\Domain\Election\Models\PollingUnitCheck;
 use App\Domain\Enumerate\Actions\ReadEnumeratePrices;
 use App\Domain\Enumerate\Enums\RequestStatus;
 use App\Domain\Enumerate\Models\EnumerateOrganisation;
@@ -149,6 +150,8 @@ class HandleInertiaRequests extends Middleware
             // waiting to be read: both are somebody's paid check standing still.
             'enumerateVisits' => EnumerateRequest::query()->where('status', RequestStatus::AwaitingAgent->value)->count()
                 + EnumerateVisit::query()->where('status', EnumerateVisit::SUBMITTED)->count(),
+            // Polling unit checks an officer filed and nobody has read yet.
+            'pollingUnits' => PollingUnitCheck::query()->where('status', PollingUnitCheck::SUBMITTED)->count(),
             // Enumerate organisations waiting for an admin's approval, and
             // projects nobody has picked up; only an admin can act on them.
             'organisations' => $user->administers()
