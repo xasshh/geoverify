@@ -1,11 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { CityBackdrop } from '@/components/CityBackdrop';
 import { GeoVerifyLockup } from '@/components/GeoVerifyMark';
 import { HexField } from '@/components/AuthLayouts';
 import { Eyebrow, SectionHeading, SiteFooter, SiteHeader, Tick, type NavItem } from '@/components/PublicSite';
-import { STATE_TILES } from '@/lib/nigeria';
-import { cx } from '@/lib/cx';
 
 const NAV: NavItem[] = [
     { label: 'Registry', href: '/directory' },
@@ -218,20 +216,6 @@ function Enumerate() {
     );
 }
 
-/** A browser window holding a drawn screen, for the products without a photograph. */
-function BrowserFrame({ children, dark = false }: { children: ReactNode; dark?: boolean }) {
-    return (
-        <div className={cx('overflow-hidden rounded-card shadow-2xl ring-1', dark ? 'bg-[#0F1A17] ring-white/10' : 'bg-raised ring-rule')}>
-            <div className={cx('flex items-center gap-1.5 px-4 py-2.5', dark ? 'bg-white/5' : 'bg-sunken')}>
-                {['#E5786D', '#E8B04A', '#5CB176'].map((c) => (
-                    <span key={c} className="size-2.5 rounded-full" style={{ backgroundColor: c }} />
-                ))}
-            </div>
-            {children}
-        </div>
-    );
-}
-
 function BusinessPortal() {
     const portalOpen = usePage().props.surfaces.portal;
     return (
@@ -290,80 +274,46 @@ function BusinessPortal() {
 }
 
 function InvestPortal() {
-    const bars: Array<[string, number]> = [
-        ['Agro-processing', 28],
-        ['Retail and trade', 22],
-        ['Manufacturing', 16],
-        ['Solid minerals', 11],
-        ['Logistics', 9],
-    ];
-
     return (
         <section className="bg-raised">
-            <div className="mx-auto max-w-[1200px] px-4 py-20 sm:px-6">
-                <SectionHeading
-                    eyebrow="Meet"
-                    title={
-                        <>
-                            The <span className="text-gold-dark">Invest Portal</span>
-                        </>
-                    }
-                    intro="The registry as a map investors can use: verified businesses and the opportunities they publish, searchable by state, sector or local government, behind a KYC check."
-                />
-                <div className="mt-10">
-                    <BrowserFrame dark>
-                        <div aria-hidden="true" className="grid gap-4 p-5 text-inverse md:grid-cols-[1.1fr_0.9fr]">
-                            <div className="rounded-card bg-white/5 p-4">
-                                <p className="text-label font-extrabold">Verified businesses by state</p>
-                                <div className="mt-3 grid w-fit grid-cols-8 gap-1">
-                                    {STATE_TILES.map((s, i) => (
-                                        <span
-                                            key={s.code}
-                                            style={{ gridRowStart: s.row + 1, gridColumnStart: s.col + 1 }}
-                                            className="flex size-7 items-center justify-center rounded-[4px] text-[0.55rem] font-extrabold"
-                                        >
-                                            <span
-                                                className="flex size-full items-center justify-center rounded-[4px]"
-                                                style={{ backgroundColor: `rgba(75,184,176,${String(0.15 + ((i * 37) % 70) / 100)})` }}
-                                            >
-                                                {s.abbr}
-                                            </span>
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="rounded-card bg-white/5 p-4">
-                                <p className="text-label font-extrabold">Sectors</p>
-                                <ul className="mt-3 flex flex-col gap-2.5">
-                                    {bars.map(([name, pct]) => (
-                                        <li key={name}>
-                                            <div className="flex justify-between text-[0.7rem] text-inverse/75">
-                                                <span>{name}</span>
-                                                <span>{pct}%</span>
-                                            </div>
-                                            <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                                                <div className="h-full rounded-full bg-logo" style={{ width: `${String(pct * 3)}%` }} />
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    </BrowserFrame>
+            <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <picture>
+                    <source srcSet="/media/invest-tablet.webp" type="image/webp" />
+                    <img
+                        src="/media/invest-tablet.jpg"
+                        alt="An investor in a boardroom reading a map of verified business locations across Nigeria on a tablet"
+                        width={1200}
+                        height={1200}
+                        loading="lazy"
+                        className="mx-auto w-full max-w-[560px] rounded-[24px] object-cover shadow-2xl"
+                    />
+                </picture>
+                <div>
+                    <SectionHeading
+                        eyebrow="Meet"
+                        title={
+                            <>
+                                The <span className="text-gold-dark">Invest Portal</span>
+                            </>
+                        }
+                        intro="The registry as a map investors can use: verified businesses and the opportunities they publish, searchable by state, sector or local government, behind a KYC check."
+                    />
+                    <ul className="mt-6 flex flex-col gap-3">
+                        {[
+                            ['Search by geography or sector', 'Filter verified businesses and opportunities by state, LGA or industry.'],
+                            ['A live investment map', 'Registered businesses and investment zones as points on a real map.'],
+                            ['Due diligence on the ground', 'Commission an officer visit to any business you are weighing up.'],
+                        ].map(([lead, rest]) => (
+                            <li key={lead} className="flex gap-3 text-ui">
+                                <Tick className="mt-0.5 text-green" />
+                                <span>
+                                    <strong className="font-extrabold text-ink">{lead}.</strong> <span className="text-muted">{rest}</span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    <span className="mt-7 inline-flex rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">Coming soon</span>
                 </div>
-                <div className="mt-8 grid gap-6 md:grid-cols-3">
-                    {[
-                        ['Search by geography or sector', 'Filter verified businesses and opportunities by state, LGA or industry.'],
-                        ['A live investment map', 'Registered businesses and investment zones as points on a real map.'],
-                        ['Due diligence on the ground', 'Commission an officer visit to any business you are weighing up.'],
-                    ].map(([title, body]) => (
-                        <div key={title}>
-                            <p className="text-body font-extrabold text-ink">{title}</p>
-                            <p className="mt-1 text-ui text-muted">{body}</p>
-                        </div>
-                    ))}
-                </div>
-                <span className="mt-8 inline-flex rounded-full bg-sunken px-5 py-2.5 text-ui font-extrabold text-muted">Coming soon</span>
             </div>
         </section>
     );
