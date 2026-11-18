@@ -103,6 +103,19 @@ export default defineConfig({
 
                 runtimeCaching: [
                     {
+                        // The street map's fonts and icons. Put in this cache
+                        // when an officer's street map downloads (see
+                        // lib/offline/streets.ts, STREET_ASSETS_CACHE), and
+                        // answered from it first, so names show with no signal.
+                        urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/basemap-assets/'),
+                        handler: 'CacheFirst',
+                        options: {
+                            cacheName: 'geoverify-basemap-assets',
+                            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                            cacheableResponse: { statuses: [200] },
+                        },
+                    },
+                    {
                         // The field screens themselves: Today, the inbox, records
                         // and the capture map. Network first so an officer with
                         // signal always sees the latest, falling back to the last

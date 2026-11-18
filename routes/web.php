@@ -59,6 +59,7 @@ use App\Http\Controllers\Field\FieldMessageController;
 use App\Http\Controllers\Field\FieldPollingUnitController;
 use App\Http\Controllers\Field\FieldVisitController;
 use App\Http\Controllers\Field\MapPackController;
+use App\Http\Controllers\Field\StreetMapController;
 use App\Http\Controllers\Field\SyncController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Invest\CommissionController as InvestCommissionController;
@@ -835,6 +836,12 @@ Route::middleware(['auth', 'field'])->prefix('api/field')->name('api.field.')->g
     // Satellite imagery for area capture, beside the packs and never in them.
     Route::get('imagery', [MapPackController::class, 'imagery'])->name('imagery.index');
     Route::get('imagery/{layer}', [MapPackController::class, 'imageryFile'])->name('imagery.show');
+
+    // The offline street map (OpenStreetMap cut to the mandate), beside the
+    // packs and the imagery and never in them.
+    Route::get('streets', [StreetMapController::class, 'index'])->name('streets.index');
+    Route::get('streets/{coverageArea}', [StreetMapController::class, 'show'])
+        ->whereNumber('coverageArea')->name('streets.show');
 
     // Where a handset that has been offline tells the server what happened.
     Route::post('sync', SyncController::class)->name('sync');

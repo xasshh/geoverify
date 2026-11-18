@@ -7,6 +7,7 @@ import { fieldStyle, readPalette } from '@/lib/mapStyle';
 import type { PMTiles } from 'pmtiles';
 import type { BasemapChoice } from '@/lib/offline/imagery';
 import type { Fix } from '@/lib/geolocation';
+import { addStreetLayers, showStreetsWithSatellite } from '@/lib/streetLayers';
 
 export type DrawKind = 'point' | 'line' | 'polygon';
 
@@ -54,6 +55,11 @@ interface AreaMapProps {
     bare?: boolean;
     /** Fit to this box on load, as west, south, east, north. */
     bounds?: [number, number, number, number] | null;
+    /**
+     * The mandate's offline street map, when the officer's phone holds it.
+     * Only the field passes it; the desk and the client map draw as before.
+     */
+    streets?: { archive: PMTiles; url: string } | null;
 }
 
 /**
@@ -82,6 +88,7 @@ export function AreaMap({
     focus = null,
     bare = false,
     bounds = null,
+    streets = null,
 }: AreaMapProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibre | null>(null);
@@ -300,6 +307,18 @@ export function AreaMap({
         instance.setLayoutProperty('imagery', 'visibility', basemap.basemap === 'satellite' ? 'visible' : 'none');
         instance.setPaintProperty('imagery', 'raster-opacity', basemap.opacity);
     }, [ready, openedImagery, basemap.basemap, basemap.opacity]);
+
+    // The street map, under the recorded features and the drawing.
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || !ready || streets === null) {
+            return;
+        }
+
+        addStreetLayers(instance, streets);
+        showStreetsWithSatellite(instance, openedImagery !== null && basemap.basemap === 'satellite');
+    }, [ready, streets, openedImagery, basemap.basemap]);
 
     useEffect(() => {
         if (ready) {

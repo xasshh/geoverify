@@ -86,7 +86,8 @@ final class BasemapFetchCommand extends Command
         $this->components->twoColumnDetail('Basemap', $target);
         $this->components->twoColumnDetail('Size', number_format((int) filesize($target) / 1_048_576, 1).' MB');
 
-        return self::SUCCESS;
+        // Each mandate's offline cut comes from this file, so it is refreshed with it.
+        return $this->call('geoverify:streets-build');
     }
 
     private function newestBuild(): ?string

@@ -7,7 +7,9 @@ import { FIELD_FOOTPRINTS, fieldStyle, readPalette } from '@/lib/mapStyle';
 import { addFootprintImage } from '@/lib/footprints';
 import { openPack } from '@/lib/offline/pack';
 import { openImagery, type BasemapChoice } from '@/lib/offline/imagery';
-import type { LocalImagery, LocalPack } from '@/lib/offline/db';
+import { openStreets } from '@/lib/offline/streets';
+import type { LocalImagery, LocalPack, LocalStreets } from '@/lib/offline/db';
+import { addStreetLayers, showStreetsWithSatellite } from '@/lib/streetLayers';
 import type { Fix } from '@/lib/geolocation';
 import { cx } from '@/lib/cx';
 
@@ -53,6 +55,12 @@ interface FieldMapProps {
      */
     imagery?: LocalImagery | null;
     basemap?: BasemapChoice;
+    /**
+     * The mandate's street map (OpenStreetMap), when it is on the device:
+     * names, landmarks and roads around the work list. Without it the map
+     * draws exactly as it always has.
+     */
+    streets?: LocalStreets | null;
 }
 
 export function FieldMap({
@@ -68,6 +76,7 @@ export function FieldMap({
     onStreetChange,
     imagery = null,
     basemap = { basemap: 'street', opacity: 1 },
+    streets = null,
 }: FieldMapProps) {
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibre | null>(null);
@@ -156,6 +165,15 @@ export function FieldMap({
                     layers: PACK_LAYERS.filter((layer) => instance.getLayer(layer) !== undefined),
                 }).length,
             );
+
+            // The same honest signal for the street map's names: a label only
+            // draws once its font has loaded, so offline this says the fonts
+            // came out of the worker's cache.
+            const labels = instance
+                .getStyle()
+                .layers.filter((layer) => layer.id.startsWith('streets-') && layer.type === 'symbol')
+                .map((layer) => layer.id);
+            element.dataset.streetLabels = String(labels.length === 0 ? 0 : instance.queryRenderedFeatures({ layers: labels }).length);
         });
         instance.on('error', (event) => {
             // Reported rather than swallowed. A map that silently draws nothing
@@ -217,6 +235,23 @@ export function FieldMap({
         instance.setLayoutProperty('imagery', 'visibility', basemap.basemap === 'satellite' ? 'visible' : 'none');
         instance.setPaintProperty('imagery', 'raster-opacity', basemap.opacity);
     }, [ready, openedImagery, imagery, basemap.basemap, basemap.opacity]);
+
+    const openedStreets = useMemo(() => (streets === null ? null : openStreets(streets)), [streets]);
+
+    /**
+     * The street map: added once the map is up and the archive is on the
+     * device. Its own effect, so a phone without it builds the map as before.
+     */
+    useEffect(() => {
+        const instance = map.current;
+
+        if (instance === null || !ready || openedStreets === null) {
+            return;
+        }
+
+        addStreetLayers(instance, openedStreets);
+        showStreetsWithSatellite(instance, imagery !== null && basemap.basemap === 'satellite');
+    }, [ready, openedStreets, imagery, basemap.basemap]);
 
     /** The officer's position, the ring around it, and the path walked. */
     useEffect(() => {

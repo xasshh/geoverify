@@ -16,6 +16,7 @@ import { PhotoCapture } from '@/components/PhotoCapture';
 import { FieldMap, type CapturedPoint } from '@/components/FieldMap';
 import { BasemapSwitch } from '@/components/BasemapSwitch';
 import { useImagery } from '@/lib/offline/useImagery';
+import { useStreets } from '@/lib/offline/useStreets';
 import { PackDownload } from '@/components/PackDownload';
 import { usePack } from '@/lib/offline/usePack';
 import { sendFixes, startSession, uuid7 } from '@/lib/capture';
@@ -116,6 +117,8 @@ export default function Capture({
     // Optional satellite view. Absent unless imagery of this mandate is on the
     // phone, in which case the map is exactly what it always was.
     const imagery = useImagery(cell.coverageAreaId);
+    // The street map: names and landmarks under the work list, fetched on its own.
+    const streets = useStreets(cell.coverageAreaId);
 
     /**
      * The building the officer tapped on the map.
@@ -320,6 +323,7 @@ export default function Capture({
                                 onStreetChange={setStreet}
                                 imagery={imagery.image}
                                 basemap={imagery.choice}
+                                streets={streets.streets}
                             />
 
                             {areaCaptureUrl !== null && (

@@ -231,6 +231,29 @@ export interface ImageryChunk {
     blob: Blob;
 }
 
+/**
+ * The street map of a mandate (OpenStreetMap, cut to its box), held offline
+ * beside the pack: street names, landmarks, water and land use under the work
+ * list. One per mandate; a changed checksum means a newer cut.
+ */
+export interface LocalStreets {
+    coverageAreaId: number;
+    mandate: string;
+    checksum: string;
+    bytes: number;
+    received: number;
+    maxZoom: number;
+    bounds: [number, number, number, number];
+    blob: Blob | null;
+    installedAt: string | null;
+}
+
+export interface StreetChunk {
+    coverageAreaId: number;
+    index: number;
+    blob: Blob;
+}
+
 const db = new Dexie('geoverify') as Dexie & {
     structures: EntityTable<LocalStructure, 'clientUuid'>;
     enterprises: EntityTable<LocalEnterprise, 'clientUuid'>;
@@ -245,6 +268,8 @@ const db = new Dexie('geoverify') as Dexie & {
     imagery: EntityTable<LocalImagery, 'layerId'>;
     imageryChunks: EntityTable<ImageryChunk, 'layerId'>;
     areaPhotos: EntityTable<LocalAreaPhoto, 'clientUuid'>;
+    streets: EntityTable<LocalStreets, 'coverageAreaId'>;
+    streetChunks: EntityTable<StreetChunk, 'coverageAreaId'>;
 };
 
 db.version(1).stores({
@@ -286,6 +311,13 @@ db.version(5).stores({
 // (which waits on a building's server id) never sees them.
 db.version(6).stores({
     areaPhotos: 'clientUuid, revisionClientUuid, serverId',
+});
+
+// The offline street map. Its own version and tables, so an officer upgrading
+// mid deployment keeps every capture, pack and image already on the device.
+db.version(7).stores({
+    streets: 'coverageAreaId',
+    streetChunks: '[coverageAreaId+index], coverageAreaId',
 });
 
 export { db };

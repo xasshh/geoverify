@@ -7,6 +7,7 @@ import { cx } from '@/lib/cx';
 import { ago, clock, shortCell, type FieldCapture, type OfficerDay } from '@/lib/fieldDay';
 import { useInbox } from '@/lib/offline/messages';
 import { usePack } from '@/lib/offline/usePack';
+import { useStreets } from '@/lib/offline/useStreets';
 
 const QA: Record<string, { label: string; className: string }> = {
     submitted: { label: 'Awaiting QA', className: 'bg-held-soft text-held-ink' },
@@ -57,6 +58,7 @@ function Stat({
 function MapPanel({ day }: { day: OfficerDay }) {
     const next = day.cells.next[0];
     const pack = usePack(next?.coverageAreaId ?? 0);
+    const streets = useStreets(next?.coverageAreaId ?? null);
 
     if (next === undefined) {
         return (
@@ -80,6 +82,7 @@ function MapPanel({ day }: { day: OfficerDay }) {
                     selectedFootprintId={null}
                     onSelectFootprint={() => undefined}
                     onStreetChange={() => undefined}
+                    streets={streets.streets}
                 />
             ) : (
                 <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-3 px-6 text-center sm:min-h-[360px]">

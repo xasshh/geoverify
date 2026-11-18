@@ -589,7 +589,10 @@ php artisan geoverify:basemap-fetch      # newest daily build, Nigeria, zoom 0 t
 ls -lh storage/app/basemap/nigeria.pmtiles   # about 550 MB
 ```
 
-Nothing needs restarting: the next page load sees the file. Run it again every
+Nothing needs restarting: the next page load sees the file. The same command then cuts each mandate's
+small offline street map for officers' phones (`geoverify:streets-build`, a few
+MB each, in `storage/app/basemap/areas`); run that alone after creating a new
+mandate. Run it again every
 few months for a fresher map; the new file replaces the old one only once it is
 complete. Fonts and icons ship in `public/basemap-assets`, so the map reaches no
 third party while it is open. The attribution "© OpenStreetMap contributors"

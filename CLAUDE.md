@@ -292,7 +292,12 @@ connection from the clearest free Sentinel-2 scene of each tile
 (`SentinelCatalogue`, Earth Search STAC) through GDAL and the pmtiles CLI
 (`ImageryPipeline`), and served to officers at `/api/field/imagery`, beside the
 vector packs and never inside `/api/field/packs`, whose answer a shipped
-handset depends on. A mandate can also come from an uploaded boundary file
+handset depends on. The street map follows the same rule: the national
+OpenStreetMap basemap (`geoverify:basemap-fetch`, served to staff maps at
+`/basemap/nigeria.pmtiles`) is cut per mandate by `StreetMaps` and served to
+officers at `/api/field/streets`, stored on the phone in its own Dexie tables
+(version 7) and drawn under the work list by `lib/streetLayers.ts`, its fonts
+answered offline from the worker's `geoverify-basemap-assets` cache. A mandate can also come from an uploaded boundary file
 (`CreateCoverageAreaFromBoundary`, `coverage_areas.boundary_source`).
 `Election` is polling unit checks (`_plan/polling-units/00-plan.md`): a list
 of units imported into a campaign whose capture modes include `polling_units`,
@@ -491,6 +496,7 @@ php artisan geoverify:footprints-ingest <area> --path=   # buildings
 php artisan geoverify:roads-ingest --path=              # streets, for map landmarks
 php artisan geoverify:pack-build <area>                 # the offline PMTiles pack
 php artisan geoverify:basemap-fetch                     # street basemap (OSM via Protomaps), ~550 MB for Nigeria
+php artisan geoverify:streets-build [area]              # each mandate's offline street cut (run by basemap-fetch)
 php artisan geoverify:score                             # confidence over captures
 php artisan orders:sweep-sla --dry-run                  # SLA refunds, daily at 07:00
 php artisan geoverify:reconcile-ledger --from= --to=    # provider drift, daily at 07:30

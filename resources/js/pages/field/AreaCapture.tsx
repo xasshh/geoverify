@@ -8,6 +8,8 @@ import { Button } from '@/components/Button';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { holdAreaPhotograph } from '@/lib/offline/areaPhotos';
 import { useImagery } from '@/lib/offline/useImagery';
+import { useStreets } from '@/lib/offline/useStreets';
+import { openStreets } from '@/lib/offline/streets';
 import { useOfflineQueue } from '@/lib/offline/useOfflineQueue';
 import { usePack } from '@/lib/offline/usePack';
 import { useTrace, type Fix } from '@/lib/geolocation';
@@ -111,6 +113,7 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
     const queue = useOfflineQueue();
     const pack = usePack(cell.coverageAreaId);
     const imagery = useImagery(cell.coverageAreaId);
+    const streets = useStreets(cell.coverageAreaId);
     const trace = useTrace(true);
     const { takeFixes } = trace;
 
@@ -122,6 +125,7 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
         return local === null || open === null ? null : { ...open, minZoom: local.minZoom, maxZoom: local.maxZoom, layers: local.layers };
     }, [pack.pack]);
     const satellite = useMemo<MapArchive | null>(() => (imagery.image === null ? null : openImagery(imagery.image)), [imagery.image]);
+    const streetMap = useMemo(() => (streets.streets === null ? null : openStreets(streets.streets)), [streets.streets]);
 
     const [step, setStep] = useState<Step>('pick');
     // The check under way, and the ones finished on this phone today.
@@ -440,6 +444,7 @@ export default function AreaCapture({ assignmentId, cell, campaign, classes, fea
                         pack={base}
                         imagery={satellite}
                         basemap={imagery.choice}
+                        streets={streetMap}
                         assignedH3={cell.h3}
                         centre={cell.centre}
                         position={position}
