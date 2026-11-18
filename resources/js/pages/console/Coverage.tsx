@@ -1,19 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Head, usePage } from '@inertiajs/react';
 import { ConsoleShell } from '@/components/ConsoleShell';
+import { MapPanel } from '@/components/MapPanel';
 import {
-    Map as MapLibreMap,
-    NavigationControl,
-    ScaleControl,
     type ExpressionSpecification,
     type GeoJSONSource,
+    type Map as MapLibreMap,
     type MapLayerMouseEvent,
 } from 'maplibre-gl';
-import { addProtocol } from 'maplibre-gl';
-import { Protocol } from 'pmtiles';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import '@/lib/maplibre';
 import { cx } from '@/lib/cx';
+import { createGeoMap, type MapView } from '@/lib/geomap';
 
 interface Summary {
     cells: number;
@@ -43,8 +39,11 @@ interface CoverageProps {
     imagery: { url: string; captured: string | null; maxZoom: number | null; licence: string | null } | null;
 }
 
-/** Registered once per tab: MapLibre keeps protocols in a module registry. */
-let pmtilesRegistered = false;
+/** What the panel can switch between: the grid itself, and the mandate's edge. */
+const COVERAGE_LAYERS = [
+    { label: 'Cells', ids: ['cell-fill', 'cell-line'] },
+    { label: 'Mandate edge', ids: ['mandate-line'] },
+];
 
 /** What the cells endpoint puts on each feature. */
 interface CellProperties {
@@ -155,45 +154,35 @@ const SHADINGS = {
 type Shading = keyof typeof SHADINGS;
 
 export default function Coverage({ area, summary, imagery }: CoverageProps) {
+    const { basemap } = usePage().props;
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibreMap | null>(null);
+    const [loaded, setLoaded] = useState<MapLibreMap | null>(null);
     const [loadedCells, setLoadedCells] = useState(0);
     const [hovered, setHovered] = useState<CellProperties | null>(null);
     const [shading, setShading] = useState<Shading>('density');
-    const [satellite, setSatellite] = useState(false);
-    const [imageryOpacity, setImageryOpacity] = useState(1);
+    const [view, setView] = useState<MapView>('street');
+    const archives = useMemo(() => (imagery === null ? [] : [imagery]), [imagery]);
 
     useEffect(() => {
         if (container.current === null || map.current !== null) {
             return;
         }
 
-        const instance = new MapLibreMap({
+        // The dusk console's street map, dark to match; the grid is what the
+        // page is about and draws over it. The mandate's satellite image is
+        // offered in the map panel.
+        const instance = createGeoMap({
             container: container.current,
-            // No basemap. Self-hosted vector tiles arrive with the offline packs at
-            // M5; billed tile providers are out of the question. What is drawn here
-            // is this system's own geometry, which is the thing under test.
-            style: {
-                version: 8,
-                sources: {},
-                layers: [
-                    {
-                        id: 'ground',
-                        type: 'background',
-                        paint: { 'background-color': '#0F1A17' },
-                    },
-                ],
-            },
+            basemap,
+            flavor: 'dark',
+            ground: '#0F1A17',
             bounds: summary.bounds,
-            fitBoundsOptions: { padding: 48 },
-            maxPitch: 0,
-            attributionControl: false,
+            padding: 48,
+            imagery: archives,
         });
 
         map.current = instance;
-
-        instance.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-        instance.addControl(new ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
 
         instance.on('load', () => {
             void (async () => {
@@ -209,63 +198,42 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                 /*
                  * Roads first, so the grid sits over them. A supervisor reads a
                  * low completion figure differently once they can see the cell
-                 * is the far side of an expressway, and the register's own
-                 * PostGIS is where the network comes from: no basemap, no
-                 * billed tile provider.
+                 * is the far side of an expressway. With the street basemap the
+                 * roads are already there; without it, the register's own
+                 * network from PostGIS is drawn instead.
                  */
-                // Satellite first, so the roads and the grid draw over it.
-                // Hidden until asked for: the grid on dark ground is still the
-                // view a supervisor reads progress from.
-                if (imagery !== null) {
-                    if (!pmtilesRegistered) {
-                        addProtocol('pmtiles', new Protocol().tile);
-                        pmtilesRegistered = true;
-                    }
-
-                    instance.addSource('imagery', {
-                        type: 'raster',
-                        url: `pmtiles://${new URL(imagery.url, window.location.href).toString()}`,
-                        tileSize: 256,
+                if (basemap === null) {
+                    instance.addSource('roads', {
+                        type: 'geojson',
+                        data: { type: 'FeatureCollection', features: [] },
                     });
                     instance.addLayer({
-                        id: 'imagery',
-                        type: 'raster',
-                        source: 'imagery',
-                        layout: { visibility: 'none' },
-                        paint: { 'raster-fade-duration': 0 },
+                        id: 'roads',
+                        type: 'line',
+                        source: 'roads',
+                        layout: { 'line-cap': 'round', 'line-join': 'round' },
+                        paint: {
+                            'line-color': [
+                                'match',
+                                ['get', 'highway'],
+                                ['motorway', 'trunk'],
+                                '#B7791F',
+                                ['primary'],
+                                '#34483F',
+                                '#23332D',
+                            ],
+                            'line-width': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                8,
+                                ['match', ['get', 'highway'], ['motorway', 'trunk'], 1.2, 0.4],
+                                14,
+                                ['match', ['get', 'highway'], ['motorway', 'trunk'], 4.5, 1.6],
+                            ],
+                        },
                     });
                 }
-
-                instance.addSource('roads', {
-                    type: 'geojson',
-                    data: { type: 'FeatureCollection', features: [] },
-                });
-                instance.addLayer({
-                    id: 'roads',
-                    type: 'line',
-                    source: 'roads',
-                    layout: { 'line-cap': 'round', 'line-join': 'round' },
-                    paint: {
-                        'line-color': [
-                            'match',
-                            ['get', 'highway'],
-                            ['motorway', 'trunk'],
-                            '#B7791F',
-                            ['primary'],
-                            '#34483F',
-                            '#23332D',
-                        ],
-                        'line-width': [
-                            'interpolate',
-                            ['linear'],
-                            ['zoom'],
-                            8,
-                            ['match', ['get', 'highway'], ['motorway', 'trunk'], 1.2, 0.4],
-                            14,
-                            ['match', ['get', 'highway'], ['motorway', 'trunk'], 4.5, 1.6],
-                        ],
-                    },
-                });
 
                 instance.addSource('cells', { type: 'geojson', data: cells });
                 instance.addSource('mandate', {
@@ -277,7 +245,7 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                     id: 'cell-fill',
                     type: 'fill',
                     source: 'cells',
-                    paint: { 'fill-color': SHADINGS.density.fill },
+                    paint: { 'fill-color': SHADINGS.density.fill, 'fill-opacity': basemap === null ? 1 : 0.6 },
                 });
 
                 instance.addLayer({
@@ -300,22 +268,25 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                 });
 
                 setLoadedCells(cells.features.length);
+                setLoaded(instance);
 
                 // Fetched after the grid has painted. Eighteen thousand cells
                 // are what this screen is about; the streets are context that
                 // can arrive a moment later.
-                void fetch(`/console/coverage/${String(area.id)}/roads.json`)
-                    .then((response) => response.json() as Promise<{ roads: GeoJSON.FeatureCollection }>)
-                    .then((payload) => {
-                        const source = instance.getSource<GeoJSONSource>('roads');
+                if (basemap === null) {
+                    void fetch(`/console/coverage/${String(area.id)}/roads.json`)
+                        .then((response) => response.json() as Promise<{ roads: GeoJSON.FeatureCollection }>)
+                        .then((payload) => {
+                            const source = instance.getSource<GeoJSONSource>('roads');
 
-                        if (source !== undefined) {
-                            void source.setData(payload.roads);
-                        }
-                    })
-                    .catch(() => {
-                        // A mandate with no roads loaded still draws its grid.
-                    });
+                            if (source !== undefined) {
+                                void source.setData(payload.roads);
+                            }
+                        })
+                        .catch(() => {
+                            // A mandate with no roads loaded still draws its grid.
+                        });
+                }
 
                 instance.on('mousemove', 'cell-fill', (event: MapLayerMouseEvent) => {
                     setHovered(readCell(event.features?.[0]?.properties));
@@ -332,8 +303,9 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
         return () => {
             instance.remove();
             map.current = null;
+            setLoaded(null);
         };
-    }, [area.id, summary.bounds, imagery]);
+    }, [area.id, summary.bounds, archives, basemap]);
 
     // Repainted rather than rebuilt: a mandate is 18,337 cells and tearing the
     // map down to change a colour ramp would refetch every one of them.
@@ -347,19 +319,16 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
         instance.setPaintProperty('cell-fill', 'fill-color', SHADINGS[shading].fill);
     }, [shading, loadedCells]);
 
+    // Over imagery the cells read better as a light wash than as solid fill.
     useEffect(() => {
         const instance = map.current;
 
-        if (instance === null || instance.getLayer('imagery') === undefined) {
+        if (instance === null || instance.getLayer('cell-fill') === undefined) {
             return;
         }
 
-        instance.setLayoutProperty('imagery', 'visibility', satellite ? 'visible' : 'none');
-        instance.setPaintProperty('imagery', 'raster-opacity', imageryOpacity);
-        // The cells are filled on dark ground; over imagery they read better
-        // as outlines with a light wash.
-        instance.setPaintProperty('cell-fill', 'fill-opacity', satellite ? 0.35 : 1);
-    }, [satellite, imageryOpacity, loadedCells]);
+        instance.setPaintProperty('cell-fill', 'fill-opacity', view === 'satellite' ? 0.35 : basemap === null ? 1 : 0.6);
+    }, [view, loadedCells, basemap]);
 
     const stats: Array<[string, string]> = [
         ['Cells', summary.cells.toLocaleString()],
@@ -408,6 +377,7 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                     same specificity, so an absolutely positioned container collapses
                     to zero height depending on stylesheet order. */}
                 <div ref={container} className="h-full w-full" />
+                <MapPanel map={loaded} imagery={archives} layers={COVERAGE_LAYERS} onView={setView} />
 
                 <div className="pointer-events-none absolute top-4 left-4 max-w-xs rounded-card border border-rule bg-raised/95 shadow-float p-3">
                     <p className="text-label font-semibold tracking-[0.05em] text-muted uppercase">
@@ -449,39 +419,6 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                         ))}
                     </div>
 
-                    {imagery !== null && (
-                        <div className="pointer-events-auto mt-3 flex flex-col gap-1.5 border-t border-rule pt-3">
-                            <label className="flex items-center gap-2 text-label text-ink">
-                                <input
-                                    type="checkbox"
-                                    checked={satellite}
-                                    onChange={(e) => {
-                                        setSatellite(e.target.checked);
-                                    }}
-                                    className="size-4 accent-gold"
-                                />
-                                Satellite view{imagery.captured !== null && `, ${imagery.captured}`}
-                            </label>
-                            {satellite && (
-                                <input
-                                    type="range"
-                                    min={20}
-                                    max={100}
-                                    step={10}
-                                    value={Math.round(imageryOpacity * 100)}
-                                    onChange={(e) => {
-                                        setImageryOpacity(Number(e.target.value) / 100);
-                                    }}
-                                    aria-label="Satellite opacity"
-                                    className="w-full accent-gold"
-                                />
-                            )}
-                            {satellite && imagery.licence !== null && (
-                                <p className="text-label text-faint">{imagery.licence}</p>
-                            )}
-                        </div>
-                    )}
-
                     <p className="mt-2 text-label text-faint">
                         {loadedCells.toLocaleString()} cells drawn. Outline only means no
                         detected buildings, or nothing counted yet under this shading.
@@ -489,7 +426,7 @@ export default function Coverage({ area, summary, imagery }: CoverageProps) {
                 </div>
 
                 {hovered !== null && (
-                    <div className="pointer-events-none absolute right-4 bottom-4 rounded-card border border-rule bg-raised/95 shadow-float p-3">
+                    <div className="pointer-events-none absolute right-4 bottom-10 rounded-card border border-rule bg-raised/95 shadow-float p-3">
                         <p className="numeric-mono text-mono text-ink">{hovered.h3}</p>
                         <p className="mt-1 numeric-mono text-label text-muted">
                             {hovered.footprints.toLocaleString()} detected /{' '}

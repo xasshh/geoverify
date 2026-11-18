@@ -78,7 +78,7 @@ describe('the mock location signal', function (): void {
         $result = (new MockLocationSignal)->evaluate(facts(mockFixCount: 1));
 
         expect($result->verdict)->toBe(Verdict::Fail)
-            ->and($result->message)->toContain('1 fix');
+            ->and($result->message)->toContain('1 GPS reading');
     });
 
     it('passes when no mock provider was reported', function (): void {
@@ -178,7 +178,7 @@ describe('the position accuracy signal', function (): void {
         ));
 
         expect($result->verdict)->toBe(Verdict::Warn)
-            ->and($result->message)->toContain('2 of 12 fixes');
+            ->and($result->message)->toContain('2 of 12 GPS readings');
     });
 
     it('passes a tight session', function (): void {
@@ -194,7 +194,7 @@ describe('the accuracy variance signal', function (): void {
         ));
 
         expect($result->verdict)->toBe(Verdict::Fail)
-            ->and($result->message)->toContain('12 fixes');
+            ->and($result->message)->toContain('12 GPS readings');
     });
 
     it('warns on an accuracy that barely moved', function (): void {

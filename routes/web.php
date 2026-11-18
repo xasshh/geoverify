@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PeopleController;
 use App\Http\Controllers\Admin\ReviewModerationController;
 use App\Http\Controllers\Agent\AgentApplicationController;
 use App\Http\Controllers\Agent\AgentPortalController;
+use App\Http\Controllers\BasemapController;
 use App\Http\Controllers\Client\CampaignController as ClientCampaignController;
 use App\Http\Controllers\Client\LandController as ClientLandController;
 use App\Http\Controllers\Client\PollingUnitController as ClientPollingUnitController;
@@ -149,6 +150,10 @@ Route::get('terms', fn () => Inertia::render('public/Terms', ['contactEmail' => 
 Route::get('health', fn (CheckSpatialStack $check) => Inertia::render('Health', $check()))
     ->name('health');
 
+// The street basemap (OpenStreetMap via Protomaps), read by range. Public data,
+// fetched by geoverify:basemap-fetch; 404 until it has been.
+Route::get('basemap/nigeria.pmtiles', BasemapController::class)->name('basemap');
+
 // The design system gallery. Never routed in production: it exists so the
 // primitives can be reviewed in every state before any feature screen uses them.
 if (app()->isLocal()) {
@@ -247,6 +252,8 @@ Route::middleware(['auth', 'supervises'])->prefix('console')->name('console.')->
     // rather than at the end of the week.
     Route::get('live', [LiveOperationsController::class, 'index'])->name('live');
     Route::get('live/feed.json', [LiveOperationsController::class, 'feed'])->name('live.feed');
+    Route::get('live/sessions/{session}/replay.json', [LiveOperationsController::class, 'replay'])
+        ->whereNumber('session')->name('live.replay');
 
     // Evidence output. Every download appends to verification_events.
     Route::get('exports', [ExportController::class, 'index'])->name('exports');

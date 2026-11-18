@@ -6,7 +6,10 @@ namespace App\Http\Controllers\Console;
 
 use App\Domain\Coverage\Models\CoverageArea;
 use App\Domain\Field\Actions\ReadLiveOperations;
+use App\Domain\Field\Actions\ReadSessionReplay;
 use App\Domain\Field\Models\Assignment;
+use App\Domain\Field\Models\FieldSession;
+use App\Domain\Imagery\Actions\ReadConsoleImagery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +27,7 @@ use Inertia\Response;
  */
 final class LiveOperationsController
 {
-    public function index(Request $request, ReadLiveOperations $live): Response
+    public function index(Request $request, ReadLiveOperations $live, ReadConsoleImagery $imagery): Response
     {
         Gate::authorize('viewAny', Assignment::class);
 
@@ -41,6 +44,8 @@ final class LiveOperationsController
                     'name' => $area->name,
                 ])->all(),
             'filters' => ['area' => $areaId],
+            // The satellite view, over the mandates the map is showing.
+            'imagery' => $imagery($areaId === null ? null : [$areaId]),
         ]);
     }
 
@@ -85,5 +90,16 @@ final class LiveOperationsController
         return JsonResponse::fromJsonString(
             json_encode($live($request->integer('area') ?: null), JSON_THROW_ON_ERROR),
         );
+    }
+
+    /**
+     * One session's positions and captures with their times, for the replay.
+     * Fetched when a supervisor asks to replay somebody's day, never polled.
+     */
+    public function replay(FieldSession $session, ReadSessionReplay $replay): JsonResponse
+    {
+        Gate::authorize('viewAny', Assignment::class);
+
+        return new JsonResponse($replay($session));
     }
 }

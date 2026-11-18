@@ -44,7 +44,7 @@ final class ImpliedSpeedSignal implements Signal
     public function evaluate(CaptureFacts $facts): SignalResult
     {
         if ($facts->fastestImpliedSpeedMps === null) {
-            return SignalResult::unknown('Not enough fixes to imply a speed.');
+            return SignalResult::unknown('Not enough GPS readings to work out how fast the officer moved.');
         }
 
         $speed = $facts->fastestImpliedSpeedMps;
@@ -55,18 +55,18 @@ final class ImpliedSpeedSignal implements Signal
 
         if ($speed > self::VEHICLE_MPS) {
             return SignalResult::fail(
-                'The fixes imply '.round($speed * 3.6).' km/h between two points.',
+                'The GPS readings imply '.round($speed * 3.6).' km/h between two points.',
                 $evidence,
             );
         }
 
         if ($speed > self::WALKING_MPS) {
             return SignalResult::warn(
-                'The fixes imply '.round($speed * 3.6).' km/h, so part of this was travelled.',
+                'The GPS readings imply '.round($speed * 3.6).' km/h, so part of this was travelled.',
                 $evidence,
             );
         }
 
-        return SignalResult::ok('Movement between fixes stayed at walking pace.', $evidence);
+        return SignalResult::ok('Movement between GPS readings stayed at walking pace.', $evidence);
     }
 }

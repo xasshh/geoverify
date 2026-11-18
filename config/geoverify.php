@@ -160,4 +160,32 @@ return [
             env('QUEUE_CONNECTION') === 'redis' ? 'redis-long' : env('QUEUE_CONNECTION', 'database'),
         ),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Street basemap
+    |--------------------------------------------------------------------------
+    |
+    | OpenStreetMap as Protomaps packages it: one PMTiles file of roads, places,
+    | water and land use, cut to Nigeria from Protomaps' daily planet build by
+    | `geoverify:basemap-fetch` and served from here by range. Self hosted
+    | rather than a tile service because a service bills per map view and can
+    | be switched off or repriced, and because the same file can go offline.
+    |
+    | Zoom 14 is the deepest the planet build carries real detail at; MapLibre
+    | draws vector tiles past their last level without loss, so the map still
+    | zooms to a single building.
+    |
+    | Not a pack: the officer's pack under /api/field/packs is untouched by this.
+    |
+    */
+    'basemap' => [
+        'path' => env('BASEMAP_PATH', storage_path('app/basemap/nigeria.pmtiles')),
+        'planet_url' => env('BASEMAP_PLANET_URL', 'https://build.protomaps.com/{date}.pmtiles'),
+        'builds_url' => 'https://build-metadata.protomaps.dev/builds.json',
+        // Nigeria with a small margin: west, south, east, north.
+        'bbox' => env('BASEMAP_BBOX', '2.6,4.2,14.7,13.95'),
+        'max_zoom' => (int) env('BASEMAP_MAX_ZOOM', 14),
+        'attribution' => '© OpenStreetMap contributors, Protomaps',
+    ],
 ];

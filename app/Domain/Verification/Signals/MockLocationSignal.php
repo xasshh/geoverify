@@ -34,14 +34,14 @@ final class MockLocationSignal implements Signal
     public function evaluate(CaptureFacts $facts): SignalResult
     {
         if ($facts->fixCount === 0) {
-            return SignalResult::unknown('No fixes were recorded for this capture.');
+            return SignalResult::unknown('No GPS readings were recorded for this capture.');
         }
 
         if ($facts->mockFixCount > 0) {
             return SignalResult::fail(
                 $facts->mockFixCount === 1
-                    ? 'A mock location provider was active on 1 fix.'
-                    : "A mock location provider was active on {$facts->mockFixCount} fixes.",
+                    ? 'A mock location provider was active on 1 GPS reading.'
+                    : "A mock location provider was active on {$facts->mockFixCount} GPS readings.",
                 ['mock_fixes' => $facts->mockFixCount, 'fixes' => $facts->fixCount],
             );
         }

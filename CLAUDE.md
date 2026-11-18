@@ -490,6 +490,7 @@ php artisan geoverify:grid-generate <area>              # its H3 cells
 php artisan geoverify:footprints-ingest <area> --path=   # buildings
 php artisan geoverify:roads-ingest --path=              # streets, for map landmarks
 php artisan geoverify:pack-build <area>                 # the offline PMTiles pack
+php artisan geoverify:basemap-fetch                     # street basemap (OSM via Protomaps), ~550 MB for Nigeria
 php artisan geoverify:score                             # confidence over captures
 php artisan orders:sweep-sla --dry-run                  # SLA refunds, daily at 07:00
 php artisan geoverify:reconcile-ledger --from= --to=    # provider drift, daily at 07:30

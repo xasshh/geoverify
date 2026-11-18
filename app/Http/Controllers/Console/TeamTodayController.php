@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Console;
 
 use App\Domain\Field\Actions\FieldMessaging;
 use App\Domain\Field\Actions\ReadLiveOperations;
+use App\Domain\Imagery\Actions\ReadConsoleImagery;
 use App\Domain\Verification\Actions\BuildReviewQueue;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -113,6 +114,7 @@ final class TeamTodayController
             // The Live page's own framing: the contracted ground, not wherever
             // the officers happen to be.
             'bounds' => app(LiveOperationsController::class)->bounds(null),
+            'imagery' => app(ReadConsoleImagery::class)(),
             'cells' => DB::table('assignments')
                 ->join('grid_cells', 'grid_cells.id', '=', 'assignments.grid_cell_id')
                 ->where('assignments.assigned_by', $supervisor->id)

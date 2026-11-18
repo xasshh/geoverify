@@ -102,6 +102,13 @@ class HandleInertiaRequests extends Middleware
                 'portal' => EnsureSurfaceOpen::open('portal'),
                 'invest' => EnsureSurfaceOpen::open('invest'),
             ],
+
+            // The street basemap, or null on a server that has not fetched it, in
+            // which case every map keeps its plain ground rather than asking for
+            // a file that is not there.
+            'basemap' => is_file((string) config('geoverify.basemap.path'))
+                ? ['url' => route('basemap', absolute: false), 'attribution' => (string) config('geoverify.basemap.attribution')]
+                : null,
             //
         ];
     }

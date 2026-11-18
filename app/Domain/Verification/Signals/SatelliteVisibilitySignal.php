@@ -44,7 +44,7 @@ final class SatelliteVisibilitySignal implements Signal
 
         if ($facts->zeroSatelliteFixCount === $facts->satelliteAwareFixCount) {
             return SignalResult::fail(
-                'Every fix claimed a position with no satellites in view.',
+                'Every GPS reading claimed a position with no satellites in view.',
                 $evidence,
             );
         }
@@ -52,7 +52,7 @@ final class SatelliteVisibilitySignal implements Signal
         if ($facts->zeroSatelliteFixCount > 0) {
             return SignalResult::warn(
                 sprintf(
-                    '%d of %d fixes reported no satellites in view.',
+                    '%d of %d GPS readings reported no satellites in view.',
                     $facts->zeroSatelliteFixCount,
                     $facts->satelliteAwareFixCount,
                 ),

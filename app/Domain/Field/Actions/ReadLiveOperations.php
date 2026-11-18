@@ -27,15 +27,58 @@ final class ReadLiveOperations
     /** Vertices kept per trace. Enough to read a day's shape on a map. */
     private const TRACE_POINTS = 300;
 
+    /** Captures sent for the map's dots and heatmap: a busy day, not a register. */
+    private const CAPTURE_POINTS = 3000;
+
     /**
-     * @return array{officers: list<array<string, mixed>>, day: array<string, mixed>}
+     * @return array{officers: list<array<string, mixed>>, day: array<string, mixed>, captures: list<array{0: float, 1: float, 2: int|null}>}
      */
     public function __invoke(?int $coverageAreaId = null): array
     {
         return [
             'officers' => $this->officers($coverageAreaId),
             'day' => $this->day($coverageAreaId),
+            'captures' => $this->captures($coverageAreaId),
         ];
+    }
+
+    /**
+     * Where today's captures were made, and how far each is believed: the
+     * map's capture dots and its activity heatmap. A structure's centroid is
+     * the register's own point, so this shows where work happened without
+     * exposing any officer's raw fix.
+     *
+     * @return list<array{0: float, 1: float, 2: int|null}>
+     */
+    private function captures(?int $coverageAreaId): array
+    {
+        $where = '';
+        $bindings = [];
+
+        if ($coverageAreaId !== null) {
+            $where = 'and structures.coverage_area_id = ?';
+            $bindings[] = $coverageAreaId;
+        }
+
+        $bindings[] = self::CAPTURE_POINTS;
+
+        $rows = DB::select(<<<SQL
+            select round(st_x(structures.centroid::geometry)::numeric, 6)::float8 as lon,
+                   round(st_y(structures.centroid::geometry)::numeric, 6)::float8 as lat,
+                   observations.confidence_score as confidence
+              from structure_observations observations
+              join structures on structures.id = observations.structure_id
+             where observations.observed_at >= now() - interval '18 hours'
+               and structures.centroid is not null {$where}
+             order by observations.observed_at desc
+             limit ?
+        SQL, $bindings);
+
+        return array_map(static fn (object $row): array => [
+            (float) $row->lon,
+            (float) $row->lat,
+            $row->confidence === null ? null : (int) $row->confidence,
+        ], $rows);
     }
 
     /**

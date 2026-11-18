@@ -1,6 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { ConsoleShell } from '@/components/ConsoleShell';
-import { lastSeenLabel, useLiveMap, type Live } from '@/components/LiveMap';
+import { LIVE_LAYERS, lastSeenLabel, useLiveMap, type Live } from '@/components/LiveMap';
+import { MapPanel } from '@/components/MapPanel';
+import { ReplayBar } from '@/components/ReplayBar';
+import type { Imagery } from '@/lib/geomap';
 import { PresenceMark } from '@/components/PresenceMark';
 import { cx } from '@/lib/cx';
 
@@ -9,6 +12,7 @@ interface LiveProps {
     bounds: [number, number, number, number];
     areas: Array<{ id: number; name: string }>;
     filters: { area: number | null };
+    imagery: Imagery[];
 }
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -34,8 +38,8 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
  * in the list, because the mark carries density where the map carries route: a
  * fabricated day is a straight line in the column before anyone reads a number.
  */
-export default function Live({ live, bounds, areas, filters }: LiveProps) {
-    const { container, map, data, refreshedAt, selected, setSelected } = useLiveMap({ live, bounds, filters });
+export default function Live({ live, bounds, areas, filters, imagery }: LiveProps) {
+    const { container, map, loaded, data, refreshedAt, selected, setSelected, replay } = useLiveMap({ live, bounds, filters, imagery });
 
     const quiet = data.officers.filter((o) => !o.active).length;
 
@@ -93,10 +97,14 @@ export default function Live({ live, bounds, areas, filters }: LiveProps) {
                 <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_380px]">
                     <div className="relative h-[560px] overflow-hidden rounded-card border border-rule bg-raised">
                         <div ref={container} className="h-full w-full" data-testid="live-map" />
+                        <MapPanel map={loaded} imagery={imagery} layers={LIVE_LAYERS} />
+                        <ReplayBar controls={replay} />
                         {data.officers.length === 0 && (
-                            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-ui text-faint">
-                                Nobody has opened a session in the last eighteen hours.
-                            </p>
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <p className="rounded-sm bg-raised/95 px-4 py-2 text-ui text-muted shadow-card">
+                                    Nobody has opened a session in the last eighteen hours.
+                                </p>
+                            </div>
                         )}
                     </div>
 

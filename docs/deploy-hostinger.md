@@ -574,3 +574,37 @@ The button appears on its own once both are set.
 `ENUMERATE_FREE=true`, `BUSINESS_PORTAL_OPEN=false` and `INVEST_PORTAL_OPEN=false`
 in `.env` (then `php artisan config:cache`). Flip them back to charge for
 checks and open the portals; nothing else changes.
+
+## Street basemap (OpenStreetMap via Protomaps)
+
+The console's live map draws officers over a street map: OpenStreetMap as
+Protomaps packages it, one PMTiles file served by this application. Until the
+file exists every map keeps its plain ground, so this step is safe to do late.
+
+It uses the pmtiles CLI from section 6. As `deploy`:
+
+```bash
+cd /var/www/geoverify
+php artisan geoverify:basemap-fetch      # newest daily build, Nigeria, zoom 0 to 14
+ls -lh storage/app/basemap/nigeria.pmtiles   # about 550 MB
+```
+
+Nothing needs restarting: the next page load sees the file. Run it again every
+few months for a fresher map; the new file replaces the old one only once it is
+complete. Fonts and icons ship in `public/basemap-assets`, so the map reaches no
+third party while it is open. The attribution "© OpenStreetMap contributors"
+is shown on the map and must stay: it is the condition OpenStreetMap is given
+under.
+
+Faster serving (recommended): let nginx answer the basemap itself instead of
+PHP. Every pan and zoom is a handful of range requests, and nginx serves those
+from disk without waking a PHP worker. In the `server` block for the site, as
+root, then `nginx -t && systemctl reload nginx`:
+
+```nginx
+location = /basemap/nigeria.pmtiles {
+    alias /var/www/geoverify/storage/app/basemap/nigeria.pmtiles;
+    add_header Cache-Control "public, max-age=86400";
+    types { } default_type application/vnd.pmtiles;
+}
+```

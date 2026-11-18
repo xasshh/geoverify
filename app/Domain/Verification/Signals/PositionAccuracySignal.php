@@ -60,7 +60,7 @@ final class PositionAccuracySignal implements Signal
         if ($facts->fixesOverFiveMetres > 0) {
             return SignalResult::warn(
                 sprintf(
-                    'Accuracy was worse than %d m on %d of %d fixes.',
+                    'Accuracy was worse than %d m on %d of %d GPS readings.',
                     (int) self::LOOSE_M,
                     $facts->fixesOverFiveMetres,
                     $facts->fixCount,

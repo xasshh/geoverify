@@ -45,6 +45,8 @@ declare module '@inertiajs/core' {
         enumerateFree: boolean;
         surfaces: { portal: boolean; invest: boolean };
         googleSignIn: boolean;
+        /** The street basemap, null until the server has fetched it. */
+        basemap: { url: string; attribution: string } | null;
         /**
          * What is waiting, for the console sidebar. Null off the console and
          * null for anyone who cannot act on it, so the shape says whether the

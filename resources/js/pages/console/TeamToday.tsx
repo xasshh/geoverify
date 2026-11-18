@@ -2,7 +2,10 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { ConsoleShell } from '@/components/ConsoleShell';
-import { useLiveMap, type Live } from '@/components/LiveMap';
+import { LIVE_LAYERS, useLiveMap, type Live } from '@/components/LiveMap';
+import { MapPanel } from '@/components/MapPanel';
+import { ReplayBar } from '@/components/ReplayBar';
+import type { Imagery } from '@/lib/geomap';
 import { cx } from '@/lib/cx';
 import { ago, clock, shortCell } from '@/lib/fieldDay';
 
@@ -46,6 +49,7 @@ interface Props {
     live: Live;
     bounds: [number, number, number, number];
     cells: string[];
+    imagery: Imagery[];
 }
 
 const STATE: Record<Officer['state'], { label: (o: Officer) => string; className: string }> = {
@@ -249,9 +253,9 @@ function SendToOfficers({ officers, cells }: { officers: Officer[]; cells: strin
  * Team today, to the supervisor board. The map is the Live page's map,
  * unchanged: the same hook draws it, on the same data and the same polling.
  */
-export default function TeamToday({ campaign, stats, officers, queue, live, bounds, cells }: Props) {
+export default function TeamToday({ campaign, stats, officers, queue, live, bounds, cells, imagery }: Props) {
     const flash = usePage().props.flash.status;
-    const { container, data, refreshedAt } = useLiveMap({ live, bounds, filters: { area: null } });
+    const { container, loaded, data, refreshedAt, replay } = useLiveMap({ live, bounds, filters: { area: null }, imagery });
 
     return (
         <ConsoleShell current="team">
@@ -305,13 +309,17 @@ export default function TeamToday({ campaign, stats, officers, queue, live, boun
                 <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                     <div className="relative h-[480px] overflow-hidden rounded-card border border-rule bg-raised">
                         <div ref={container} className="h-full w-full" data-testid="live-map" />
+                        <MapPanel map={loaded} imagery={imagery} layers={LIVE_LAYERS} />
+                        <ReplayBar controls={replay} />
                         <span className="pointer-events-none absolute top-3 left-3 rounded-sm bg-ink px-3 py-1.5 text-table font-bold text-inverse">
                             Live · updated {refreshedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {data.officers.length === 0 && (
-                            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-ui text-faint">
-                                Nobody has opened a session in the last eighteen hours.
-                            </p>
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                <p className="rounded-sm bg-raised/95 px-4 py-2 text-ui text-muted shadow-card">
+                                    Nobody has opened a session in the last eighteen hours.
+                                </p>
+                            </div>
                         )}
                     </div>
 

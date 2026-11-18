@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import {
-    Map as MapLibreMap,
-    NavigationControl,
-    type GeoJSONSource,
-} from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import '@/lib/maplibre';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl';
 import { CampaignIntroModal, Progress } from '@/components/CampaignWidgets';
 import { ClientShell } from '@/components/ClientShell';
 import { StatusPill } from '@/components/StatusPill';
 import { campaignTone, on, type CampaignDossier as Dossier } from '@/lib/campaign';
+import { createGeoMap } from '@/lib/geomap';
 import { readPalette } from '@/lib/mapStyle';
 
 interface RoadLabel {
@@ -104,9 +99,9 @@ function boundsOf(
 /**
  * The coverage, drawn.
  *
- * No basemap, and none is needed: the street network and the mandate outline
- * both come out of this system's own PostGIS, so the map is built from the same
- * data the register is. Billed tile providers stay out of the question.
+ * On the street basemap (OpenStreetMap, served by this application) when the
+ * server has it. Without it, the street network and the mandate outline both
+ * come out of this system's own PostGIS, as they did before the basemap.
  *
  * Roads arrive on their own request after the outline has painted. The outline
  * and the numbers are what the page is about; the roads are a quarter of a
@@ -119,6 +114,7 @@ function CoverageMap({
     areas: Dossier['coverage']['areas'];
     roadsUrl: string;
 }) {
+    const { basemap } = usePage().props;
     const container = useRef<HTMLDivElement | null>(null);
     const map = useRef<MapLibreMap | null>(null);
     const [labels, setLabels] = useState<RoadLabel[]>([]);
@@ -152,31 +148,45 @@ function CoverageMap({
 
         const palette = readPalette(container.current);
 
-        const instance = new MapLibreMap({
+        const instance = createGeoMap({
             container: container.current,
-            style: {
-                version: 8,
-                sources: {},
-                layers: [
-                    {
-                        id: 'ground',
-                        type: 'background',
-                        paint: { 'background-color': palette.sunken },
-                    },
-                ],
-            },
-            maxPitch: 0,
-            attributionControl: false,
+            basemap,
+            ground: palette.sunken,
+            padding: 32,
         });
 
         map.current = instance;
-        instance.addControl(new NavigationControl({ showCompass: false }), 'top-right');
 
         instance.on('load', () => {
             instance.addSource('areas', {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features },
             });
+
+            // On the street map the mandate is a tint and an edge over the
+            // streets, which already carry their own names.
+            if (basemap !== null) {
+                instance.addLayer({
+                    id: 'areas-fill',
+                    type: 'fill',
+                    source: 'areas',
+                    paint: { 'fill-color': palette.gold, 'fill-opacity': 0.08 },
+                });
+                instance.addLayer({
+                    id: 'areas-line',
+                    type: 'line',
+                    source: 'areas',
+                    paint: { 'line-color': palette.gold, 'line-width': 2 },
+                });
+
+                const box = boundsOf(features);
+
+                if (box !== null) {
+                    instance.fitBounds(box, { padding: 32, animate: false });
+                }
+
+                return;
+            }
 
             // The mandate sits under the roads: it is the ground, and a boundary
             // drawn over the street network hides the junctions that make the
@@ -293,7 +303,7 @@ function CoverageMap({
             instance.remove();
             map.current = null;
         };
-    }, [features, roadsUrl]);
+    }, [features, roadsUrl, basemap]);
 
     /*
      * Labels are HTML, not map symbols.
@@ -394,10 +404,13 @@ function CoverageMap({
             <div ref={container} className="h-[420px] w-full rounded-card border border-rule bg-raised" />
 
             {/* ODbL requires it wherever the network is shown, the same way the
-                boundary licences do on a published export. */}
-            <p className="pointer-events-none absolute right-2 bottom-1 numeric-mono text-label text-faint">
-                Streets &copy; OpenStreetMap contributors
-            </p>
+                boundary licences do on a published export. The street basemap
+                carries its own attribution, so this is only for the drawn roads. */}
+            {basemap === null && (
+                <p className="pointer-events-none absolute right-2 bottom-1 numeric-mono text-label text-faint">
+                    Streets &copy; OpenStreetMap contributors
+                </p>
+            )}
 
             <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-sm">
                 {placed.map((label) => (

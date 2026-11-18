@@ -44,7 +44,7 @@ final class AccuracyVarianceSignal implements Signal
     public function evaluate(CaptureFacts $facts): SignalResult
     {
         if ($facts->fixCount < self::ENOUGH_FIXES || $facts->accuracyStdDev === null) {
-            return SignalResult::unknown('Too few fixes to tell whether accuracy varied.');
+            return SignalResult::unknown('Too few GPS readings to tell whether accuracy varied.');
         }
 
         $evidence = [
@@ -55,7 +55,7 @@ final class AccuracyVarianceSignal implements Signal
 
         if ($facts->distinctAccuracyValues === 1) {
             return SignalResult::fail(
-                "Every one of {$facts->fixCount} fixes reported the same accuracy.",
+                "Every one of {$facts->fixCount} GPS readings reported the same accuracy.",
                 $evidence,
             );
         }

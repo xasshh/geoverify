@@ -303,3 +303,25 @@ it('shows a supervisor the current imagery on the console map, and nobody else',
     $bare = mandateFor('POLYGON((8.60 7.71, 8.62 7.71, 8.62 7.73, 8.60 7.73, 8.60 7.71))');
     $this->actingAs($supervisor)->get("/console/coverage/{$bare->id}")->assertInertia(fn ($page) => $page->where('imagery', null));
 });
+
+it('offers the satellite view on the live map, for the mandate it shows', function () {
+    Http::fake(['*' => Http::response(stacAnswer([['S2C_32NMP_20251119_0_L2A', '32NMP', '2025-11-19', 0.23]]))]);
+    fakePipeline();
+    Bus::fake();
+    $area = mandateFor();
+    $layer = app(RequestSatelliteBasemap::class)($area, null);
+    (new BuildSatelliteBasemap($layer->id))->handle(app(SentinelCatalogue::class), app(ImageryPipeline::class));
+    $bare = mandateFor('POLYGON((8.60 7.71, 8.62 7.71, 8.62 7.73, 8.60 7.73, 8.60 7.71))');
+
+    $supervisor = person(Role::Supervisor);
+
+    $this->actingAs($supervisor)->get('/console/live')
+        ->assertInertia(fn ($page) => $page
+            ->has('imagery', 1)
+            ->where('imagery.0.url', "/console/coverage/{$area->id}/imagery.pmtiles")
+            ->where('imagery.0.captured', '19 Nov 2025'));
+
+    // Filtered to a mandate with no image, there is nothing to switch to.
+    $this->actingAs($supervisor)->get("/console/live?area={$bare->id}")
+        ->assertInertia(fn ($page) => $page->has('imagery', 0));
+});

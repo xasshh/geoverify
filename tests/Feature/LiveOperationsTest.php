@@ -273,3 +273,46 @@ it('never lets a structure count as accepted in a cell that is not its own', fun
         ->and(Structure::query()->findOrFail($observation->structure_id)->status)
         ->toBe(Structure::STATUS_ACCEPTED);
 });
+
+it('puts today\'s captures on the live map, at the structure and with its confidence', function () {
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, person(Role::Supervisor));
+    [$lon, $lat] = cellCentre($cell);
+    $session = sessionFor($officer, $cell);
+    recordFixes($session, walkedDay(now()->subMinutes(30), $lon, $lat));
+    captureIn($cell, $officer, $session, now()->subMinutes(10));
+
+    $captures = app(ReadLiveOperations::class)()['captures'];
+
+    expect($captures)->toHaveCount(1)
+        ->and($captures[0][0])->toEqualWithDelta($lon, 0.001)
+        ->and($captures[0][1])->toEqualWithDelta($lat, 0.001);
+});
+
+it('replays a session to a supervisor in time order, start and end included', function () {
+    $supervisor = person(Role::Supervisor);
+    $officer = person(Role::Officer);
+    $cell = assignedCell($officer, $supervisor);
+    [$lon, $lat] = cellCentre($cell);
+    $session = sessionFor($officer, $cell);
+    $day = walkedDay(now()->subHour(), $lon, $lat);
+    recordFixes($session, $day);
+    captureIn($cell, $officer, $session, now()->subMinutes(40));
+
+    $replay = $this->actingAs($supervisor)
+        ->getJson("/console/live/sessions/{$session->id}/replay.json")
+        ->assertOk()
+        ->json();
+
+    $times = array_column($replay['points'], 2);
+
+    expect($replay['officer'])->toBe($officer->name)
+        ->and($replay['points'])->toHaveCount(count($day))
+        ->and($times)->toBe(array_values(collect($times)->sort()->all()))
+        ->and($times[0])->toBe($day[0]['at']->getTimestamp())
+        ->and(end($times))->toBe(end($day)['at']->getTimestamp())
+        ->and($replay['captures'])->toHaveCount(1);
+
+    // An officer does not get to watch anybody's day, including their own.
+    $this->actingAs($officer)->get("/console/live/sessions/{$session->id}/replay.json")->assertRedirect();
+});

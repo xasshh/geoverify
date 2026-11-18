@@ -48,7 +48,7 @@ final class CaptureIntervalSignal implements Signal
         if ($facts->captureCount < self::ENOUGH_CAPTURES
             || $facts->meanCaptureIntervalSeconds === null
             || $facts->captureIntervalStdDev === null) {
-            return SignalResult::unknown('Too few captures in this session to read a rhythm.');
+            return SignalResult::unknown('Fewer than four captures in this session, too few to judge their pace.');
         }
 
         $mean = $facts->meanCaptureIntervalSeconds;
